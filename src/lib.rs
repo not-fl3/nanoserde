@@ -1,4 +1,4 @@
-pub use makepad_tinyserde_derive::*;
+pub use nanoserde_derive::*;
 
 mod serde_bin;
 pub use crate::serde_bin::*;
