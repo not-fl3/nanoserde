@@ -119,3 +119,23 @@ fn path_type() {
     assert_eq!(bar.c, Some(2));
     assert_eq!(bar.d, Some(vec![vec![1, 2], vec![3, 4]]));
 }
+
+#[test]
+fn hashmaps() {
+    #[derive(DeJson)]
+    struct Foo {
+        map: std::collections::HashMap<String, i32>,
+    }
+
+    let json = r#"{
+       "map": {
+          "asd": 1,
+          "qwe": 2
+       }
+    }"#;
+
+    let foo: Foo = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(foo.map["asd"], 1);
+    assert_eq!(foo.map["qwe"], 2);
+}

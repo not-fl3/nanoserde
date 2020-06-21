@@ -135,7 +135,12 @@ pub fn parse_data(input: TokenStream) -> Data {
         let angel_bracket = maybe_exact_punct(&mut source, "<");
 
         if angel_bracket.is_some() {
-            let generic_type = next_type(source).expect("Expecting generic argument");
+            let mut generic_type = next_type(source).expect("Expecting generic argument");
+            while let Some(_comma) = maybe_exact_punct(&mut source, ",") {
+                let next_ty = next_type(source).expect("Expecting generic argument");
+                generic_type.path.push_str(&format!(", {}", next_ty.path));
+            }
+
             let _closing_bracket =
                 maybe_exact_punct(&mut source, ">").expect("Expecting closing generic bracket");
 
