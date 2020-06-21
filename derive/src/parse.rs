@@ -55,7 +55,7 @@ pub enum Data {
 }
 
 pub fn parse_data(input: TokenStream) -> Data {
-    let mut source = input.into_iter();
+    let mut source = input.into_iter().peekable();
 
     fn maybe_visibility_modifier<T: Iterator<Item = TokenTree>>(
         source: &mut Peekable<T>,
@@ -80,6 +80,18 @@ pub fn parse_data(input: TokenStream) -> Data {
         return None;
     }
 
+    fn maybe_doc_comment<T: Iterator<Item = TokenTree>>(
+        mut source: &mut Peekable<T>,
+    ) -> Option<()> {
+        // for some reason structs with doc comment are started with "#" character followed by a group with comments
+        let maybe_doc_punct = maybe_punct(&mut source);
+        if let Some("#") = maybe_doc_punct.as_deref() {
+            let _doc_comment = next_group(&mut source);
+            return Some(());
+        }
+
+        None
+    }
     fn maybe_eof<T: Iterator>(source: &mut Peekable<T>) -> Option<()> {
         if source.peek().is_none() {
             Some(())
@@ -138,6 +150,9 @@ pub fn parse_data(input: TokenStream) -> Data {
         println!("{:?}", source.peek());
     }
 
+    while let Some(_doc_comment) = maybe_doc_comment(&mut source) {}
+
+
     let pub_or_struct = next_ident(&mut source).expect("Not an ident");
 
     let struct_keyword = if pub_or_struct == "pub" {
@@ -159,6 +174,9 @@ pub fn parse_data(input: TokenStream) -> Data {
         if maybe_eof(&mut body).is_some() {
             break;
         }
+
+        while let Some(_doc_comment) = maybe_doc_comment(&mut body) {}
+
         let _visibility = maybe_visibility_modifier(&mut body);
         let field_name = next_ident(&mut body).expect("Field name expected");
 
@@ -167,6 +185,8 @@ pub fn parse_data(input: TokenStream) -> Data {
         let ty = next_type(&mut body).expect("Expected field type");
 
         let _punct = maybe_punct(&mut body);
+
+        let _doc_comment = maybe_doc_comment(&mut source);
 
         fields.push(Field {
             attributes: vec![],
