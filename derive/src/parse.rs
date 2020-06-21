@@ -28,18 +28,9 @@ pub struct Field {
 }
 
 #[allow(dead_code)]
-pub enum Type {
-    Tuple { is_option: bool, ty: Vec<Type> },
-    Path { is_option: bool, path: String },
-}
-
-impl Type {
-    pub fn is_option(&self) -> bool {
-        match self {
-            Type::Tuple { is_option, .. } => *is_option,
-            Type::Path { is_option, .. } => *is_option,
-        }
-    }
+pub struct Type {
+    pub is_option: bool,
+    pub path: String,
 }
 
 pub struct Struct {
@@ -80,7 +71,10 @@ pub fn parse_data(input: TokenStream) -> Data {
         return None;
     }
 
-    fn maybe_exact_punct<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>, pattern: &str) -> Option<String> {
+    fn maybe_exact_punct<T: Iterator<Item = TokenTree>>(
+        source: &mut Peekable<T>,
+        pattern: &str,
+    ) -> Option<String> {
         if let Some(TokenTree::Punct(punct)) = source.peek() {
             let punct = format!("{}", punct);
             if punct == pattern {
@@ -129,28 +123,35 @@ pub fn parse_data(input: TokenStream) -> Data {
     }
 
     fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Option<Type> {
-        let ty = next_ident(&mut source)?;
+        let mut ty = next_ident(&mut source)?;
+
+        while let Some(_) = maybe_exact_punct(&mut source, ":") {
+            let _second_colon = maybe_exact_punct(&mut source, ":").expect("Expecting second :");
+
+            let next_ident = next_ident(&mut source).expect("Expecting next path part after ::");
+            ty.push_str(&format!("::{}", next_ident));
+        }
 
         let angel_bracket = maybe_exact_punct(&mut source, "<");
 
         if angel_bracket.is_some() {
-            let generic_ty = next_ident(&mut source).expect("Option without type is not supported");
-            let _bracket =
-                next_punct(&mut source).expect("Option without generic bound is not supported");
+            let generic_type = next_type(source).expect("Expecting generic argument");
+            let _closing_bracket =
+                maybe_exact_punct(&mut source, ">").expect("Expecting closing generic bracket");
 
             if ty == "Option" {
-                Some(Type::Path {
-                    path: ty,
+                Some(Type {
+                    path: generic_type.path,
                     is_option: true,
                 })
             } else {
-                Some(Type::Path {
-                    path: format!("{}<{}>", ty, generic_ty),
+                Some(Type {
+                    path: format!("{}<{}>", ty, generic_type.path),
                     is_option: false,
                 })
             }
         } else {
-            Some(Type::Path {
+            Some(Type {
                 path: ty,
                 is_option: false,
             })

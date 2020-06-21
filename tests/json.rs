@@ -74,12 +74,15 @@ fn array() {
     #[derive(DeJson)]
     pub struct Bar {
         foos: Vec<Foo>,
-        ints: Vec<i32>
+        ints: Vec<i32>,
+        floats_a: Option<Vec<f32>>,
+        floats_b: Option<Vec<f32>>,
     }
 
     let json = r#"{
        "foos": [{"x": 1}, {"x": 2}],
-       "ints": [1, 2, 3, 4]
+       "ints": [1, 2, 3, 4],
+       "floats_b": [4., 3., 2., 1.]
     }"#;
 
     let bar: Bar = DeJson::deserialize_json(json).unwrap();
@@ -88,5 +91,31 @@ fn array() {
     assert_eq!(bar.foos[0].x, 1);
     assert_eq!(bar.ints.len(), 4);
     assert_eq!(bar.ints[2], 3);
+    assert_eq!(bar.floats_b.unwrap()[2], 2.);
+    assert_eq!(bar.floats_a, None);
+}
 
+#[test]
+fn path_type() {
+    #[derive(DeJson)]
+    struct Foo {
+        a: i32,
+        b: std::primitive::i32,
+        c: Option<std::primitive::i32>,
+        d: Option<Vec<std::vec::Vec<std::primitive::i32>>>,
+    }
+
+    let json = r#"{
+       "a": 0,
+       "b": 1,
+       "c": 2,
+       "d": [[1, 2], [3, 4]]
+    }"#;
+
+    let bar: Foo = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(bar.a, 0);
+    assert_eq!(bar.b, 1);
+    assert_eq!(bar.c, Some(2));
+    assert_eq!(bar.d, Some(vec![vec![1, 2], vec![3, 4]]));
 }

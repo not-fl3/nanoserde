@@ -81,7 +81,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
         let fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", fieldname);
 
-        if field.ty.is_option() {
+        if field.ty.is_option {
             unwraps.push(format!(
                 "{{if let Some(t) = {} {{t}}else {{ None }} }}",
                 localvar
