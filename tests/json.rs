@@ -33,7 +33,8 @@ fn doctests() {
     pub struct Test {
         /// with documented field
         pub a: i32,
-        pub b: f32, /// or here
+        pub b: f32,
+        /// or here
         /// Or here
         c: Option<String>,
         /// more doc comments
@@ -55,5 +56,17 @@ fn doctests() {
 }
 
 #[test]
-fn array() {
+fn empty() {
+    use nanoserde::{DeJson, DeJsonErr};
+
+    #[derive(DeJson)]
+    pub struct Empty {}
+
+    let json = r#"{
+    }"#;
+
+    let _: Empty = DeJson::deserialize_json(json).unwrap();
 }
+
+#[test]
+fn array() {}

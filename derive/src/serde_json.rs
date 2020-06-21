@@ -82,14 +82,15 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
         let localvar = format!("_{}", fieldname);
 
         if field.ty.is_option() {
-            unwraps.push(format!("{{if let Some(t) = {} {{t}}else {{ None }} }}", localvar));
-        }
-        else {
-        unwraps.push(format!(
-            "{{if let Some(t) = {} {{t}} else {{return Err(s.err_nf(\"{}\"))}} }}",
-            localvar, fieldname
-        ));
-
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}}else {{ None }} }}",
+                localvar
+            ));
+        } else {
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}} else {{return Err(s.err_nf(\"{}\"))}} }}",
+                localvar, fieldname
+            ));
         }
 
         field_names.push(fieldname);
@@ -102,17 +103,23 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     }
     l!(r, "s.curly_open(i) ?;");
     l!(r, "while let Some(_) = s.next_str() {");
-    l!(r, "match s.strbuf.as_ref() {");
-    for (field_name, local_var) in field_names.iter().zip(local_vars.iter()) {
+
+    if field_names.len() != 0 {
+        l!(r, "match s.strbuf.as_ref() {");
+        for (field_name, local_var) in field_names.iter().zip(local_vars.iter()) {
+            l!(
+                r,
+                "\"{}\" => {{s.next_colon(i) ?;{} = Some(DeJson::de_json(s, i) ?)}},",
+                field_name,
+                local_var
+            );
+        }
         l!(
             r,
-            "\"{}\" => {{s.next_colon(i) ?;{} = Some(DeJson::de_json(s, i) ?)}},",
-            field_name,
-            local_var
+            "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))"
         );
+        l!(r, "}");
     }
-    l!(r, "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))");
-    l!(r, "}");
     l!(r, "s.eat_comma_curly(i) ?");
     l!(r, "}");
     l!(r, "s.curly_close(i) ?;");
