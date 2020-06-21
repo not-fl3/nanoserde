@@ -80,6 +80,18 @@ pub fn parse_data(input: TokenStream) -> Data {
         return None;
     }
 
+    fn maybe_exact_punct<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>, pattern: &str) -> Option<String> {
+        if let Some(TokenTree::Punct(punct)) = source.peek() {
+            let punct = format!("{}", punct);
+            if punct == pattern {
+                source.next();
+                return Some(punct);
+            }
+        }
+
+        return None;
+    }
+
     fn maybe_doc_comment<T: Iterator<Item = TokenTree>>(
         mut source: &mut Peekable<T>,
     ) -> Option<()> {
@@ -119,16 +131,24 @@ pub fn parse_data(input: TokenStream) -> Data {
     fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Option<Type> {
         let ty = next_ident(&mut source)?;
 
-        if ty == "Option" {
+        let angel_bracket = maybe_exact_punct(&mut source, "<");
+
+        if angel_bracket.is_some() {
+            let generic_ty = next_ident(&mut source).expect("Option without type is not supported");
             let _bracket =
                 next_punct(&mut source).expect("Option without generic bound is not supported");
-            let ty = next_ident(&mut source).expect("Option without type is not supported");
-            let _bracket =
-                next_punct(&mut source).expect("Option without generic bound is not supported");
-            Some(Type::Path {
-                path: ty,
-                is_option: true,
-            })
+
+            if ty == "Option" {
+                Some(Type::Path {
+                    path: ty,
+                    is_option: true,
+                })
+            } else {
+                Some(Type::Path {
+                    path: format!("{}<{}>", ty, generic_ty),
+                    is_option: false,
+                })
+            }
         } else {
             Some(Type::Path {
                 path: ty,
@@ -151,7 +171,6 @@ pub fn parse_data(input: TokenStream) -> Data {
     }
 
     while let Some(_doc_comment) = maybe_doc_comment(&mut source) {}
-
 
     let pub_or_struct = next_ident(&mut source).expect("Not an ident");
 

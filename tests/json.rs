@@ -1,7 +1,7 @@
+use nanoserde::{DeJson, DeJsonErr};
+
 #[test]
 fn de() {
-    use nanoserde::{DeJson, DeJsonErr};
-
     #[derive(DeJson)]
     pub struct Test {
         pub a: i32,
@@ -25,8 +25,6 @@ fn de() {
 
 #[test]
 fn doctests() {
-    use nanoserde::{DeJson, DeJsonErr};
-
     /// This is test
     /// second doc comment
     #[derive(DeJson)]
@@ -57,8 +55,6 @@ fn doctests() {
 
 #[test]
 fn empty() {
-    use nanoserde::{DeJson, DeJsonErr};
-
     #[derive(DeJson)]
     pub struct Empty {}
 
@@ -69,4 +65,28 @@ fn empty() {
 }
 
 #[test]
-fn array() {}
+fn array() {
+    #[derive(DeJson)]
+    pub struct Foo {
+        x: i32
+    }
+
+    #[derive(DeJson)]
+    pub struct Bar {
+        foos: Vec<Foo>,
+        ints: Vec<i32>
+    }
+
+    let json = r#"{
+       "foos": [{"x": 1}, {"x": 2}],
+       "ints": [1, 2, 3, 4]
+    }"#;
+
+    let bar: Bar = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(bar.foos.len(), 2);
+    assert_eq!(bar.foos[0].x, 1);
+    assert_eq!(bar.ints.len(), 4);
+    assert_eq!(bar.ints[2], 3);
+
+}
