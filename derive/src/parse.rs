@@ -23,7 +23,7 @@ pub enum Visibility {
 pub struct Field {
     pub attributes: Vec<Attribute>,
     pub vis: Visibility,
-    pub field_name: Option<String>,
+    pub field_name: String,
     pub ty: Type,
 }
 
@@ -216,7 +216,7 @@ pub fn parse_data(input: TokenStream) -> Data {
         fields.push(Field {
             attributes: vec![],
             vis: Visibility::Public,
-            field_name: Some(field_name),
+            field_name: field_name,
             ty,
         });
     }

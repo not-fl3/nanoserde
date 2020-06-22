@@ -1,24 +1,22 @@
-// use crate::shared::*;
+use crate::parse::Struct;
 
-// use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 
-// pub fn derive_ser_bin_struct(input: &DeriveInput, fields: &FieldsNamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
-//     let fieldname = fields.named.iter().map( | f | f.ident.clone().unwrap()).collect::<Vec<_>>();
-    
-//     quote! {
-//         impl #impl_generics SerBin for #ident #ty_generics #bounded_where_clause {
-//             fn ser_bin(&self, s: &mut Vec<u8>) {
-//                 #(
-//                     self.#fieldname.ser_bin(s);
-//                 ) *
-//             }
-//         }
-//     }
-// }
+pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
+
+    for field in &struct_.fields {
+        l!(body, "self.{}.ser_bin(s);", field.field_name);
+    }
+    format!(
+        "impl SerBin for {} {{
+            fn ser_bin(&self, s: &mut Vec<u8>) {{
+                {}
+            }}
+        }}",
+        struct_.name, body
+    ).parse().unwrap()
+}
 
 // pub fn derive_ser_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
@@ -41,25 +39,24 @@
 //     }
 // }
 
-// pub fn derive_de_bin_struct(input: &DeriveInput, fields:&FieldsNamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let fieldname = fields.named.iter().map( | f | f.ident.clone().unwrap()).collect::<Vec<_>>();
+pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-//     quote! {
-//         impl #impl_generics DeBin for #ident #ty_generics #bounded_where_clause {
-//             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {
-//                 std::result::Result::Ok(Self {
-//                     #(
-//                         #fieldname: DeBin::de_bin(o,d)?,
-//                     ) *
-//                 })
-//             }
-//         }
-//     }
-// }
+    for field in &struct_.fields {
+        l!(body, "{}: DeBin::de_bin(o, d)?,", field.field_name);
+    }
+
+    format!(
+        "impl DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {{
+                std::result::Result::Ok(Self {{
+                    {}
+                }})
+            }}
+        }}",
+        struct_.name, body
+    ).parse().unwrap()
+}
 
 // pub fn derive_de_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
@@ -89,11 +86,11 @@
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
 //     let bound = parse_quote!(SerBin);
 //     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-    
+
 //     let ident = &input.ident;
-    
+
 //     let mut match_item = Vec::new();
-    
+
 //     for (index, variant) in enumeration.variants.iter().enumerate() {
 //         let lit = LitInt::new(&format!("{}u16", index), ident.span());
 //         let ident = &variant.ident;
@@ -131,7 +128,7 @@
 //             },
 //         }
 //     }
-    
+
 //     quote! {
 //         impl #impl_generics SerBin for #ident #ty_generics #bounded_where_clause {
 //             fn ser_bin(&self, s: &mut Vec<u8>) {
@@ -146,14 +143,14 @@
 // }
 
 // pub fn derive_de_bin_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
-    
+
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
 //     let ident = &input.ident;
 //     let bound = parse_quote!(DeBin);
 //     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-    
+
 //     let mut match_item = Vec::new();
-    
+
 //     for (index, variant) in enumeration.variants.iter().enumerate() {
 //         let lit = LitInt::new(&format!("{}u16", index), ident.span());
 //         let ident = &variant.ident;
@@ -185,7 +182,7 @@
 //             },
 //         }
 //     }
-    
+
 //     quote! {
 //         impl #impl_generics DeBin for #ident #ty_generics #bounded_where_clause {
 //             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {

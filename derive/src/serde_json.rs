@@ -78,7 +78,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     let mut unwraps = Vec::new();
 
     for field in &struct_.fields {
-        let fieldname = field.field_name.as_ref().unwrap().to_string();
+        let fieldname = field.field_name.to_string();
         let localvar = format!("_{}", fieldname);
 
         if field.ty.is_option {

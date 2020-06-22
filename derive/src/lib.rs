@@ -3,8 +3,8 @@ extern crate proc_macro;
 #[macro_use]
 mod shared;
 
-//mod serde_bin;
-//use crate::serde_bin::*;
+mod serde_bin;
+use crate::serde_bin::*;
 
 //mod serde_ron;
 //use crate::serde_ron::*;
@@ -16,44 +16,29 @@ mod parse;
 use crate::serde_json::*;
 
 #[proc_macro_derive(SerBin)]
-pub fn derive_ser_bin(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // let input = parse_macro_input!(input as DeriveInput);
+pub fn derive_ser_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse::parse_data(input);
+
     // // ok we have an ident, its either a struct or a enum
-    // let ts = match &input.data {
-    //     Data::Struct(DataStruct {fields: Fields::Named(fields), ..}) => {
-    //         derive_ser_bin_struct(&input, fields)
-    //     },
-    //     Data::Struct(DataStruct {fields: Fields::Unnamed(fields), ..}) => {
-    //         derive_ser_bin_struct_unnamed(&input, fields)
-    //     },
-    //     Data::Enum(enumeration) => {
-    //         derive_ser_bin_enum(&input, enumeration)
-    //     },
-    //     _ => error(Span::call_site(), "only structs or enums supported")
-    // };
-    // proc_macro::TokenStream::from(ts)
-    unimplemented!()
+    let ts = match &input {
+        parse::Data::Struct(struct_) => derive_ser_bin_struct(struct_),
+        _ => unimplemented!("Only structs are supported"),
+    };
+
+    ts
 }
 
 #[proc_macro_derive(DeBin)]
-pub fn derive_de_bin(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // let input = parse_macro_input!(input as DeriveInput);
-    // // ok we have an ident, its either a struct or a enum
-    // let ts = match &input.data {
-    //     Data::Struct(DataStruct {fields: Fields::Named(fields), ..}) => {
-    //         derive_de_bin_struct(&input, fields)
-    //     },
-    //     Data::Struct(DataStruct {fields: Fields::Unnamed(fields), ..}) => {
-    //         derive_de_bin_struct_unnamed(&input, fields)
-    //     },
-    //     Data::Enum(enumeration) => {
-    //         derive_de_bin_enum(&input, enumeration)
-    //     },
-    //     _ => error(Span::call_site(), "only structs or enums supported")
-    // };
-    // proc_macro::TokenStream::from(ts)
+pub fn derive_de_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse::parse_data(input);
 
-    unimplemented!()
+    // ok we have an ident, its either a struct or a enum
+    let ts = match &input {
+        parse::Data::Struct(struct_) => derive_de_bin_struct(struct_),
+        _ => unimplemented!("Only structs are supported"),
+    };
+
+    ts
 }
 
 #[proc_macro_derive(SerRon)]
