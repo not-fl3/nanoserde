@@ -9,7 +9,9 @@ nanoserde v0.1.0 (/../nanoserde)
 └── nanoserde-derive v0.1.0 (/../nanoserde/derive)
 ```
 
-Work in progress, right now only jsons deserialization is implemented.
+Work in progress, features that works:
+- json deserialization 
+- binary serialization/deserialization
 
 And this is going to be even more restricted and limited serialization/deserialization library than makepad-tinyserde. 
 Generic bounds, lifetime bounds, where clauses and probably a lot more is not supported and probably will never be supported.
