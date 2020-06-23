@@ -8,11 +8,14 @@ use proc_macro::{Group, TokenStream, TokenTree};
 
 use std::iter::Peekable;
 
+#[derive(Debug)]
 pub struct Attribute {
-    pub attr: String,
+    pub name: String,
+    pub tokens: Vec<String>,
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum Visibility {
     Public,
     Crate,
@@ -20,6 +23,7 @@ pub enum Visibility {
     Private,
 }
 
+#[derive(Debug)]
 pub struct Field {
     pub attributes: Vec<Attribute>,
     pub vis: Visibility,
@@ -28,14 +32,17 @@ pub struct Field {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct Type {
     pub is_option: bool,
     pub path: String,
 }
 
+#[derive(Debug)]
 pub struct Struct {
     pub name: String,
     pub fields: Vec<Field>,
+    pub attributes: Vec<Attribute>,
 }
 
 #[allow(dead_code)]
@@ -43,6 +50,28 @@ pub enum Data {
     Struct(Struct),
     Enum(()),
     Union(()),
+}
+
+impl Data {
+    pub fn name(&self) -> &str {
+        match self {
+            Data::Struct(Struct {
+                name,
+                ..
+            }) => name.as_str(),
+            _ => unimplemented!()
+        }
+    }
+
+    pub fn attributes(&self) -> &[Attribute] {
+        match self {
+            Data::Struct(Struct {
+                attributes,
+                ..
+            }) => &attributes[..],
+            _ => unimplemented!()
+        }
+    }
 }
 
 pub fn parse_data(input: TokenStream) -> Data {
@@ -86,14 +115,66 @@ pub fn parse_data(input: TokenStream) -> Data {
         return None;
     }
 
-    fn maybe_doc_comment<T: Iterator<Item = TokenTree>>(
+    fn next_literal<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>) -> Option<String> {
+        if let Some(TokenTree::Literal(lit)) = source.peek() {
+            let mut literal = lit.to_string();
+
+            // the only way to check that literal is string :/
+            if literal.starts_with("\"") {
+                literal.remove(0);
+                literal.remove(literal.len() - 1);
+            }
+            source.next();
+            return Some(literal);
+        }
+
+        return None;
+    }
+
+    fn maybe_attribute<T: Iterator<Item = TokenTree>>(
         mut source: &mut Peekable<T>,
-    ) -> Option<()> {
-        // for some reason structs with doc comment are started with "#" character followed by a group with comments
-        let maybe_doc_punct = maybe_punct(&mut source);
-        if let Some("#") = maybe_doc_punct.as_deref() {
-            let _doc_comment = next_group(&mut source);
-            return Some(());
+    ) -> Option<Option<Attribute>> {
+        // all attributes, even doc-comments, starts with "#"
+        let maybe_attr_punct = maybe_punct(&mut source);
+        if let Some("#") = maybe_attr_punct.as_deref() {
+            let mut attr_group = next_group(&mut source)
+                .expect("Expecting attribute body")
+                .stream()
+                .into_iter()
+                .peekable();
+
+            let name = next_ident(&mut attr_group).expect("Attributes should start with a name");
+
+            if name != "nserde" {
+                return Some(None);
+            }
+
+            let mut args_group = next_group(&mut attr_group)
+                .expect("Expecting attribute body")
+                .stream()
+                .into_iter()
+                .peekable();
+
+            let mut attr_tokens = vec![];
+
+            loop {
+                let attribute_name = next_ident(&mut args_group).expect("Expecting attribute name");
+                attr_tokens.push(attribute_name);
+                let _ = maybe_exact_punct(&mut args_group, "=")
+                    .expect("Expecting = after attribute argument name");
+                let value = next_literal(&mut args_group).expect("Expecting argument value");
+
+                attr_tokens.push(value);
+
+                if maybe_eof(&mut args_group).is_some() {
+                    break;
+                }
+            }
+
+            return Some(Some(Attribute {
+                name,
+                tokens: attr_tokens,
+            }));
         }
 
         None
@@ -171,12 +252,26 @@ pub fn parse_data(input: TokenStream) -> Data {
         }
     }
 
+    fn maybe_attributes_list<T: Iterator<Item = TokenTree>>(
+        source: &mut Peekable<T>,
+    ) -> Vec<Attribute> {
+        let mut attributes = vec![];
+
+        while let Some(attr) = maybe_attribute(source) {
+            if let Some(nserde_attr) = attr {
+                attributes.push(nserde_attr);
+            }
+        }
+
+        attributes
+    }
+
     #[allow(dead_code)]
     fn debug_current_token<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>) {
         println!("{:?}", source.peek());
     }
 
-    while let Some(_doc_comment) = maybe_doc_comment(&mut source) {}
+    let attributes = maybe_attributes_list(&mut source);
 
     let pub_or_struct = next_ident(&mut source).expect("Not an ident");
 
@@ -200,7 +295,7 @@ pub fn parse_data(input: TokenStream) -> Data {
             break;
         }
 
-        while let Some(_doc_comment) = maybe_doc_comment(&mut body) {}
+        let attributes = maybe_attributes_list(&mut body);
 
         let _visibility = maybe_visibility_modifier(&mut body);
         let field_name = next_ident(&mut body).expect("Field name expected");
@@ -211,10 +306,8 @@ pub fn parse_data(input: TokenStream) -> Data {
 
         let _punct = maybe_punct(&mut body);
 
-        let _doc_comment = maybe_doc_comment(&mut source);
-
         fields.push(Field {
-            attributes: vec![],
+            attributes,
             vis: Visibility::Public,
             field_name: field_name,
             ty,
@@ -229,5 +322,6 @@ pub fn parse_data(input: TokenStream) -> Data {
     Data::Struct(Struct {
         name: struct_name,
         fields,
+        attributes,
     })
 }

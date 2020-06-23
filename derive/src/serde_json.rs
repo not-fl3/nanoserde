@@ -132,6 +132,20 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     r.parse().unwrap()
 }
 
+pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+    format!(
+        "impl DeJson for {} {{
+            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, DeJsonErr> {{
+                let proxy: {} = DeJson::deserialize_json(i)?;
+                std::result::Result::Ok(Into::into(&proxy))
+            }}
+        }}",
+        type_, proxy_type
+    )
+    .parse()
+    .unwrap()
+}
+
 pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_json_named(struct_);
 

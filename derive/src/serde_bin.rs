@@ -2,11 +2,49 @@ use crate::parse::Struct;
 
 use proc_macro::TokenStream;
 
+pub fn derive_ser_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+    format!(
+        "impl SerBin for {} {{
+            fn ser_bin(&self, s: &mut Vec<u8>) {{
+                let proxy: {} = self.into();
+                proxy.ser_bin(s);
+            }}
+        }}",
+        type_, proxy_type
+    )
+    .parse()
+    .unwrap()
+}
+
+pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+    format!(
+        "impl DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {{
+                let proxy: {} = DeBin::deserialize_bin(d)?;
+                std::result::Result::Ok(Into::into(&proxy))
+            }}
+        }}",
+        type_, proxy_type
+    )
+    .parse()
+    .unwrap()
+}
+
 pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
 
     for field in &struct_.fields {
-        l!(body, "self.{}.ser_bin(s);", field.field_name);
+        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+            l!(
+                body,
+                "let proxy: {} = Into::into(&self.{});",
+                proxy,
+                field.field_name
+            );
+            l!(body, "proxy.ser_bin(s);");
+        } else {
+            l!(body, "self.{}.ser_bin(s);", field.field_name);
+        }
     }
     format!(
         "impl SerBin for {} {{
@@ -15,7 +53,9 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
             }}
         }}",
         struct_.name, body
-    ).parse().unwrap()
+    )
+    .parse()
+    .unwrap()
 }
 
 // pub fn derive_ser_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
@@ -43,7 +83,14 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
 
     for field in &struct_.fields {
-        l!(body, "{}: DeBin::de_bin(o, d)?,", field.field_name);
+        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+            l!(body, "{}: {{", field.field_name);
+            l!(body, "let proxy: {} = DeBin::de_bin(o, d)?;", proxy);
+            l!(body, "Into::into(&proxy)");
+            l!(body, "},")
+        } else {
+            l!(body, "{}: DeBin::de_bin(o, d)?,", field.field_name);
+        }
     }
 
     format!(
@@ -55,7 +102,9 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
             }}
         }}",
         struct_.name, body
-    ).parse().unwrap()
+    )
+    .parse()
+    .unwrap()
 }
 
 // pub fn derive_de_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
