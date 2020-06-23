@@ -135,7 +135,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
 pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeJson for {} {{
-            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, DeJsonErr> {{
+            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
                 let proxy: {} = DeJson::deserialize_json(i)?;
                 std::result::Result::Ok(Into::into(&proxy))
             }}
@@ -152,7 +152,7 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     format!(
         "impl DeJson for {} {{
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,
-            DeJsonErr> {{
+            nanoserde::DeJsonErr> {{
                 std::result::Result::Ok({{ {} }})
             }}
         }}", struct_.name, body)

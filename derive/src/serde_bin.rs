@@ -19,7 +19,7 @@ pub fn derive_ser_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
                 let proxy: {} = DeBin::deserialize_bin(d)?;
                 std::result::Result::Ok(Into::into(&proxy))
             }}
@@ -95,7 +95,7 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
                 std::result::Result::Ok(Self {{
                     {}
                 }})

@@ -1,4 +1,4 @@
-use nanoserde::{DeJson, DeJsonErr};
+use nanoserde::DeJson;
 
 #[test]
 fn de() {

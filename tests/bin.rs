@@ -1,4 +1,4 @@
-use nanoserde::{DeBin, DeBinErr, SerBin};
+use nanoserde::{DeBin, SerBin};
 
 #[test]
 fn binary() {
