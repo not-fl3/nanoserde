@@ -4,7 +4,7 @@
 //! https://docs.rs/syn/0.15.44/syn/enum.Type.html
 //! https://ziglang.org/documentation/0.5.0/#toc-typeInfo
 
-use proc_macro::{Group, TokenStream, TokenTree};
+use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 use std::iter::Peekable;
 
@@ -27,7 +27,7 @@ pub enum Visibility {
 pub struct Field {
     pub attributes: Vec<Attribute>,
     pub vis: Visibility,
-    pub field_name: String,
+    pub field_name: Option<String>,
     pub ty: Type,
 }
 
@@ -41,6 +41,7 @@ pub struct Type {
 #[derive(Debug)]
 pub struct Struct {
     pub name: String,
+    pub named: bool,
     pub fields: Vec<Field>,
     pub attributes: Vec<Attribute>,
 }
@@ -55,21 +56,15 @@ pub enum Data {
 impl Data {
     pub fn name(&self) -> &str {
         match self {
-            Data::Struct(Struct {
-                name,
-                ..
-            }) => name.as_str(),
-            _ => unimplemented!()
+            Data::Struct(Struct { name, .. }) => name.as_str(),
+            _ => unimplemented!(),
         }
     }
 
     pub fn attributes(&self) -> &[Attribute] {
         match self {
-            Data::Struct(Struct {
-                attributes,
-                ..
-            }) => &attributes[..],
-            _ => unimplemented!()
+            Data::Struct(Struct { attributes, .. }) => &attributes[..],
+            _ => unimplemented!(),
         }
     }
 }
@@ -83,6 +78,7 @@ pub fn parse_data(input: TokenStream) -> Data {
         if let Some(TokenTree::Ident(ident)) = source.peek() {
             if format!("{}", ident) == "pub" {
                 source.next();
+                maybe_group(source);
                 return Some("pub".to_string());
             }
         }
@@ -137,7 +133,7 @@ pub fn parse_data(input: TokenStream) -> Data {
         // all attributes, even doc-comments, starts with "#"
         let maybe_attr_punct = maybe_punct(&mut source);
         if let Some("#") = maybe_attr_punct.as_deref() {
-            let mut attr_group = next_group(&mut source)
+            let mut attr_group = maybe_group(&mut source)
                 .expect("Expecting attribute body")
                 .stream()
                 .into_iter()
@@ -149,7 +145,7 @@ pub fn parse_data(input: TokenStream) -> Data {
                 return Some(None);
             }
 
-            let mut args_group = next_group(&mut attr_group)
+            let mut args_group = maybe_group(&mut attr_group)
                 .expect("Expecting attribute body")
                 .stream()
                 .into_iter()
@@ -190,14 +186,6 @@ pub fn parse_data(input: TokenStream) -> Data {
     fn next_ident(mut source: impl Iterator<Item = TokenTree>) -> Option<String> {
         if let TokenTree::Ident(ident) = source.next().unwrap() {
             Some(format!("{}", ident))
-        } else {
-            None
-        }
-    }
-
-    fn next_punct(mut source: impl Iterator<Item = TokenTree>) -> Option<String> {
-        if let TokenTree::Punct(punct) = source.next().unwrap() {
-            Some(format!("{}", punct))
         } else {
             None
         }
@@ -244,9 +232,13 @@ pub fn parse_data(input: TokenStream) -> Data {
         }
     }
 
-    fn next_group(mut source: impl Iterator<Item = TokenTree>) -> Option<Group> {
-        if let TokenTree::Group(ident) = source.next().unwrap() {
-            Some(ident)
+    fn maybe_group<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>) -> Option<Group> {
+        if let TokenTree::Group(_) = source.peek().unwrap() {
+            let group = match source.next().unwrap() {
+                TokenTree::Group(group) => group,
+                _ => unreachable!("just checked with peek()!"),
+            };
+            Some(group)
         } else {
             None
         }
@@ -285,7 +277,14 @@ pub fn parse_data(input: TokenStream) -> Data {
 
     let struct_name = next_ident(&mut source).expect("Unnamed structs are not supported");
 
-    let group = next_group(&mut source).expect("Struct body expected");
+    let group = maybe_group(&mut source).expect("Struct body expected");
+    let delimiter = group.delimiter();
+
+    let named = match delimiter {
+        Delimiter::Parenthesis => false,
+        Delimiter::Brace => true,
+        _ => panic!("Struct with unsupported delimiter"),
+    };
     let mut body = group.stream().into_iter().peekable();
 
     let mut fields = vec![];
@@ -298,12 +297,15 @@ pub fn parse_data(input: TokenStream) -> Data {
         let attributes = maybe_attributes_list(&mut body);
 
         let _visibility = maybe_visibility_modifier(&mut body);
-        let field_name = next_ident(&mut body).expect("Field name expected");
+        let field_name = if named {
+            let field_name = next_ident(&mut body).expect("Field name expected");
 
-        let punct = next_punct(&mut body).expect("Delimeter after field name expected");
-        assert_eq!(punct, ":");
+            let _ = maybe_exact_punct(&mut body, ":").expect("Delimeter after field name expected");
+            Some(field_name)
+        } else {
+            None
+        };
         let ty = next_type(&mut body).expect("Expected field type");
-
         let _punct = maybe_punct(&mut body);
 
         fields.push(Field {
@@ -314,6 +316,10 @@ pub fn parse_data(input: TokenStream) -> Data {
         });
     }
 
+    if named == false {
+        maybe_exact_punct(&mut source, ";").expect("Expected ; on the end of tuple struct");
+    }
+
     assert!(
         source.next().is_none(),
         "Unexpected data after end of the struct"
@@ -321,6 +327,7 @@ pub fn parse_data(input: TokenStream) -> Data {
 
     Data::Struct(Struct {
         name: struct_name,
+        named,
         fields,
         attributes,
     })

@@ -39,11 +39,15 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
                 body,
                 "let proxy: {} = Into::into(&self.{});",
                 proxy,
-                field.field_name
+                field.field_name.as_ref().unwrap()
             );
             l!(body, "proxy.ser_bin(s);");
         } else {
-            l!(body, "self.{}.ser_bin(s);", field.field_name);
+            l!(
+                body,
+                "self.{}.ser_bin(s);",
+                field.field_name.as_ref().unwrap()
+            );
         }
     }
     format!(
@@ -58,38 +62,44 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
     .unwrap()
 }
 
-// pub fn derive_ser_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
+pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-//     let mut fieldname = Vec::new();
-//     for (index, field) in fields.unnamed.iter().enumerate() {
-//         fieldname.push(LitInt::new(&format!("{}", index), field.span()));
-//     }
-//     quote! {
-//         impl #impl_generics SerBin for #ident #ty_generics #bounded_where_clause {
-//             fn ser_bin(&self, s: &mut Vec<u8>) {
-//                 #(
-//                     self.#fieldname.ser_bin(s);
-//                 ) *
-//             }
-//         }
-//     }
-// }
+    for (n, field) in struct_.fields.iter().enumerate() {
+        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+            l!(body, "let proxy: {} = Into::into(&self.{});", proxy, n);
+            l!(body, "proxy.ser_bin(s);");
+        } else {
+            l!(body, "self.{}.ser_bin(s);", n);
+        }
+    }
+    format!(
+        "impl SerBin for {} {{
+            fn ser_bin(&self, s: &mut Vec<u8>) {{
+                {}
+            }}
+        }}",
+        struct_.name, body
+    )
+    .parse()
+    .unwrap()
+}
 
 pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
 
     for field in &struct_.fields {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-            l!(body, "{}: {{", field.field_name);
+            l!(body, "{}: {{", field.field_name.as_ref().unwrap());
             l!(body, "let proxy: {} = DeBin::de_bin(o, d)?;", proxy);
             l!(body, "Into::into(&proxy)");
             l!(body, "},")
         } else {
-            l!(body, "{}: DeBin::de_bin(o, d)?,", field.field_name);
+            l!(
+                body,
+                "{}: DeBin::de_bin(o, d)?,",
+                field.field_name.as_ref().unwrap()
+            );
         }
     }
 
@@ -107,29 +117,33 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
     .unwrap()
 }
 
-// pub fn derive_de_bin_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-//     let mut fieldname = Vec::new();
-//     for (index, field) in fields.unnamed.iter().enumerate() {
-//         fieldname.push(LitInt::new(&format!("{}", index), field.span()));
-//     }
+    for (n, field) in struct_.fields.iter().enumerate() {
+        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+            l!(body, "{}: {{", n);
+            l!(body, "let proxy: {} = DeBin::de_bin(o, d)?;", proxy);
+            l!(body, "Into::into(&proxy)");
+            l!(body, "},")
+        } else {
+            l!(body, "{}: DeBin::de_bin(o, d)?,", n);
+        }
+    }
 
-//     quote! {
-//         impl #impl_generics DeBin for #ident #ty_generics #bounded_where_clause {
-//             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self,DeBinErr> {
-//                 std::result::Result::Ok(Self {
-//                     #(
-//                         #fieldname: DeBin::de_bin(o,d)?,
-//                     ) *
-//                 })
-//             }
-//         }
-//     }
-// }
+    format!(
+        "impl DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
+                std::result::Result::Ok(Self {{
+                    {}
+                }})
+            }}
+        }}",
+        struct_.name, body
+    )
+    .parse()
+    .unwrap()
+}
 
 // pub fn derive_ser_bin_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
