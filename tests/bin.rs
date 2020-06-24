@@ -38,16 +38,12 @@ fn field_proxy() {
 
     impl Into<NonSerializable> for &Serializable {
         fn into(self) -> NonSerializable {
-            NonSerializable {
-                foo: self.x
-            }
+            NonSerializable { foo: self.x }
         }
     }
     impl Into<Serializable> for &NonSerializable {
         fn into(self) -> Serializable {
-            Serializable {
-                x: self.foo
-            }
+            Serializable { x: self.foo }
         }
     }
 
@@ -71,7 +67,7 @@ fn field_proxy() {
 fn struct_proxy() {
     #[derive(PartialEq, Debug)]
     struct NonSerializable<T: PartialEq> {
-        s: T
+        s: T,
     }
 
     #[derive(DeBin, SerBin, PartialEq, Debug)]
@@ -83,15 +79,13 @@ fn struct_proxy() {
     #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub struct PortableVec2 {
         x: u64,
-        y: u64
+        y: u64,
     }
 
     impl Into<SimdVec2> for &PortableVec2 {
         fn into(self) -> SimdVec2 {
             SimdVec2 {
-                simd_data: NonSerializable {
-                    s: self.x + self.y
-                }
+                simd_data: NonSerializable { s: self.x + self.y },
             }
         }
     }
@@ -99,15 +93,13 @@ fn struct_proxy() {
         fn into(self) -> PortableVec2 {
             PortableVec2 {
                 x: self.simd_data.s / 2,
-                y: self.simd_data.s / 2 + self.simd_data.s % 2
+                y: self.simd_data.s / 2 + self.simd_data.s % 2,
             }
         }
     }
 
     let test = SimdVec2 {
-        simd_data: NonSerializable {
-            s: 23
-        }
+        simd_data: NonSerializable { s: 23 },
     };
 
     let bytes = SerBin::serialize_bin(&test);
@@ -123,7 +115,7 @@ fn tuple_struct() {
 
     #[derive(DeBin, SerBin, PartialEq)]
     pub struct Vec2(pub(crate) f32, pub(crate) f32);
-    
+
     let test = Test(0, 1, "asd".to_string(), 2.);
     let bytes = SerBin::serialize_bin(&test);
 

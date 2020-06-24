@@ -68,7 +68,7 @@ fn empty() {
 fn array() {
     #[derive(DeJson)]
     pub struct Foo {
-        x: i32
+        x: i32,
     }
 
     #[derive(DeJson)]
