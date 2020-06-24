@@ -18,3 +18,8 @@ pub fn attrs_proxy(attributes: &[crate::parse::Attribute]) -> Option<String> {
     })
 }
 
+pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> bool {
+    attributes
+        .iter()
+        .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "default")
+}

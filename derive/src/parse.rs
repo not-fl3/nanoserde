@@ -156,6 +156,11 @@ pub fn parse_data(input: TokenStream) -> Data {
             loop {
                 let attribute_name = next_ident(&mut args_group).expect("Expecting attribute name");
                 attr_tokens.push(attribute_name);
+
+                // single-word attribute, like #[nserde(whatever)]
+                if maybe_eof(&mut args_group).is_some() {
+                    break;
+                }
                 let _ = maybe_exact_punct(&mut args_group, "=")
                     .expect("Expecting = after attribute argument name");
                 let value = next_literal(&mut args_group).expect("Expecting argument value");

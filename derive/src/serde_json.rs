@@ -2,7 +2,7 @@ use crate::parse::Struct;
 
 use proc_macro::TokenStream;
 
-// use crate::shared::*;
+use crate::shared;
 // use proc_macro2::{TokenStream};
 // use syn::{
 //     parse_quote,
@@ -77,6 +77,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     let mut field_names = Vec::new();
     let mut unwraps = Vec::new();
 
+    let attr_default = shared::attrs_default(&struct_.attributes);
     for field in &struct_.fields {
         let fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", fieldname);
@@ -84,6 +85,11 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
         if field.ty.is_option {
             unwraps.push(format!(
                 "{{if let Some(t) = {} {{t}}else {{ None }} }}",
+                localvar
+            ));
+        } else if attr_default {
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}}else {{ Default::default() }} }}",
                 localvar
             ));
         } else {
@@ -114,15 +120,12 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
                 local_var
             );
         }
-        // TODO: maybe introduce "exhaustive" attribute? 
+        // TODO: maybe introduce "exhaustive" attribute?
         // l!(
         //     r,
         //     "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))"
         // );
-        l!(
-            r,
-            "_ => {s.next_colon(i)?; s.whole_field(i)?; }"
-        );
+        l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
         l!(r, "}");
     }
     l!(r, "s.eat_comma_curly(i) ?");
