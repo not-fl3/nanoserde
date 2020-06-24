@@ -114,9 +114,14 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
                 local_var
             );
         }
+        // TODO: maybe introduce "exhaustive" attribute? 
+        // l!(
+        //     r,
+        //     "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))"
+        // );
         l!(
             r,
-            "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))"
+            "_ => {s.next_colon(i)?; s.whole_field(i)?; }"
         );
         l!(r, "}");
     }

@@ -24,6 +24,62 @@ fn de() {
 }
 
 #[test]
+fn de_non_exhaustive() {
+    #[derive(DeJson)]
+    pub struct Test {
+        pub a: i32,
+        pub b: f32,
+        c: Option<String>,
+        d: Option<String>,
+    }
+
+    let json = r#"{
+        "some": {
+            "export": {
+                "target":"."
+            }
+        },
+        "a": 1,
+        "b": 2.0,
+        "b_": 5.,
+        "d": "hello",
+        "d__": "this string is going nowhere",
+        "e": 1.,
+        "extra_array": [1, 2, 3],
+        "extra_struct": {"a": 1., "b": [1, {"a": 1}]}
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 2.);
+    assert_eq!(test.d.unwrap(), "hello");
+    assert_eq!(test.c, None);
+}
+
+#[test]
+fn de_default() {
+    #[derive(DeJson)]
+    #[nserde(default)]
+    pub struct Test {
+        pub a: i32,
+        pub b: f32,
+        c: Option<String>,
+        d: Option<String>,
+    }
+
+    let json = r#"{
+        "a": 1,
+        "d": "hello",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 0.);
+    assert_eq!(test.d.unwrap(), "hello");
+    assert_eq!(test.c, None);
+}
+
+#[test]
 fn doctests() {
     /// This is test
     /// second doc comment

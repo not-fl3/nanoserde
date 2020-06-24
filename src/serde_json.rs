@@ -200,6 +200,41 @@ impl DeJsonState {
         }
     }
 
+    pub fn whole_field(&mut self, i: &mut Chars) -> Result<(), DeJsonErr> {
+        match self.tok {
+            DeJsonTok::F64 { .. }
+            | DeJsonTok::I64 { .. }
+            | DeJsonTok::Str
+            | DeJsonTok::U64 { .. }
+            | DeJsonTok::Bool { .. }
+            | DeJsonTok::Null => {
+                self.next_tok(i)?;
+                Ok(())
+            }
+            DeJsonTok::BlockOpen | DeJsonTok::CurlyOpen => {
+                let mut open_brackets = 0;
+
+                loop {
+                    if let DeJsonTok::BlockOpen | DeJsonTok::CurlyOpen = self.tok {
+                        open_brackets += 1;
+                    }
+
+                    if let DeJsonTok::BlockClose | DeJsonTok::CurlyClose = self.tok {
+                        open_brackets -= 1;
+                    }
+
+                    self.next_tok(i)?;
+
+                    if open_brackets == 0 {
+                        break;
+                    }
+                }
+                Ok(())
+            }
+            _ => unimplemented!("{:?}", self.tok),
+        }
+    }
+
     pub fn eat_comma_curly(&mut self, i: &mut Chars) -> Result<(), DeJsonErr> {
         match self.tok {
             DeJsonTok::Comma => {
