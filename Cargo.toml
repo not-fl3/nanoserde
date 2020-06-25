@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 description = "Fork of makepad-tinyserde without any external dependencies."
 edition = "2018"
 repository = "https://github.com/not-fl3/nanoserde"
+readme = "README.md"
 
 [dependencies]
 nanoserde-derive = { path = "derive", version = "=0.1.9" }
