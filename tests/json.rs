@@ -57,7 +57,7 @@ fn de_non_exhaustive() {
 }
 
 #[test]
-fn de_default() {
+fn de_container_default() {
     #[derive(DeJson)]
     #[nserde(default)]
     pub struct Test {
@@ -77,6 +77,43 @@ fn de_default() {
     assert_eq!(test.b, 0.);
     assert_eq!(test.d.unwrap(), "hello");
     assert_eq!(test.c, None);
+}
+
+#[test]
+fn de_field_default() {
+    #[derive(DeJson)]
+    struct Foo {
+        x: i32
+    }
+    impl Default for Foo {
+        fn default() -> Foo {
+            Foo {
+                x: 23
+            }
+        }
+    }
+
+    #[derive(DeJson)]
+    pub struct Test {
+        a: i32,
+        #[nserde(default)]
+        foo: Foo,
+        foo2: Foo,
+        b: f32,
+
+    }
+
+    let json = r#"{
+        "a": 1,
+        "b": 2.,
+        "foo2": { "x": 3 }
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 2.);
+    assert_eq!(test.foo.x, 23);
+    assert_eq!(test.foo2.x, 3);
 }
 
 #[test]

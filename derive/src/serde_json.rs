@@ -77,17 +77,19 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     let mut field_names = Vec::new();
     let mut unwraps = Vec::new();
 
-    let attr_default = shared::attrs_default(&struct_.attributes);
+    let container_attr_default = shared::attrs_default(&struct_.attributes);
+
     for field in &struct_.fields {
         let fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", fieldname);
+        let field_attr_default = shared::attrs_default(&field.attributes);
 
         if field.ty.is_option {
             unwraps.push(format!(
                 "{{if let Some(t) = {} {{t}}else {{ None }} }}",
                 localvar
             ));
-        } else if attr_default {
+        } else if container_attr_default || field_attr_default {
             unwraps.push(format!(
                 "{{if let Some(t) = {} {{t}}else {{ Default::default() }} }}",
                 localvar
