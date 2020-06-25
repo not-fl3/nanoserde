@@ -10,8 +10,17 @@ nanoserde v0.1.0 (/../nanoserde)
 ```
 
 Work in progress, features that works:
-- json deserialization 
-- binary serialization/deserialization
+- json: serialization/deserialization 
+- json: containers supported: Struct, Tuple Struct
+- json: field types supported: HashMap, Vec, Option, String, i\*, f\*
+- json: field attributes: `#[nserde(default)]`, `#[nserde(rename = "")]`, `#[nserde(proxy = "")]`
+- json: container attributes: `#[nserde(default)]`, `#[nserde(proxy = "")]` 
+
+- binary: serialization/deserialization 
+- binary: containers supported: Struct
+- binary: field types supported: HashMap, Vec, Option, String, i\*, f\*
+- binary: field attributes `#[nserde(proxy = "")]`
+- binary: container attributes `#[nserde(proxy = "")]`
 
 And this is going to be even more restricted and limited serialization/deserialization library than makepad-tinyserde. 
 Generic bounds, lifetime bounds, where clauses and probably a lot more is not supported and probably will never be supported.
