@@ -80,13 +80,13 @@ fn de_container_default() {
 }
 
 #[test]
-fn replace() {
+fn rename() {
     #[derive(DeJson, SerJson, PartialEq)]
     #[nserde(default)]
     pub struct Test {
-        #[nserde(replace = "fooField")]
+        #[nserde(rename = "fooField")]
         pub a: i32,
-        #[nserde(replace = "barField")]
+        #[nserde(rename = "barField")]
         pub b: i32,
     }
 

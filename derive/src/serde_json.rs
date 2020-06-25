@@ -46,7 +46,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     for (index, field) in struct_.fields.iter().enumerate() {
         let struct_fieldname = field.field_name.clone().unwrap();
         let json_fieldname =
-            shared::attrs_replace(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+            shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
 
         if index == last {
             if field.ty.is_option {
@@ -106,7 +106,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
         let localvar = format!("_{}", struct_fieldname);
         let field_attr_default = shared::attrs_default(&field.attributes);
         let json_fieldname =
-            shared::attrs_replace(&field.attributes).unwrap_or(struct_fieldname.clone());
+            shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
 
         if field.ty.is_option {
             unwraps.push(format!(
