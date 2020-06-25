@@ -1,4 +1,4 @@
-use nanoserde::DeJson;
+use nanoserde::{DeJson, SerJson};
 
 #[test]
 fn de() {
@@ -80,16 +80,39 @@ fn de_container_default() {
 }
 
 #[test]
+fn replace() {
+    #[derive(DeJson, SerJson, PartialEq)]
+    #[nserde(default)]
+    pub struct Test {
+        #[nserde(replace = "fooField")]
+        pub a: i32,
+        #[nserde(replace = "barField")]
+        pub b: i32,
+    }
+
+    let json = r#"{
+        "fooField": 1,
+        "barField": 2,
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 2);
+
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    assert!(test == test_deserialized);
+}
+
+#[test]
 fn de_field_default() {
     #[derive(DeJson)]
     struct Foo {
-        x: i32
+        x: i32,
     }
     impl Default for Foo {
         fn default() -> Foo {
-            Foo {
-                x: 23
-            }
+            Foo { x: 23 }
         }
     }
 
@@ -100,7 +123,6 @@ fn de_field_default() {
         foo: Foo,
         foo2: Foo,
         b: f32,
-
     }
 
     let json = r#"{

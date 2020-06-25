@@ -96,24 +96,21 @@ pub fn derive_de_ron(_input: proc_macro::TokenStream) -> proc_macro::TokenStream
 }
 
 #[proc_macro_derive(SerJson, attributes(nserde))]
-pub fn derive_ser_json(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // let input = parse_macro_input!(input as DeriveInput);
-    // // ok we have an ident, its either a struct or a enum
-    // let ts = match &input.data {
-    //     Data::Struct(DataStruct {fields: Fields::Named(fields), ..}) => {
-    //         derive_ser_json_struct(&input, fields)
-    //     },
-    //     Data::Struct(DataStruct {fields: Fields::Unnamed(fields), ..}) => {
-    //         derive_ser_json_struct_unnamed(&input, fields)
-    //     },
-    //     Data::Enum(enumeration) => {
-    //         derive_ser_json_enum(&input, enumeration)
-    //     },
-    //     _ => error(Span::call_site(), "only structs or enums supported")
-    // };
-    // proc_macro::TokenStream::from(ts)
+pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let input = parse::parse_data(input);
 
-    unimplemented!()
+    if let Some(proxy) = shared::attrs_proxy(&input.attributes()) {
+        return derive_ser_json_proxy(&proxy, &input.name());
+    }
+
+    // ok we have an ident, its either a struct or a enum
+    let ts = match &input {
+        parse::Data::Struct(struct_) if struct_.named => derive_ser_json_struct(struct_),
+        //parse::Data::Struct(struct_) => derive_ser_json_struct_unnamed(struct_),
+        _ => unimplemented!("Only named structs are supported"),
+    };
+
+    ts
 }
 
 #[proc_macro_derive(DeJson, attributes(nserde))]

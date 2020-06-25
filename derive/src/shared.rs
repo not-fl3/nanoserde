@@ -18,6 +18,16 @@ pub fn attrs_proxy(attributes: &[crate::parse::Attribute]) -> Option<String> {
     })
 }
 
+pub fn attrs_replace(attributes: &[crate::parse::Attribute]) -> Option<String> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "replace" {
+            Some(attr.tokens[1].clone())
+        } else {
+            None
+        }
+    })
+}
+
 pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> bool {
     attributes
         .iter()
