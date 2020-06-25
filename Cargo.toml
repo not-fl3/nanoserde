@@ -1,10 +1,10 @@
 [package]
 name = "nanoserde"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = "Fork of makepad-tinyserde without any external dependencies."
 edition = "2018"
 
 [dependencies]
-nanoserde-derive = { path = "derive", version = "=0.1.8" }
+nanoserde-derive = { path = "derive", version = "=0.1.9" }

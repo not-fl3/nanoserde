@@ -42,38 +42,40 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     let mut s = String::new();
 
-    let last = struct_.fields.len() - 1;
-    for (index, field) in struct_.fields.iter().enumerate() {
-        let struct_fieldname = field.field_name.clone().unwrap();
-        let json_fieldname =
-            shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+    if struct_.fields.len() > 1 {
+        let last = struct_.fields.len() - 1;
+        for (index, field) in struct_.fields.iter().enumerate() {
+            let struct_fieldname = field.field_name.clone().unwrap();
+            let json_fieldname =
+                shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
 
-        if index == last {
-            if field.ty.is_option {
-                l!(
-                    s,
-                    "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
-                    struct_fieldname,
-                    json_fieldname
-                );
+            if index == last {
+                if field.ty.is_option {
+                    l!(
+                        s,
+                        "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
+                        struct_fieldname,
+                        json_fieldname
+                    );
+                } else {
+                    l!(
+                        s,
+                        "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);",
+                        json_fieldname,
+                        struct_fieldname
+                    );
+                }
             } else {
-                l!(
-                    s,
-                    "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);",
-                    json_fieldname,
-                    struct_fieldname
-                );
-            }
-        } else {
-            if field.ty.is_option {
-                l!(s, "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);s.conl();}};", struct_fieldname, json_fieldname);
-            } else {
-                l!(
-                    s,
-                    "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);s.conl();",
-                    json_fieldname,
-                    struct_fieldname
-                );
+                if field.ty.is_option {
+                    l!(s, "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);s.conl();}};", struct_fieldname, json_fieldname);
+                } else {
+                    l!(
+                        s,
+                        "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);s.conl();",
+                        json_fieldname,
+                        struct_fieldname
+                    );
+                }
             }
         }
     }
