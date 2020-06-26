@@ -9,27 +9,24 @@ nanoserde v0.1.0 (/../nanoserde)
 └── nanoserde-derive v0.1.0 (/../nanoserde/derive)
 ```
 
-Work in progress, features that works:
-- json: serialization/deserialization 
-- json: containers supported: Struct, Tuple Struct
-- json: field types supported: HashMap, Vec, Option, String, i\*, f\*
-- json: field attributes: `#[nserde(default)]`, `#[nserde(rename = "")]`
-- json: container attributes: `#[nserde(default)]`, `#[nserde(proxy = "")]`   
-
-
-- binary: serialization/deserialization 
-- binary: containers supported: Struct
-- binary: field types supported: HashMap, Vec, Option, String, i\*, f\*
-- binary: field attributes `#[nserde(proxy = "")]`
-- binary: container attributes `#[nserde(proxy = "")]`   
-
-
-- ron: deserialization
-- ron: container supported: Struct
-- ron: field types supported: HashMap, Vec, Option, String, i\*, f\*
-- ron: field attributes: `#[nserde(default)]`, `#[nserde(rename = "")]`
-- ron: container attributes: `#[nserde(default)]`, `#[nserde(proxy = "")]`
-
+Features support matrix:
+| Feature                                        | json   | bin   | ron    | toml  |
+| ---------------------------------------------- | ------ | ----- | ------ | ----- |
+| serialization                                  | yes    | yes   | no     | no    |
+| deserialization                                | yes    | yes   | yes    | no    |
+| container: Struct                              | yes    | yes   | yes    | no    |
+| container: Tuple Struct                        | no     | yes   | no     | no    |
+| container: Enum                                | no     | no    | no     | no    |
+| field: `std::collections::HashMap`             | yes    | yes   | yes    | no    |
+| field: `std::vec::Vec`                         | yes    | yes   | yes    | no    |
+| field: `Option`                                | yes    | yes   | yes    | no    |
+| field: `i*`/`f*`/`String`/`T: De*/Ser*`        | yes    | yes   | yes    | no    |
+| field attribute: `#[nserde(default)]`          | yes    | no    | yes    | no    |
+| field attribute: `#[nserde(rename = "")]`      | yes    | yes   | yes    | no    |
+| field attribute: `#[nserde(proxy = "")]`       | no     | yes   | no     | no    |
+| container attribute: `#[nserde(default)]`      | yes    | no    | yes    | no    |
+| container attribute: `#[nserde(rename = "")]`  | yes    | yes   | yes    | no    |
+| container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | no     | no    |
 
 And this is going to be even more restricted and limited serialization/deserialization library than makepad-tinyserde. 
 Generic bounds, lifetime bounds, where clauses and probably a lot more is not supported and probably will never be supported.
