@@ -1,20 +1,22 @@
-// use crate::shared::*;
-// use proc_macro2::{TokenStream};
-// use syn::{
-//     parse_quote,
-//     Ident,
-//     DeriveInput,
-//     Fields,
-//     FieldsNamed,
-//     FieldsUnnamed,
-//     DataEnum,
-//     LitInt,
-//     LitStr,
-//     Type,
-// };
-// use quote::quote;
-// use quote::format_ident;
-// use syn::spanned::Spanned;
+use crate::parse::Struct;
+
+use proc_macro::TokenStream;
+
+use crate::shared;
+
+pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+    format!(
+        "impl DeRon for {} {{
+            fn de_ron(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{ {{
+                let proxy: {} = DeRon::deserialize_ron(i)?;
+                std::result::Result::Ok(Into::into(&proxy))
+            }}
+        }}",
+        type_, proxy_type
+    )
+    .parse()
+    .unwrap()
+}
 
 // pub fn derive_ser_ron_struct(input: &DeriveInput, fields: &FieldsNamed) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
@@ -56,77 +58,101 @@
 //     return false
 // }
 
+pub fn derive_de_ron_named(struct_: &Struct) -> TokenStream {
+    let mut local_vars = Vec::new();
+    let mut struct_field_names = Vec::new();
+    let mut ron_field_names = Vec::new();
 
-// pub fn derive_de_ron_named(ident:TokenStream, fields: &FieldsNamed) -> TokenStream {
-//     let mut local_vars = Vec::new();
-//     let mut field_names = Vec::new();
-//     let mut field_strings = Vec::new();
-//     let mut unwraps = Vec::new();
-//     for field in &fields.named {
-         
-//         let fieldname = field.ident.clone().unwrap();
-//         let localvar = format_ident!("_{}", fieldname);
-//         let fieldstring = LitStr::new(&fieldname.to_string(), ident.span());
-        
-//         if type_is_option(&field.ty) {
-//             unwraps.push(quote! {if let Some(t) = #localvar {t}else {None}})
-//         }
-//         else {
-//             unwraps.push(quote! {if let Some(t) = #localvar {t}else {return Err(s.err_nf(#fieldstring))}})
-//         }
-        
-//         field_names.push(fieldname);
-//         local_vars.push(localvar);
-//         field_strings.push(fieldstring);
-//     }
-    
-//     quote!{
-//         #(
-//             let mut #local_vars = None;
-//         ) *
-//         s.paren_open(i) ?;
-//         while let Some(_) = s.next_ident() {
-//             match s.identbuf.as_ref() {
-//                 #(
-//                     #field_strings => {s.next_colon(i) ?;#local_vars = Some(DeRon::de_ron(s, i) ?)},
-//                 ) *
-//                 _ => return std::result::Result::Err(s.err_exp(&s.identbuf))
-//             }
-//             s.eat_comma_paren(i) ?
-//         }
-//         s.paren_close(i) ?;
-//         #ident {#(
-//             #field_names: #unwraps,
-//         ) *}
-//     }
-// }
+    let container_attr_default = shared::attrs_default(&struct_.attributes);
 
-// pub fn derive_de_ron_struct(input: &DeriveInput, fields: &FieldsNamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(DeRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
-//     let body = derive_de_ron_named(quote!{#ident}, fields);
-    
-//     quote!{
-//         impl #impl_generics DeRon for #ident #ty_generics #bounded_where_clause {
-//             fn de_ron(s: &mut makepad_tinyserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,
-//             DeRonErr> {
-//                 std::result::Result::Ok({#body})
-//             }
-//         }
-//     }
-// } 
+    let mut unwraps = Vec::new();
+    for field in &struct_.fields {
+        let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
+        let localvar = format!("_{}", struct_fieldname);
+        let field_attr_default = shared::attrs_default(&field.attributes);
+        let ron_fieldname =
+            shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
+
+        if field.ty.is_option {
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}}else {{ None }} }}",
+                localvar
+            ));
+        } else if container_attr_default || field_attr_default {
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}}else {{ Default::default() }} }}",
+                localvar
+            ));
+        } else {
+            unwraps.push(format!(
+                "{{if let Some(t) = {} {{t}} else {{return Err(s.err_nf(\"{}\"))}} }}",
+                localvar, struct_fieldname
+            ));
+        }
+
+        struct_field_names.push(struct_fieldname);
+        ron_field_names.push(ron_fieldname);
+        local_vars.push(localvar);
+    }
+
+    let mut r = String::new();
+    for local_var in &local_vars {
+        l!(r, "let mut {} = None;", local_var);
+    }
+
+    l!(r, "s.paren_open(i) ?;");
+    l!(r, "while let Some(_) = s.next_ident() {");
+    if ron_field_names.len() != 0 {
+        l!(r, "match s.identbuf.as_ref() {");
+        for (ron_field_name, local_var) in ron_field_names.iter().zip(local_vars.iter()) {
+            l!(
+                r,
+                "\"{}\" => {{ s.next_colon(i) ?;{} = Some(DeRon::de_ron(s, i) ?) }},",
+                ron_field_name,
+                local_var
+            );
+        }
+        l!(
+            r,
+            "_ => return std::result::Result::Err(s.err_exp(&s.identbuf))"
+        );
+        l!(r, "}");
+    }
+    l!(r, "s.eat_comma_paren(i) ?;");
+    l!(r, "}");
+    l!(r, "s.paren_close(i) ?;");
+    l!(r, "{} {{", struct_.name);
+    for (field_name, unwrap) in struct_field_names.iter().zip(unwraps.iter()) {
+        l!(r, "{}: {},", field_name, unwrap);
+    }
+    l!(r, "}");
+
+    r.parse().unwrap()
+}
+
+pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
+    let body = derive_de_ron_named(struct_);
+
+    format!(
+        "impl DeRon for {} {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,
+            nanoserde::DeRonErr> {{
+                std::result::Result::Ok({{ {} }})
+            }}
+        }}", struct_.name, body)
+    .parse()
+    .unwrap()
+}
 
 // pub fn derive_ser_ron_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
 //     let bound = parse_quote!(SerRon);
 //     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-    
+
 //     let ident = &input.ident;
-    
+
 //     let mut match_item = Vec::new();
-    
+
 //     for variant in &enumeration.variants {
 //         let ident = &variant.ident;
 //         let lit = LitStr::new(&ident.to_string(), ident.span());
@@ -201,7 +227,7 @@
 //             },
 //         }
 //     }
-    
+
 //     quote! {
 //         impl #impl_generics SerRon for #ident #ty_generics #bounded_where_clause {
 //             fn ser_ron(&self, d: usize, s: &mut makepad_tinyserde::SerRonState) {
@@ -215,16 +241,15 @@
 //     }
 // }
 
-
 // pub fn derive_de_ron_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
-    
+
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
 //     let ident = &input.ident;
 //     let bound = parse_quote!(DeRon);
 //     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-    
+
 //     let mut match_item = Vec::new();
-    
+
 //     for variant in &enumeration.variants {
 //         let ident = &variant.ident;
 //         let lit = LitStr::new(&ident.to_string(), ident.span());
@@ -251,7 +276,7 @@
 //             },
 //         }
 //     }
-    
+
 //     quote! {
 //         impl #impl_generics DeRon for #ident #ty_generics #bounded_where_clause {
 //             fn de_ron(s: &mut DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,DeRonErr> {
@@ -302,7 +327,6 @@
 //         }
 //     }
 // }
-
 
 // pub fn derive_de_ron_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
