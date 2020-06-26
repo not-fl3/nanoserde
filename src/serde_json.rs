@@ -118,6 +118,14 @@ impl std::fmt::Debug for DeJsonErr {
     }
 }
 
+impl std::fmt::Display for DeJsonErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl std::error::Error for DeJsonErr { }
+
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {
         if let Some(c) = i.next() {

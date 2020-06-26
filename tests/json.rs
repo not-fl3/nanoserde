@@ -254,3 +254,24 @@ fn hashmaps() {
     assert_eq!(foo.map["asd"], 1);
     assert_eq!(foo.map["qwe"], 2);
 }
+
+#[test]
+fn jsonerror() {
+    #[derive(DeJson)]
+    #[allow(dead_code)]
+    struct Foo {
+        i: i32,
+    }
+
+    let json = r#"{
+       "i": "string"
+    }"#;
+
+    let res : Result<Foo, _> = DeJson::deserialize_json(json);
+    match res {
+        Ok(_) => assert!(false),
+        Err(e) => {
+            let _dyn_e : Box<dyn std::error::Error> = std::convert::From::from(e);
+        }
+    }
+}
