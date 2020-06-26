@@ -254,3 +254,40 @@ fn hashmaps() {
     assert_eq!(foo.map["asd"], 1);
     assert_eq!(foo.map["qwe"], 2);
 }
+
+#[test]
+fn exponents(){
+    #[derive(DeJson)]
+    struct Foo {
+        a: f64,
+        b: f64,
+        c: f64,
+        d: f64,
+        e: f64,
+        f: f64,
+        g: f64,
+        h: f64,
+    };
+
+    let json = r#"{
+        "a": 1e2,
+        "b": 1e-2,
+        "c": 1E2,
+        "d": 1E-2,
+        "e": 1.0e2,
+        "f": 1.0e-2,
+        "g": 1.0E2,
+        "h": 1.0E-2
+    }"#;
+
+    let foo: Foo = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(foo.a, 100.);
+    assert_eq!(foo.b, 0.01);
+    assert_eq!(foo.c, 100.);
+    assert_eq!(foo.d, 0.01);
+    assert_eq!(foo.e, 100.);
+    assert_eq!(foo.f, 0.01);
+    assert_eq!(foo.g, 100.);
+    assert_eq!(foo.h, 0.01);
+}

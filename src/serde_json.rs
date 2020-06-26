@@ -421,13 +421,30 @@ impl DeJsonState {
                     self.numbuf.push(self.cur);
                     self.next(i);
                 }
+                let mut is_float = false;
                 if self.cur == '.' {
+                    is_float = true;
                     self.numbuf.push(self.cur);
                     self.next(i);
                     while self.cur >= '0' && self.cur <= '9' {
                         self.numbuf.push(self.cur);
                         self.next(i);
                     }
+                }
+                if self.cur == 'e' || self.cur == 'E' {
+                    is_float = true;
+                    self.numbuf.push(self.cur);
+                    self.next(i);
+                    if self.cur == '-' {
+                        self.numbuf.push(self.cur);
+                        self.next(i);
+                    }
+                    while self.cur >= '0' && self.cur <= '9' {
+                        self.numbuf.push(self.cur);
+                        self.next(i);
+                    }
+                }
+                if is_float {
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::F64(num);
                         return Ok(());
