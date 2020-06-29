@@ -1,5 +1,5 @@
 # nanoserde
-
+![Documentation](https://docs.rs/nanoserde/badge.svg)
 Fork of https://crates.io/crates/makepad-tinyserde with all the dependencies removed.
 No more syn, proc_macro2 or quote in the build tree!
 
