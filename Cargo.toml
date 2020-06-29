@@ -1,12 +1,25 @@
 [package]
 name = "nanoserde"
-version = "0.1.14"
+version = "0.1.16"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = "Fork of makepad-tinyserde without any external dependencies."
+description = """
+Fork of makepad-tinyserde without any external dependencies.
+Supports json, binary and ron.
+
+```rust
+#[derive(Clone, Debug, Default, DeJson, SerJson)]
+pub struct Property {
+    pub name: String,
+    #[nserde(default)]
+    pub value: String,
+    #[nserde(rename = "type")]
+    pub ty: String,
+}
+```
+"""
 edition = "2018"
 repository = "https://github.com/not-fl3/nanoserde"
-readme = "README.md"
 
 [dependencies]
 nanoserde-derive = { path = "derive", version = "=0.1.10" }

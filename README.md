@@ -1,4 +1,5 @@
 # nanoserde
+
 [![Github Actions](https://github.com/not-fl3/nanoserde/workflows/Cross-compile/badge.svg)](https://github.com/not-fl3/nanoserde/actions?query=workflow%3A)
 [![Crates.io version](https://img.shields.io/crates/v/nanoserde.svg)](https://crates.io/crates/nanoserde)
 [![Documentation](https://docs.rs/nanoserde/badge.svg)](https://docs.rs/nanoserde)
@@ -13,7 +14,25 @@ nanoserde v0.1.0 (/../nanoserde)
 └── nanoserde-derive v0.1.0 (/../nanoserde/derive)
 ```
 
-Features support matrix:
+## Example:
+
+```rust
+use nanoserde::{DeJson, SerJson};
+
+#[derive(Clone, Debug, Default, DeJson, SerJson)]
+pub struct Property {
+    pub name: String,
+    #[nserde(default)]
+    pub value: String,
+    #[nserde(rename = "type")]
+    pub ty: String,
+}
+```
+
+For more examples take a look on [tests](/tests)
+
+## Features support matrix:
+
 | Feature                                        | json   | bin   | ron    | toml  |
 | ---------------------------------------------- | ------ | ----- | ------ | ----- |
 | serialization                                  | yes    | yes   | no     | no    |
@@ -31,9 +50,4 @@ Features support matrix:
 | container attribute: `#[nserde(default)]`      | yes    | no    | yes    | no    |
 | container attribute: `#[nserde(rename = "")]`  | yes    | yes   | yes    | no    |
 | container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | no     | no    |
-
-And this is going to be even more restricted and limited serialization/deserialization library than makepad-tinyserde. 
-Generic bounds, lifetime bounds, where clauses and probably a lot more is not supported and probably will never be supported.
-
-This is used in [macroquad](https://github.com/not-fl3/macroquad/) game engine and only features needed for macroquad's internal serialization needs are going to be well supported. 
 
