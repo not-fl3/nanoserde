@@ -1,5 +1,8 @@
 # nanoserde
-![Documentation](https://docs.rs/nanoserde/badge.svg)
+[![Github Actions](https://github.com/not-fl3/nanoserde/workflows/Cross-compile/badge.svg)](https://github.com/not-fl3/nanoserde/actions?query=workflow%3A)
+[![Crates.io version](https://img.shields.io/crates/v/nanoserde.svg)](https://crates.io/crates/nanoserde)
+[![Documentation](https://docs.rs/nanoserde/badge.svg)](https://docs.rs/nanoserde)
+[![Discord chat](https://img.shields.io/discord/710177966440579103.svg?label=discord%20chat)](https://discord.gg/WfEp6ut)
 
 Fork of https://crates.io/crates/makepad-tinyserde with all the dependencies removed.
 No more syn, proc_macro2 or quote in the build tree!
