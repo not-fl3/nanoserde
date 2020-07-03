@@ -256,7 +256,7 @@ fn hashmaps() {
 }
 
 #[test]
-fn exponents(){
+fn exponents() {
     #[derive(DeJson)]
     struct Foo {
         a: f64,
@@ -304,11 +304,48 @@ fn jsonerror() {
        "i": "string"
     }"#;
 
-    let res : Result<Foo, _> = DeJson::deserialize_json(json);
+    let res: Result<Foo, _> = DeJson::deserialize_json(json);
     match res {
         Ok(_) => assert!(false),
         Err(e) => {
-            let _dyn_e : Box<dyn std::error::Error> = std::convert::From::from(e);
+            let _dyn_e: Box<dyn std::error::Error> = std::convert::From::from(e);
         }
     }
+}
+
+#[test]
+fn de_enum() {
+    #[derive(DeJson, PartialEq, Debug)]
+    pub enum Foo {
+        A,
+        B(i32, String),
+        C { a: i32, b: String },
+    }
+
+    #[derive(DeJson, PartialEq, Debug)]
+    pub struct Bar {
+        foo1: Foo,
+        foo2: Foo,
+        foo3: Foo,
+    }
+
+    let json = r#"
+       {
+          "foo1": { "A": [] },
+          "foo2": { "B": [ 1, "asd" ] },
+          "foo3": { "C": { "a": 2, "b": "qwe" } }
+       }
+    "#;
+
+    let test: Bar = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(test.foo1, Foo::A);
+    assert_eq!(test.foo2, Foo::B(1, "asd".to_string()));
+    assert_eq!(
+        test.foo3,
+        Foo::C {
+            a: 2,
+            b: "qwe".to_string()
+        }
+    );
 }

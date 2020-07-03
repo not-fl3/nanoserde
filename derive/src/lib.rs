@@ -119,7 +119,8 @@ pub fn derive_de_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     // ok we have an ident, its either a struct or a enum
     let ts = match &input {
         parse::Data::Struct(struct_) => derive_de_json_struct(struct_),
-        _ => unimplemented!("Only structs are supported"),
+        parse::Data::Enum(enum_) => derive_de_json_enum(enum_),
+        parse::Data::Union(_) => unimplemented!("Unions are not supported"),
     };
 
     ts

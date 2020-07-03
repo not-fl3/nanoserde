@@ -124,7 +124,7 @@ impl std::fmt::Display for DeJsonErr {
     }
 }
 
-impl std::error::Error for DeJsonErr { }
+impl std::error::Error for DeJsonErr {}
 
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {

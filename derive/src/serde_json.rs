@@ -1,4 +1,4 @@
-use crate::parse::Struct;
+use crate::parse::{Enum, Field, Struct};
 
 use proc_macro::TokenStream;
 
@@ -7,7 +7,7 @@ use crate::shared;
 pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl SerJson for {} {{
-            fn ser_json(&self, d: usize, s: &mut makepad_tinyserde::SerJsonState) {{
+            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_json(d, s);
             }}
@@ -74,15 +74,15 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     .unwrap()
 }
 
-pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
+pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> TokenStream {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut json_field_names = Vec::new();
     let mut unwraps = Vec::new();
 
-    let container_attr_default = shared::attrs_default(&struct_.attributes);
+    let container_attr_default = defaults;
 
-    for field in &struct_.fields {
+    for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
         let field_attr_default = shared::attrs_default(&field.attributes);
@@ -139,7 +139,7 @@ pub fn derive_de_json_named(struct_: &Struct) -> TokenStream {
     l!(r, "s.eat_comma_curly(i) ?");
     l!(r, "}");
     l!(r, "s.curly_close(i) ?;");
-    l!(r, "{} {{", struct_.name);
+    l!(r, "{} {{", name);
     for (field_name, unwrap) in struct_field_names.iter().zip(unwraps.iter()) {
         l!(r, "{}: {},", field_name, unwrap);
     }
@@ -163,7 +163,11 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 }
 
 pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
-    let body = derive_de_json_named(struct_);
+    let body = derive_de_json_named(
+        &struct_.name,
+        shared::attrs_default(&struct_.attributes),
+        &struct_.fields[..],
+    );
 
     format!(
         "impl DeJson for {} {{
@@ -278,61 +282,61 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
 //     }
 // }
 
-// pub fn derive_de_json_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
+pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
+    let mut r = String::new();
 
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeJson);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+    for variant in &enum_.variants {
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(
+                r,
+                "\"{}\" => {{s.block_open(i)?;s.block_close(i)?;Self::{} }},",
+                variant.name,
+                variant.name
+            );
+        }
+        // Named
+        else if variant.named {
+            let body =
+                derive_de_json_named(&format!("Self::{}", variant.name), false, &variant.fields);
+            l!(r, "\"{}\" => {{ {} }}, ", variant.name, body);
+        }
+        // Unnamed
+        else if variant.named == false {
+            let mut field_names = String::new();
 
-//     let mut match_item = Vec::new();
+            for _ in &variant.fields {
+                l!(
+                    field_names,
+                    "{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
+                );
+            }
+            l!(
+                r,
+                "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
+                variant.name,
+                variant.name,
+                field_names
+            );
+        }
+    }
 
-//     for variant in &enumeration.variants {
-//         let ident = &variant.ident;
-//         let lit = LitStr::new(&ident.to_string(), ident.span());
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     #lit => {s.block_open(i)?;s.block_close(i)?;Self::#ident},
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let body = derive_de_json_named(quote!{Self::#ident}, fields_named);
-//                 match_item.push(quote!{
-//                     #lit => {#body},
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 for _ in &fields_unnamed.unnamed {
-//                     field_names.push(quote! {{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r}});
-//                 }
-//                 match_item.push(quote!{
-//                     #lit => {s.block_open(i)?;let r = Self::#ident(#(#field_names,) *); s.block_close(i)?;r},
-//                 });
-//             },
-//         }
-//     }
-
-//     quote! {
-//         impl #impl_generics DeJson for #ident #ty_generics #bounded_where_clause {
-//             fn de_json(s: &mut DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,DeJsonErr> {
-//                 // we are expecting an identifier
-//                 s.curly_open(i)?;
-//                 let _ = s.string(i)?;
-//                 s.colon(i)?;
-//                 let r = std::result::Result::Ok(match s.strbuf.as_ref() {
-//                     #(
-//                         #match_item
-//                     ) *
-//                     _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
-//                 });
-//                 s.curly_close(i)?;
-//                 r
-//             }
-//         }
-//     }
-// }
+    format!(
+        "impl DeJson for {} {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
+                // we are expecting an identifier
+                s.curly_open(i)?;
+                let _ = s.string(i)?;
+                s.colon(i)?;
+                let r = std::result::Result::Ok(match s.strbuf.as_ref() {{
+            {}
+                    _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
+                }});
+                s.curly_close(i)?;
+                r
+            }}
+        }}", enum_.name, r).parse().unwrap()
+}
 
 // pub fn derive_ser_json_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
 //     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
