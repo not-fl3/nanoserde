@@ -3,22 +3,6 @@ use crate::parse::Struct;
 use proc_macro::TokenStream;
 
 use crate::shared;
-// use proc_macro2::{TokenStream};
-// use syn::{
-//     parse_quote,
-//     Ident,
-//     DeriveInput,
-//     Fields,
-//     FieldsNamed,
-//     FieldsUnnamed,
-//     DataEnum,
-//     LitInt,
-//     LitStr,
-//     Type,
-// };
-// use quote::quote;
-// use quote::format_ident;
-// use syn::spanned::Spanned;
 
 pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
@@ -35,11 +19,6 @@ pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 }
 
 pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
-    // let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-    // let bound = parse_quote!(SerJson);
-    // let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-    // let ident = &input.ident;
-
     let mut s = String::new();
 
     if struct_.fields.len() > 1 {
