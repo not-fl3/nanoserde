@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::Chars;
+use std::sync::Arc;
 
 pub struct SerRonState {
     pub out: String,
@@ -963,5 +964,23 @@ where
 {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Box<T>, DeRonErr> {
         Ok(Box::new(DeRon::de_ron(s, i)?))
+    }
+}
+
+impl<T> SerRon for Arc<T>
+where
+    T: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        (**self).ser_ron(d, s)
+    }
+}
+
+impl<T> DeRon for Arc<T>
+where
+    T: DeRon,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Arc<T>, DeRonErr> {
+        Ok(Arc::new(DeRon::de_ron(s, i)?))
     }
 }

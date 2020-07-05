@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::Chars;
+use std::sync::Arc;
 
 pub struct SerJsonState {
     pub out: String,
@@ -124,7 +125,7 @@ impl std::fmt::Display for DeJsonErr {
     }
 }
 
-impl std::error::Error for DeJsonErr { }
+impl std::error::Error for DeJsonErr {}
 
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {
@@ -960,5 +961,23 @@ where
 {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Box<T>, DeJsonErr> {
         Ok(Box::new(DeJson::de_json(s, i)?))
+    }
+}
+
+impl<T> SerJson for Arc<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        (**self).ser_json(d, s)
+    }
+}
+
+impl<T> DeJson for Arc<T>
+where
+    T: DeJson,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Arc<T>, DeJsonErr> {
+        Ok(Arc::new(DeJson::de_json(s, i)?))
     }
 }

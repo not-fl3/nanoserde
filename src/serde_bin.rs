@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::sync::Arc;
 
 pub trait SerBin {
     fn serialize_bin(&self) -> Vec<u8> {
@@ -422,5 +423,23 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Box<T>, DeBinErr> {
         Ok(Box::new(DeBin::de_bin(o, d)?))
+    }
+}
+
+impl<T> SerBin for Arc<T>
+where
+    T: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        (**self).ser_bin(s)
+    }
+}
+
+impl<T> DeBin for Arc<T>
+where
+    T: DeBin,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Arc<T>, DeBinErr> {
+        Ok(Arc::new(DeBin::de_bin(o, d)?))
     }
 }
