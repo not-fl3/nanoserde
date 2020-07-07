@@ -123,3 +123,43 @@ fn tuple_struct() {
 
     assert!(test == test_deserialized);
 }
+
+#[test]
+fn enums() {
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub enum Foo {
+        A,
+        B(i32),
+        C { x: String },
+    }
+    
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub struct Test {
+        foo1: Foo,
+        foo2: Foo,
+        foo3: Foo
+    }
+
+    
+    let test: Test = Test {
+        foo1: Foo::A,
+        foo2: Foo::B(23),
+        foo3: Foo::C {
+            x: "qwe".to_string(),
+        },
+    };
+
+    let bytes = SerBin::serialize_bin(&test);
+
+    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+    assert_eq!(test_deserialized.foo1, Foo::A);
+    assert_eq!(test_deserialized.foo2, Foo::B(23));
+    assert_eq!(
+        test_deserialized.foo3,
+        Foo::C {
+            x: "qwe".to_string()
+        }
+    );
+}

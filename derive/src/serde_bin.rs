@@ -1,4 +1,4 @@
-use crate::parse::Struct;
+use crate::parse::{Enum, Struct};
 
 use proc_macro::TokenStream;
 
@@ -145,118 +145,100 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     .unwrap()
 }
 
-// pub fn derive_ser_bin_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
+    let mut r = String::new();
 
-//     let ident = &input.ident;
+    for (index, variant) in enum_.variants.iter().enumerate() {
+        let lit = format!("{}u16", index);
+        let ident = &variant.name;
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(r, "Self::{} => {}.ser_bin(s),", ident, lit);
+        }
+        // Named
+        else if variant.named {
+            l!(r, "Self::{} {{", variant.name);
+            for field in &variant.fields {
+                l!(r, "{}, ", field.field_name.as_ref().unwrap())
+            }
+            l!(r, "} => {");
+            l!(r, "{}.ser_bin(s);", lit);
+            for field in &variant.fields {
+                l!(r, "{}.ser_bin(s);", field.field_name.as_ref().unwrap())
+            }
+            l!(r, "}")
+        }
+        // Unnamed
+        else if variant.named == false {
+            l!(r, "Self::{} (", variant.name);
+            for (n, _) in variant.fields.iter().enumerate() {
+                l!(r, "f{}, ", n)
+            }
+            l!(r, ") => {");
+            l!(r, "{}.ser_bin(s);", lit);
+            for (n, _) in variant.fields.iter().enumerate() {
+                l!(r, "f{}.ser_bin(s);", n)
+            }
+            l!(r, "}")
+        }
+    }
 
-//     let mut match_item = Vec::new();
+    format!(
+        "impl SerBin for {} {{
+            fn ser_bin(&self, s: &mut Vec<u8>) {{
+                match self {{
+                  {}
+                }}
+            }}
+        }}",
+        enum_.name, r
+    )
+    .parse()
+    .unwrap()
+}
 
-//     for (index, variant) in enumeration.variants.iter().enumerate() {
-//         let lit = LitInt::new(&format!("{}u16", index), ident.span());
-//         let ident = &variant.ident;
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     Self::#ident => #lit.ser_bin(s),
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let mut field_names = Vec::new();
-//                 for field in &fields_named.named {
-//                     if let Some(ident) = &field.ident {
-//                         field_names.push(ident);
-//                     }
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident {#(#field_names,) *} => {
-//                         #lit.ser_bin(s);
-//                         #(#field_names.ser_bin(s);) *
-//                     }
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 for (index, field) in fields_unnamed.unnamed.iter().enumerate() {
-//                     field_names.push(Ident::new(&format!("f{}", index), field.span()));
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident (#(#field_names,) *) => {
-//                         #lit.ser_bin(s);
-//                         #(#field_names.ser_bin(s);) *
-//                     }
-//                 });
-//             },
-//         }
-//     }
+pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
+    let mut r = String::new();
 
-//     quote! {
-//         impl #impl_generics SerBin for #ident #ty_generics #bounded_where_clause {
-//             fn ser_bin(&self, s: &mut Vec<u8>) {
-//                 match self {
-//                     #(
-//                         #match_item
-//                     ) *
-//                 }
-//             }
-//         }
-//     }
-// }
+    for (index, variant) in enum_.variants.iter().enumerate() {
+        let lit = format!("{}u16", index);
 
-// pub fn derive_de_bin_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(r, "{} => Self::{},", lit, variant.name)
+        }
+        // Named
+        else if variant.named {
+            l!(r, "{} => Self::{} {{", lit, variant.name);
+            for field in &variant.fields {
+                l!(
+                    r,
+                    "{}: DeBin::de_bin(o, d)?,",
+                    field.field_name.as_ref().unwrap()
+                );
+            }
+            l!(r, "},");
+        }
+        // Unnamed
+        else if variant.named == false {
+            l!(r, "{} => Self::{} (", lit, variant.name);
+            for _ in &variant.fields {
+                l!(r, "DeBin::de_bin(o, d)?,");
+            }
+            l!(r, "),");
+        }
+    }
 
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeBin);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-
-//     let mut match_item = Vec::new();
-
-//     for (index, variant) in enumeration.variants.iter().enumerate() {
-//         let lit = LitInt::new(&format!("{}u16", index), ident.span());
-//         let ident = &variant.ident;
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     #lit => Self::#ident,
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let mut field_names = Vec::new();
-//                 for field in &fields_named.named {
-//                     if let Some(ident) = &field.ident {
-//                         field_names.push(quote!{#ident: DeBin::de_bin(o,d)?});
-//                     }
-//                 }
-//                 match_item.push(quote!{
-//                     #lit => Self::#ident {#(#field_names,) *},
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 for _ in &fields_unnamed.unnamed {
-//                     field_names.push(quote! {DeBin::de_bin(o,d)?});
-//                 }
-//                 match_item.push(quote!{
-//                     #lit => Self::#ident(#(#field_names,) *),
-//                 });
-//             },
-//         }
-//     }
-
-//     quote! {
-//         impl #impl_generics DeBin for #ident #ty_generics #bounded_where_clause {
-//             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, DeBinErr> {
-//                 let id: u16 = DeBin::de_bin(o,d)?;
-//                 Ok(match id {
-//                     #(
-//                         #match_item
-//                     ) *
-//                     _ => return std::result::Result::Err(DeBinErr{o:*o, l:0, s:d.len()})
-//                 })
-//             }
-//         }
-//     }
-// }
+    format!(
+        "impl  DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
+                let id: u16 = DeBin::de_bin(o,d)?;
+                Ok(match id {{
+                    {}
+                    _ => return std::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
+                }})
+            }}
+        }}", enum_.name, r)
+        .parse()
+        .unwrap()
+}
