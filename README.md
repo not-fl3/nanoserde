@@ -39,7 +39,7 @@ For more examples take a look on [tests](/tests)
 | deserialization                                | yes    | yes   | yes    | no    |
 | container: Struct                              | yes    | yes   | yes    | no    |
 | container: Tuple Struct                        | no     | yes   | no     | no    |
-| container: Enum                                | no     | no    | no     | no    |
+| container: Enum                                | yes    | yes   | no     | no    |
 | field: `std::collections::HashMap`             | yes    | yes   | yes    | no    |
 | field: `std::vec::Vec`                         | yes    | yes   | yes    | no    |
 | field: `Option`                                | yes    | yes   | yes    | no    |
