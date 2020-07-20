@@ -21,7 +21,7 @@ pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     let mut s = String::new();
 
-    if struct_.fields.len() > 1 {
+    if struct_.fields.len() >= 1 {
         let last = struct_.fields.len() - 1;
         for (index, field) in struct_.fields.iter().enumerate() {
             let struct_fieldname = field.field_name.clone().unwrap();

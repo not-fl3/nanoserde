@@ -180,6 +180,19 @@ fn empty() {
 }
 
 #[test]
+fn one_field() {
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct OneField {
+        field: f32,
+    }
+
+    let test = OneField { field: 23. };
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    assert!(test == test_deserialized);
+}
+
+#[test]
 fn array() {
     #[derive(DeJson)]
     pub struct Foo {
