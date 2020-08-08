@@ -513,9 +513,19 @@ impl DeJsonState {
                             'n' => self.strbuf.push('\n'),
                             'r' => self.strbuf.push('\r'),
                             't' => self.strbuf.push('\t'),
+                            'b' => self.strbuf.push('\x08'),
+                            'f' => self.strbuf.push('\x0c'),
                             '0' => self.strbuf.push('\0'),
                             '\0' => {
                                 return Err(self.err_parse("string"));
+                            }
+                            'u' => {
+                                if let Some(c) = self.hex_unescape_char(i) {
+                                    self.strbuf.push(c);
+                                    continue;
+                                } else {
+                                    return Err(self.err_parse("string"));
+                                }
                             }
                             _ => self.strbuf.push(self.cur),
                         }
@@ -535,6 +545,61 @@ impl DeJsonState {
             _ => {
                 return Err(self.err_token("tokenizer"));
             }
+        }
+    }
+
+    /// Helper for reading `\uXXXX` escapes out of a string, properly handing
+    /// surrogate pairs (by potentially unescaping a second `\uXXXX` sequence if
+    /// it would complete a surrogate pair).
+    ///
+    /// On illegal escapes or unpaired surrogates returns None (and caller
+    /// should emit an error).
+    fn hex_unescape_char(&mut self, i: &mut Chars) -> Option<char> {
+        self.next(i);
+        let a = xdigit4(self, i)?;
+        if let Some(c) = core::char::from_u32(a as u32) {
+            return Some(c);
+        }
+        // `a` isn't a valid scalar, but if it's leading surrogate, we look for
+        // a trailing surrogate in a `\uXXXX` sequence immediately after.
+        let a_is_lead = (0xd800..0xdc00).contains(&a);
+        if a_is_lead && self.cur == '\\' {
+            self.next(i);
+            if self.cur == 'u' {
+                self.next(i);
+                let b = xdigit4(self, i)?;
+                let b_is_trail = (0xdc00..0xe000).contains(&b);
+                if b_is_trail {
+                    // It's a valid pair! We have `[a, b]` where `a` is a leading
+                    // surrogate and `b` is a trailing one.
+                    let scalar = (((a as u32 - 0xd800) << 10) | (b as u32 - 0xdc00)) + 0x10000;
+                    // All valid surrogate pairs decode to unicode scalar values
+                    // (e.g. `char`), so this block should always return `Some`, the
+                    // debug_assert exists just to ensure our testing is thorough
+                    // enough.
+                    let ch = core::char::from_u32(scalar);
+                    debug_assert!(ch.is_some());
+                    return ch;
+                }
+            }
+        }
+        return None;
+
+        // Helper to turn next 4 ascii hex digits into a u16
+        fn xdigit4(de: &mut DeJsonState, i: &mut Chars) -> Option<u16> {
+            // as tempting as it is to try to find a way to use from_str_radix on the
+            // next 4 bytes from `i`, we'd still need to do validation to detect cases
+            // like `\u+123` and such which makes it less attractive.
+            (0..4).try_fold(0u16, |acc, _| {
+                let n = match de.cur {
+                    '0'..='9' => (de.cur as u16 - '0' as u16),
+                    'a'..='f' => (de.cur as u16 - 'a' as u16) + 10,
+                    'A'..='F' => (de.cur as u16 - 'A' as u16) + 10,
+                    _ => return None,
+                };
+                de.next(i);
+                Some(acc * 16 + n)
+            })
         }
     }
 }
