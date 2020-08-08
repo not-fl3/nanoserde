@@ -362,3 +362,37 @@ fn de_enum() {
         }
     );
 }
+
+#[test]
+fn test_various_escapes() {
+    let json = r#""\n\t\u0020\f\b\\\"\/\ud83d\uDE0B\r""#;
+    let unescaped: String = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(unescaped, "\n\t\u{20}\x0c\x08\\\"/😋\r");
+}
+
+// there are only 1024*1024 surrogate pairs, so we can do an exhautive test.
+#[test]
+fn test_surrogate_pairs_exhaustively() {
+    for lead in 0xd800..0xdc00 {
+        for trail in 0xdc00..0xe000 {
+            // find the scalar value represented by the [lead, trail] pair.
+            let combined: Vec<char> = core::char::decode_utf16([lead, trail].iter().copied())
+                .collect::<Result<_, _>>()
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "[{:#04x}, {:#04x}] not valid surrogate pair? {:?}",
+                        lead, trail, e,
+                    );
+                });
+            assert_eq!(combined.len(), 1);
+            let expected_string = format!("{}", combined[0]);
+
+            let json = format!(r#""\u{:04x}\u{:04x}""#, lead, trail);
+            let result: String = DeJson::deserialize_json(&json).unwrap_or_else(|e| {
+                panic!("should be able to parse {}: {:?}", &json, e);
+            });
+            assert_eq!(result, expected_string, "failed on input {}", json);
+            assert_eq!(result.chars().count(), 1);
+        }
+    }
+}
