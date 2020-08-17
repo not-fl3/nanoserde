@@ -973,14 +973,14 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
-        let last = self.len() - 1;
+        let len = self.len();
         let mut index = 0;
         for (k, v) in self {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
             v.ser_json(d + 1, s);
-            if index != last {
+            if (index + 1) < len {
                 s.conl();
             }
             index += 1;
