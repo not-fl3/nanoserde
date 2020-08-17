@@ -183,10 +183,10 @@ fn empty() {
 fn one_field() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct OneField {
-        field: f32,
+        field: std::collections::HashMap<String, f32>,
     }
 
-    let test = OneField { field: 23. };
+    let test = OneField { field: std::collections::HashMap::new() };
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
     assert!(test == test_deserialized);
