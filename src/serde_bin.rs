@@ -19,6 +19,7 @@ pub trait DeBin: Sized {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr>;
 }
 
+#[derive(Clone)]
 pub struct DeBinErr {
     pub o: usize,
     pub l: usize,

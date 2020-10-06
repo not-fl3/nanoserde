@@ -100,6 +100,7 @@ pub struct DeJsonState {
     pub col: usize,
 }
 
+#[derive(Clone)]
 pub struct DeJsonErr {
     pub msg: String,
     pub line: usize,
