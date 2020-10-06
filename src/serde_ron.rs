@@ -93,6 +93,7 @@ pub struct DeRonState {
     pub col: usize,
 }
 
+#[derive(Clone)]
 pub struct DeRonErr {
     pub msg: String,
     pub line: usize,

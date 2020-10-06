@@ -35,6 +35,7 @@ pub enum Toml {
     Array(Vec<Toml>),
 }
 
+#[derive(Clone)]
 pub struct TomlErr {
     pub msg: String,
     pub line: usize,
