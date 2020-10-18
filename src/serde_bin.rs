@@ -36,6 +36,14 @@ impl std::fmt::Debug for DeBinErr {
     }
 }
 
+impl std::fmt::Display for DeBinErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl std::error::Error for DeBinErr {}
+
 macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
         impl SerBin for $ty {

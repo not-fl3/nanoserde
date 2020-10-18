@@ -54,6 +54,14 @@ impl std::fmt::Debug for TomlErr {
     }
 }
 
+impl std::fmt::Display for TomlErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl std::error::Error for TomlErr {}
+
 impl TomlParser {
     pub fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
         match tok {
