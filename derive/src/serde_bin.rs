@@ -20,7 +20,7 @@ pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeBin for {} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                let proxy: {} = DeBin::deserialize_bin(d)?;
+                let proxy: {} = DeBin::de_bin(o, d)?;
                 std::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
