@@ -12,7 +12,7 @@
 //! The main difference with "serde" and the reason why "nanoserde" is possible: there is no intermediate data model
 //! For each serialisation datatype there is a special macro.
 //!
-//! Derive macros available: `DeJson`, `SerJson`, `DeBin`, `SerBin`, `DeRon`, `SerRon`, `DeToml`, `SerToml`
+//! Derive macros available: `DeJson`, `SerJson`, `DeBin`, `SerBin`, `DeRon`, `SerRon`
 //!
 //! `nanoserde` supports some serialization customisation with `#[nserde()]` attributes.
 //! For `#[nserde(..)]` supported attributes for each format check [Features support matrix](https://github.com/not-fl3/nanoserde#features-support-matrix)

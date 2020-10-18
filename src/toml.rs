@@ -1,6 +1,14 @@
 use std::collections::HashMap;
 use std::str::Chars;
 
+/// A parser for TOML string values.
+///
+/// ```rust
+/// # use nanoserde::*;
+/// let toml = "[Section]\nvalue=1";
+/// let parsed = TomlParser::parse(toml).unwrap();
+/// assert_eq!(parsed["Section.value"], Toml::Num(1.));
+/// ```
 #[derive(Default)]
 pub struct TomlParser {
     pub cur: char,
@@ -8,6 +16,7 @@ pub struct TomlParser {
     pub col: usize,
 }
 
+/// A TOML parsed token.
 #[derive(PartialEq, Debug)]
 pub enum TomlTok {
     Ident(String),
@@ -27,6 +36,8 @@ pub enum TomlTok {
     Eof,
 }
 
+/// A TOML value.
+#[derive(Debug, PartialEq)]
 pub enum Toml {
     Str(String),
     Bool(bool),
@@ -35,6 +46,7 @@ pub enum Toml {
     Array(Vec<Toml>),
 }
 
+/// The error message when failing to parse a TOML string.
 #[derive(Clone)]
 pub struct TomlErr {
     pub msg: String,
@@ -55,6 +67,53 @@ impl std::fmt::Debug for TomlErr {
 }
 
 impl TomlParser {
+    /// Parse a TOML string.
+    pub fn parse(data: &str) -> Result<HashMap<String, Toml>, TomlErr> {
+        let i = &mut data.chars();
+        let mut t = TomlParser::default();
+        t.next(i);
+        let mut out = HashMap::new();
+        let mut local_scope = String::new();
+        loop {
+            let tok = t.next_tok(i)?;
+            match tok {
+                TomlTok::Eof => {
+                    // at eof.
+                    return Ok(out);
+                }
+                TomlTok::BlockOpen => {
+                    // its a scope
+                    // we should expect an ident or a string
+                    let tok = t.next_tok(i)?;
+                    match tok {
+                        TomlTok::Str(key) => {
+                            // a key
+                            local_scope = key;
+                        }
+                        TomlTok::Ident(key) => {
+                            // also a key
+                            local_scope = key;
+                        }
+                        _ => return Err(t.err_token(tok)),
+                    }
+                    let tok = t.next_tok(i)?;
+                    if tok != TomlTok::BlockClose {
+                        return Err(t.err_token(tok));
+                    }
+                }
+                TomlTok::Str(key) => {
+                    // a key
+                    t.parse_key_value(&local_scope, key, i, &mut out)?;
+                }
+                TomlTok::Ident(key) => {
+                    // also a key
+                    t.parse_key_value(&local_scope, key, i, &mut out)?;
+                }
+                _ => return Err(t.err_token(tok)),
+            }
+        }
+    }
+
     pub fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
         match tok {
             TomlTok::BlockOpen => {
@@ -106,52 +165,6 @@ impl TomlParser {
         };
         out.insert(key, val);
         Ok(())
-    }
-
-    pub fn parse(data: &str) -> Result<HashMap<String, Toml>, TomlErr> {
-        let i = &mut data.chars();
-        let mut t = TomlParser::default();
-        t.next(i);
-        let mut out = HashMap::new();
-        let mut local_scope = String::new();
-        loop {
-            let tok = t.next_tok(i)?;
-            match tok {
-                TomlTok::Eof => {
-                    // at eof.
-                    return Ok(out);
-                }
-                TomlTok::BlockOpen => {
-                    // its a scope
-                    // we should expect an ident or a string
-                    let tok = t.next_tok(i)?;
-                    match tok {
-                        TomlTok::Str(key) => {
-                            // a key
-                            local_scope = key;
-                        }
-                        TomlTok::Ident(key) => {
-                            // also a key
-                            local_scope = key;
-                        }
-                        _ => return Err(t.err_token(tok)),
-                    }
-                    let tok = t.next_tok(i)?;
-                    if tok != TomlTok::BlockClose {
-                        return Err(t.err_token(tok));
-                    }
-                }
-                TomlTok::Str(key) => {
-                    // a key
-                    t.parse_key_value(&local_scope, key, i, &mut out)?;
-                }
-                TomlTok::Ident(key) => {
-                    // also a key
-                    t.parse_key_value(&local_scope, key, i, &mut out)?;
-                }
-                _ => return Err(t.err_token(tok)),
-            }
-        }
     }
 
     pub fn next(&mut self, i: &mut Chars) {

@@ -1,24 +1,54 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+/// A trait for objects that can be serialized to binary.
 pub trait SerBin {
+    /// Serialize Self to bytes.
+    ///
+    /// This is a convenient wrapper around `ser_bin`.
     fn serialize_bin(&self) -> Vec<u8> {
         let mut s = Vec::new();
         self.ser_bin(&mut s);
         s
     }
 
-    fn ser_bin(&self, s: &mut Vec<u8>);
+    /// Serialize Self to bytes.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let mut s = Vec::new();
+    /// 42u32.ser_bin(&mut s);
+    /// assert_eq!(s, vec![42, 0, 0, 0])
+    /// ```
+    fn ser_bin(&self, output: &mut Vec<u8>);
 }
 
+/// A trait for objects that can be deserialized from binary.
 pub trait DeBin: Sized {
+    /// Parse Self from the input bytes.
+    ///
+    /// This is a convenient wrapper around `de_bin`.
     fn deserialize_bin(d: &[u8]) -> Result<Self, DeBinErr> {
         DeBin::de_bin(&mut 0, d)
     }
 
-    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr>;
+    /// Parse Self from the input bytes starting at index `offset`.
+    ///
+    /// After deserialization, `offset` is updated to point at the byte after
+    /// the last one used.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let bytes = [1, 0, 0, 0, 2, 0, 0, 0];
+    /// let mut offset = 4;
+    /// let two = u32::de_bin(&mut offset, &bytes).unwrap();
+    /// assert_eq!(two, 2);
+    /// assert_eq!(offset, 8);
+    /// ```
+    fn de_bin(offset: &mut usize, bytes: &[u8]) -> Result<Self, DeBinErr>;
 }
 
+/// The error message when failing to deserialize from raw bytes.
 #[derive(Clone)]
 pub struct DeBinErr {
     pub o: usize,
