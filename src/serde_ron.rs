@@ -112,6 +112,14 @@ impl std::fmt::Debug for DeRonErr {
     }
 }
 
+impl std::fmt::Display for DeRonErr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl std::error::Error for DeRonErr {}
+
 impl DeRonState {
     pub fn next(&mut self, i: &mut Chars) {
         if let Some(c) = i.next() {
