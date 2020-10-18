@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::Chars;
 
+/// The internal state of a RON serialization.
 pub struct SerRonState {
     pub out: String,
 }
@@ -33,17 +34,37 @@ impl SerRonState {
     }
 }
 
+/// A trait for objects that can be serialized to the RON file format.
+///
+/// [Specification](https://github.com/ron-rs/ron).
 pub trait SerRon {
+    /// Serialize Self to a RON string.
+    ///
+    /// This is a convenient wrapper around `ser_json`.
     fn serialize_ron(&self) -> String {
         let mut s = SerRonState { out: String::new() };
         self.ser_ron(0, &mut s);
         s.out
     }
 
-    fn ser_ron(&self, d: usize, s: &mut SerRonState);
+    /// Serialize Self to a RON string.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let mut s = SerRonState { out: String::new() };
+    /// 42u32.ser_ron(0, &mut s);
+    /// assert_eq!(s.out, "42");
+    /// ```
+    fn ser_ron(&self, indent_level: usize, state: &mut SerRonState);
 }
 
+/// A trait for objects that can be deserialized from the RON file format.
+///
+/// [Specification](https://github.com/ron-rs/ron).
 pub trait DeRon: Sized {
+    /// Parse Self from a RON string.
+    ///
+    /// This is a convenient wrapper around `de_ron`.
     fn deserialize_ron(input: &str) -> Result<Self, DeRonErr> {
         let mut state = DeRonState::default();
         let mut chars = input.chars();
@@ -52,9 +73,21 @@ pub trait DeRon: Sized {
         DeRon::de_ron(&mut state, &mut chars)
     }
 
-    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr>;
+    /// Parse Self from a RON string.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let mut state = DeRonState::default();
+    /// let mut chars = "42".chars();
+    /// state.next(&mut chars);
+    /// state.next_tok(&mut chars).unwrap();
+    /// let out = u32::de_ron(&mut state, &mut chars).unwrap();
+    /// assert_eq!(out, 42);
+    /// ```
+    fn de_ron(state: &mut DeRonState, input: &mut Chars) -> Result<Self, DeRonErr>;
 }
 
+/// A RON parsed token.
 #[derive(PartialEq, Debug)]
 pub enum DeRonTok {
     Ident,
@@ -82,6 +115,7 @@ impl Default for DeRonTok {
     }
 }
 
+/// The internal state of a RON deserialization.
 #[derive(Default)]
 pub struct DeRonState {
     pub cur: char,
@@ -93,6 +127,7 @@ pub struct DeRonState {
     pub col: usize,
 }
 
+/// The error message when failing to deserialize a RON string.
 #[derive(Clone)]
 pub struct DeRonErr {
     pub msg: String,

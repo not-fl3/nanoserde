@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::str::Chars;
 
+/// The internal state of a JSON serialization.
 pub struct SerJsonState {
     pub out: String,
 }
@@ -41,17 +42,33 @@ impl SerJsonState {
     }
 }
 
+/// A trait for objects that can be serialized to JSON.
 pub trait SerJson {
+    /// Serialize Self to a JSON string.
+    ///
+    /// This is a convenient wrapper around `ser_json`.
     fn serialize_json(&self) -> String {
         let mut s = SerJsonState { out: String::new() };
         self.ser_json(0, &mut s);
         s.out
     }
 
+    /// Serialize Self to a JSON string.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let mut s = SerJsonState { out: String::new() };
+    /// 42u32.ser_json(0, &mut s);
+    /// assert_eq!(s.out, "42");
+    /// ```
     fn ser_json(&self, d: usize, s: &mut SerJsonState);
 }
 
+/// A trait for objects that can be deserialized from JSON.
 pub trait DeJson: Sized {
+    /// Parse Self from the input string.
+    ///
+    /// This is a convenient wrapper around `de_json`.
     fn deserialize_json(input: &str) -> Result<Self, DeJsonErr> {
         let mut state = DeJsonState::default();
         let mut chars = input.chars();
@@ -60,9 +77,21 @@ pub trait DeJson: Sized {
         DeJson::de_json(&mut state, &mut chars)
     }
 
-    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr>;
+    /// Parse Self from the input string.
+    ///
+    /// ```rust
+    /// # use nanoserde::*;
+    /// let mut state = DeJsonState::default();
+    /// let mut chars = "42".chars();
+    /// state.next(&mut chars);
+    /// state.next_tok(&mut chars).unwrap();
+    /// let out = u32::de_json(&mut state, &mut chars).unwrap();
+    /// assert_eq!(out, 42);
+    /// ```
+    fn de_json(state: &mut DeJsonState, input: &mut Chars) -> Result<Self, DeJsonErr>;
 }
 
+/// A JSON parsed token.
 #[derive(PartialEq, Debug)]
 pub enum DeJsonTok {
     Str,
@@ -89,6 +118,7 @@ impl Default for DeJsonTok {
     }
 }
 
+/// The internal state of a JSON deserialization.
 #[derive(Default)]
 pub struct DeJsonState {
     pub cur: char,
@@ -100,6 +130,7 @@ pub struct DeJsonState {
     pub col: usize,
 }
 
+/// The error message when failing to deserialize a JSON string.
 #[derive(Clone)]
 pub struct DeJsonErr {
     pub msg: String,
