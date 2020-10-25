@@ -7,9 +7,9 @@ use crate::shared;
 pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl SerRon for {} {{
-            fn ser_ron(&self, s: &mut Vec<u8>) {{
+            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
                 let proxy: {} = self.into();
-                proxy.ser_ron(s);
+                proxy.ser_ron(d, s);
             }}
         }}",
         type_, proxy_type
@@ -21,7 +21,7 @@ pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeRon for {} {{
-            fn de_ron(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeRonErr> {{
                 let proxy: {} = DeRon::deserialize_ron(i)?;
                 std::result::Result::Ok(Into::into(&proxy))
             }}
@@ -261,7 +261,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
         let ident = &variant.name;
         // Unit
         if variant.fields.len() == 0 {
-            l!(body, "Self::{} => s.out.push_str({}),", ident, ident)
+            l!(body, "Self::{} => s.out.push_str(\"{}\"),", ident, ident)
         }
         // Named
         else if variant.named {
