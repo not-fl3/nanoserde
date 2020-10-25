@@ -46,8 +46,8 @@ For more examples take a look on [tests](/tests)
 | field: `i*`/`f*`/`String`/`T: De*/Ser*`        | yes    | yes   | yes    | no    |
 | field attribute: `#[nserde(default)]`          | yes    | no    | yes    | no    |
 | field attribute: `#[nserde(rename = "")]`      | yes    | yes   | yes    | no    |
-| field attribute: `#[nserde(proxy = "")]`       | no     | yes   | yes    | no    |
+| field attribute: `#[nserde(proxy = "")]`       | no     | yes   | no     | no    |
 | container attribute: `#[nserde(default)]`      | yes    | no    | yes    | no    |
 | container attribute: `#[nserde(rename = "")]`  | yes    | yes   | yes    | no    |
-| container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | yes    | no    |
+| container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | no     | no    |
 
