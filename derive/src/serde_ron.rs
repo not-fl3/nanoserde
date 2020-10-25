@@ -1,13 +1,27 @@
-use crate::parse::Struct;
+use crate::parse::{Attribute, Enum, Field, Struct};
 
 use proc_macro::TokenStream;
 
 use crate::shared;
 
+pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+    format!(
+        "impl SerRon for {} {{
+            fn ser_ron(&self, s: &mut Vec<u8>) {{
+                let proxy: {} = self.into();
+                proxy.ser_ron(s);
+            }}
+        }}",
+        type_, proxy_type
+    )
+    .parse()
+    .unwrap()
+}
+
 pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeRon for {} {{
-            fn de_ron(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{ {{
+            fn de_ron(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
                 let proxy: {} = DeRon::deserialize_ron(i)?;
                 std::result::Result::Ok(Into::into(&proxy))
             }}
@@ -18,55 +32,90 @@ pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     .unwrap()
 }
 
-// pub fn derive_ser_ron_struct(input: &DeriveInput, fields: &FieldsNamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
+pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
+    let mut s = String::new();
 
-//     let mut outputs = Vec::new();
-//     for field in &fields.named {
-//         let fieldname = field.ident.clone().unwrap();
-//         let fieldstring = LitStr::new(&fieldname.to_string(), ident.span());
-//         if type_is_option(&field.ty) {
-//             outputs.push(quote! {if let Some(t) = self.#fieldname {s.field(d+1,#fieldstring);t.ser_ron(d+1, s);s.conl();};})
-//         }
-//         else {
-//             outputs.push(quote! {s.field(d+1,#fieldstring);self.#fieldname.ser_ron(d+1, s);s.conl();})
-//         }
-//     }
+    for field in &struct_.fields {
+        let struct_fieldname = field.field_name.clone().unwrap();
+        let ron_fieldname =
+            shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+        if field.ty.is_option {
+            l!(
+                s,
+                "if let Some(t) = &self.{} {{
+                    s.field(d+1, \"{}\");
+                    t.ser_ron(d+1, s);
+                    s.conl();
+                }};",
+                struct_fieldname,
+                ron_fieldname
+            );
+        } else {
+            l!(
+                s,
+                "s.field(d+1,\"{}\");
+                self.{}.ser_ron(d+1, s);
+                s.conl();",
+                ron_fieldname,
+                struct_fieldname
+            );
+        }
+    }
 
-//     quote!{
-//         impl #impl_generics SerRon for #ident #ty_generics #bounded_where_clause {
-//             fn ser_ron(&self, d: usize, s: &mut makepad_tinyserde::SerRonState) {
-//                 s.st_pre();
-//                 #(
-//                     #outputs
-//                 ) *
-//                 s.st_post(d);
-//             }
-//         }
-//     }
-// }
+    format!(
+        "
+        impl SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+                s.st_pre();
+                {}
+                s.st_post(d);
+            }}
+        }}
+    ",
+        struct_.name, s
+    )
+    .parse()
+    .unwrap()
+}
 
-// pub fn type_is_option(ty: &Type) -> bool {
-//     if let Type::Path(tp) = ty {
-//         if tp.path.segments.len() == 1 && tp.path.segments[0].ident.to_string() == "Option" {
-//             return true;
-//         }
-//     }
-//     return false
-// }
+pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-pub fn derive_de_ron_named(struct_: &Struct) -> TokenStream {
+    let last = struct_.fields.len() - 1;
+    for (n, _) in struct_.fields.iter().enumerate() {
+        l!(body, "self.{}.ser_ron(d, s);", n);
+        if n != last {
+            l!(body, "s.out.push_str(\", \");");
+        }
+    }
+    format!(
+        "
+        impl SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+                s.out.push('(');
+                {}
+                s.out.push(')');
+            }}
+        }}",
+        struct_.name, body
+    )
+    .parse()
+    .unwrap()
+}
+
+pub fn derive_de_ron_named(
+    name: &String,
+    fields: &Vec<Field>,
+    attributes: &Vec<Attribute>,
+) -> String {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut ron_field_names = Vec::new();
 
-    let container_attr_default = shared::attrs_default(&struct_.attributes);
+    let container_attr_default = shared::attrs_default(attributes);
 
     let mut unwraps = Vec::new();
-    for field in &struct_.fields {
+    for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
         let field_attr_default = shared::attrs_default(&field.attributes);
@@ -75,17 +124,35 @@ pub fn derive_de_ron_named(struct_: &Struct) -> TokenStream {
 
         if field.ty.is_option {
             unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}}else {{ None }} }}",
+                "{{
+                    if let Some(t) = {} {{
+                        t
+                    }} else {{
+                        None
+                    }}
+                }}",
                 localvar
             ));
         } else if container_attr_default || field_attr_default {
             unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}}else {{ Default::default() }} }}",
+                "{{
+                    if let Some(t) = {} {{
+                        t
+                    }} else {{
+                        Default::default()
+                    }}
+                }}",
                 localvar
             ));
         } else {
             unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}} else {{return Err(s.err_nf(\"{}\"))}} }}",
+                "{{
+                    if let Some(t) = {} {{
+                        t
+                    }} else {{
+                        return Err(s.err_nf(\"{}\"))
+                    }}
+                }}",
                 localvar, struct_fieldname
             ));
         }
@@ -95,262 +162,247 @@ pub fn derive_de_ron_named(struct_: &Struct) -> TokenStream {
         local_vars.push(localvar);
     }
 
-    let mut r = String::new();
-    for local_var in &local_vars {
-        l!(r, "let mut {} = None;", local_var);
+    let mut local_lets = String::new();
+
+    for local in &local_vars {
+        l!(local_lets, "let mut {} = None;", local)
     }
 
-    l!(r, "s.paren_open(i) ?;");
-    l!(r, "while let Some(_) = s.next_ident() {");
-    if ron_field_names.len() != 0 {
-        l!(r, "match s.identbuf.as_ref() {");
+    let match_names = if ron_field_names.len() != 0 {
+        let mut inner = String::new();
         for (ron_field_name, local_var) in ron_field_names.iter().zip(local_vars.iter()) {
             l!(
-                r,
-                "\"{}\" => {{ s.next_colon(i) ?;{} = Some(DeRon::de_ron(s, i) ?) }},",
+                inner,
+                "\"{}\" => {{
+                    s.next_colon(i)?;
+                    {} = Some(DeRon::de_ron(s, i)?)
+                }},",
                 ron_field_name,
                 local_var
             );
         }
-        l!(
-            r,
-            "_ => return std::result::Result::Err(s.err_exp(&s.identbuf))"
-        );
-        l!(r, "}");
-    }
-    l!(r, "s.eat_comma_paren(i) ?;");
-    l!(r, "}");
-    l!(r, "s.paren_close(i) ?;");
-    l!(r, "{} {{", struct_.name);
-    for (field_name, unwrap) in struct_field_names.iter().zip(unwraps.iter()) {
-        l!(r, "{}: {},", field_name, unwrap);
-    }
-    l!(r, "}");
+        format!(
+            "match s.identbuf.as_ref() {{
+                {}
+                _ => return std::result::Result::Err(s.err_exp(&s.identbuf))
+            }}",
+            inner
+        )
+    } else {
+        String::new()
+    };
 
-    r.parse().unwrap()
+    let mut body = String::new();
+
+    for (field_name, unwrap) in struct_field_names.iter().zip(unwraps.iter()) {
+        l!(body, "{}: {},", field_name, unwrap);
+    }
+
+    format!(
+        "{{
+            {}
+            s.paren_open(i)?;
+            while let Some(_) = s.next_ident() {{
+                {}
+                s.eat_comma_paren(i)?;
+            }};
+            s.paren_close(i)?;
+            {} {{
+                {}  
+            }}
+        }}",
+        local_lets, match_names, name, body
+    )
 }
 
 pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
-    let body = derive_de_ron_named(struct_);
+    let body = derive_de_ron_named(&struct_.name, &struct_.fields, &struct_.attributes);
 
     format!(
         "impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,
-            nanoserde::DeRonErr> {{
-                std::result::Result::Ok({{ {} }})
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+                std::result::Result::Ok({})
             }}
         }}", struct_.name, body)
     .parse()
     .unwrap()
 }
 
-// pub fn derive_ser_ron_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-//     let ident = &input.ident;
+    for _ in &struct_.fields {
+        l!(
+            body,
+            "{{
+                let r = DeRon::de_ron(s, i)?;
+                s.eat_comma_paren(i)?;
+                r
+            }}"
+        );
+    }
 
-//     let mut match_item = Vec::new();
+    format! ("
+        impl DeRon for {} {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+                s.paren_open(i)?;
+                let r = Self({});
+                s.paren_close(i)?;
+                std::result::Result::Ok(r)
+            }}
+        }}",struct_.name, body
+    ).parse().unwrap()
+}
 
-//     for variant in &enumeration.variants {
-//         let ident = &variant.ident;
-//         let lit = LitStr::new(&ident.to_string(), ident.span());
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     Self::#ident => s.out.push_str(#lit),
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let mut items = Vec::new();
-//                 let mut field_names = Vec::new();
-//                 for field in &fields_named.named {
-//                     if let Some(field_name) = &field.ident {
-//                         let field_string = LitStr::new(&field_name.to_string(), field_name.span());
-//                         if type_is_option(&field.ty) {
-//                             items.push(quote!{
-//                                 if #field_name.is_some(){
-//                                     s.field(d+1, #field_string);
-//                                     #field_name.ser_ron(d+1, s);
-//                                     s.conl();
-//                                 }
-//                             })
-//                         }
-//                         else{
-//                             items.push(quote!{
-//                                 s.field(d+1, #field_string);
-//                                 #field_name.ser_ron(d+1, s);
-//                                 s.conl();
-//                             })
-//                         }
-//                         field_names.push(field_name);
-//                     }
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident {#(#field_names,) *} => {
-//                         s.out.push_str(#lit);
-//                         s.st_pre();
-//                         #(
-//                             #items
-//                         )*
-//                         s.st_post(d);
-//                     }
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 let mut str_names = Vec::new();
-//                 let last = fields_unnamed.unnamed.len() - 1;
-//                 for (index, field) in fields_unnamed.unnamed.iter().enumerate() {
-//                     let field_name = Ident::new(&format!("f{}", index), field.span());
-//                     if index != last{
-//                         str_names.push(quote!{
-//                             #field_name.ser_ron(d, s); s.out.push_str(", ");
-//                         });
-//                     }
-//                     else{
-//                         str_names.push(quote!{
-//                             #field_name.ser_ron(d, s);
-//                         });
-//                     }
-//                     field_names.push(field_name);
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident (#(#field_names,) *) => {
-//                         s.out.push_str(#lit);
-//                         s.out.push('(');
-//                         #(#str_names) *
-//                         s.out.push(')');
-//                     }
-//                 });
-//             },
-//         }
-//     }
+pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
+    let mut body = String::new();
 
-//     quote! {
-//         impl #impl_generics SerRon for #ident #ty_generics #bounded_where_clause {
-//             fn ser_ron(&self, d: usize, s: &mut makepad_tinyserde::SerRonState) {
-//                 match self {
-//                     #(
-//                         #match_item
-//                     ) *
-//                 }
-//             }
-//         }
-//     }
-// }
+    for variant in &enum_.variants {
+        let ident = &variant.name;
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(body, "Self::{} => s.out.push_str({}),", ident, ident)
+        }
+        // Named
+        else if variant.named {
+            let mut names = Vec::new();
+            let mut inner = String::new();
+            for field in &variant.fields {
+                if let Some(name) = &field.field_name {
+                    names.push(name.clone());
+                    if field.ty.is_option {
+                        l!(
+                            inner,
+                            "if {}.is_some() {{
+                                s.field(d+1, \"{}\");
+                                {}.ser_ron(d+1, s);
+                                s.conl();
+                            }}",
+                            name,
+                            name,
+                            name
+                        )
+                    } else {
+                        l!(
+                            inner,
+                            "s.field(d+1, \"{}\");
+                            {}.ser_ron(d+1, s);
+                            s.conl();",
+                            name,
+                            name
+                        )
+                    }
+                }
+            }
+            l!(
+                body,
+                "Self::{} {{ {} }} => {{
+                    s.out.push_str(\"{}\");
+                    s.st_pre();
+                    {}
+                    s.st_post(d);
+                }}",
+                ident,
+                names.join(","),
+                ident,
+                inner
+            )
+        }
+        // Unnamed
+        else {
+            let mut names = Vec::new();
+            let mut inner = String::new();
+            let last = variant.fields.len() - 1;
+            for (index, _) in &mut variant.fields.iter().enumerate() {
+                let name = format!("f{}", index);
+                l!(inner, "{}.ser_ron(d, s);", name);
+                if index != last {
+                    l!(inner, "s.out.push_str(\", \");")
+                }
+                names.push(name);
+            }
+            l!(
+                body,
+                "Self::{} ({}) => {{
+                    s.out.push_str(\"{}\");
+                    s.out.push('(');
+                    {}
+                    s.out.push(')');
+                }}",
+                ident,
+                names.join(","),
+                ident,
+                inner
+            )
+        }
+    }
+    format!(
+        "
+        impl SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+                match self {{
+                    {}
+                }}
+            }}
+        }}",
+        enum_.name, body
+    )
+    .parse()
+    .unwrap()
+}
 
-// pub fn derive_de_ron_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
+pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
+    let mut body = String::new();
 
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+    for variant in &enum_.variants {
+        let ident = &variant.name;
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(body, "\"{}\" => Self::{},", ident, ident)
+        }
+        // Named
+        else if variant.named {
+            let name = format!("{}::{}", enum_.name, variant.name);
+            let inner = derive_de_ron_named(&name, &variant.fields, &vec![]);
+            l!(body, "\"{}\" => {}", ident, inner);
+        }
+        // Unnamed
+        else {
+            let mut inner = String::new();
+            for _ in &variant.fields {
+                l!(
+                    inner,
+                    "{
+                        let r = DeRon::de_ron(s, i)?;
+                        s.eat_comma_paren(i)?;
+                        r
+                    }, "
+                )
+            }
+            l!(
+                body,
+                "\"{}\" => {{
+                    s.paren_open(i)?;
+                    let r = Self::{} ({});
+                    s.paren_close(i)?;
+                    r
+                }}, ",
+                ident,
+                ident,
+                inner
+            );
+        }
+    }
 
-//     let mut match_item = Vec::new();
-
-//     for variant in &enumeration.variants {
-//         let ident = &variant.ident;
-//         let lit = LitStr::new(&ident.to_string(), ident.span());
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     #lit => Self::#ident,
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let body = derive_de_ron_named(quote!{Self::#ident}, fields_named);
-//                 match_item.push(quote!{
-//                     #lit => {#body},
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 for _ in &fields_unnamed.unnamed {
-//                     field_names.push(quote! {{let r = DeRon::de_ron(s,i)?;s.eat_comma_paren(i)?;r}});
-//                 }
-//                 match_item.push(quote!{
-//                     #lit => {s.paren_open(i)?;let r = Self::#ident(#(#field_names,) *); s.paren_close(i)?;r},
-//                 });
-//             },
-//         }
-//     }
-
-//     quote! {
-//         impl #impl_generics DeRon for #ident #ty_generics #bounded_where_clause {
-//             fn de_ron(s: &mut DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,DeRonErr> {
-//                 // we are expecting an identifier
-//                 s.ident(i)?;
-//                 std::result::Result::Ok(match s.identbuf.as_ref() {
-//                     #(
-//                         #match_item
-//                     ) *
-//                     _ => return std::result::Result::Err(s.err_enum(&s.identbuf))
-//                 })
-//             }
-//         }
-//     }
-// }
-
-// pub fn derive_ser_ron_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
-
-//     let mut str_names = Vec::new();
-//     let last = fields.unnamed.len() - 1;
-//     for (index, field) in fields.unnamed.iter().enumerate() {
-//         let field_name = LitInt::new(&format!("{}", index), field.span());
-//         if index != last{
-//             str_names.push(quote!{
-//                 self.#field_name.ser_ron(d, s);
-//                 s.out.push_str(", ");
-//             })
-//         }
-//         else{
-//             str_names.push(quote!{
-//                 self.#field_name.ser_ron(d, s);
-//             })
-//         }
-//     }
-//     quote! {
-//         impl #impl_generics SerRon for #ident #ty_generics #bounded_where_clause {
-//             fn ser_ron(&self, d: usize, s: &mut makepad_tinyserde::SerRonState) {
-//                 s.out.push('(');
-//                 #(
-//                     #str_names
-//                 ) *
-//                 s.out.push(')');
-//             }
-//         }
-//     }
-// }
-
-// pub fn derive_de_ron_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeRon);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-
-//     let mut items = Vec::new();
-//     for _ in &fields.unnamed {
-//         items.push(quote!{{let r = DeRon::de_ron(s,i)?;s.eat_comma_paren(i)?;r},});
-//     }
-
-//     quote! {
-//         impl #impl_generics DeRon for #ident #ty_generics #bounded_where_clause {
-//             fn de_ron(s: &mut makepad_tinyserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,DeRonErr> {
-//                 s.paren_open(i)?;
-//                 let r = Self(
-//                     #(
-//                         #items
-//                     ) *
-//                 );
-//                 s.paren_close(i)?;
-//                 std::result::Result::Ok(r)
-//             }
-//         }
-//     }
-// }
+    format! ("
+        impl DeRon for {} {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+                // we are expecting an identifier
+                s.ident(i)?;
+                std::result::Result::Ok(match s.identbuf.as_ref() {{
+                    {}
+                    _ => return std::result::Result::Err(s.err_enum(&s.identbuf))
+                }})
+            }}
+        }}", enum_.name, body).parse().unwrap()
+}
