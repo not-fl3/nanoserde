@@ -448,12 +448,13 @@ impl DeJsonState {
                 self.tok = DeJsonTok::CurlyClose;
                 return Ok(());
             }
-            '-' | '0'..='9' => {
+            '-' | '+' | '0'..='9' => {
                 self.numbuf.truncate(0);
-                let is_neg = if self.cur == '-' {
+                let is_neg = if self.cur == '-' || self.cur == '+' {
+                    let sign = self.cur;
                     self.numbuf.push(self.cur);
                     self.next(i);
-                    true
+                    sign == '-'
                 } else {
                     false
                 };
