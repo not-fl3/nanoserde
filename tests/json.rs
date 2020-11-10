@@ -4,7 +4,7 @@ use nanoserde::{DeJson, SerJson};
 fn de() {
     #[derive(DeJson)]
     pub struct Test {
-        pub a: i32,
+        pub a: f32,
         pub b: f32,
         c: Option<String>,
         d: Option<String>,
@@ -17,7 +17,7 @@ fn de() {
     }"#;
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
-    assert_eq!(test.a, 1);
+    assert_eq!(test.a, 1.);
     assert_eq!(test.b, 2.);
     assert_eq!(test.d.unwrap(), "hello");
     assert_eq!(test.c, None);
@@ -337,6 +337,27 @@ fn jsonerror() {
             let _dyn_e: Box<dyn std::error::Error> = std::convert::From::from(e);
         }
     }
+}
+
+#[test]
+fn de_tuple_fields() {
+    #[derive(DeJson, PartialEq, Debug)]
+    pub struct Foo {
+        a: (f32, i32),
+        b: [f32; 3],
+        c: Option<(f32, f32)>
+    }
+
+    let json = r#"{
+       "a": [1.0, 2],
+       "b": [3.0, 4.0, 5.0],
+       "c": [6.0, 7.0]
+    }"#;
+
+    let foo: Foo = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(foo.a, (1.0, 2));
+    assert_eq!(foo.b[2], 5.0);
+    assert_eq!(foo.c.unwrap().1, 7.0);
 }
 
 #[test]

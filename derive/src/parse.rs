@@ -175,8 +175,24 @@ pub fn debug_current_token(source: &mut Peekable<impl Iterator<Item = TokenTree>
 }
 
 fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Option<Type> {
-    let mut ty = next_ident(&mut source)?;
+    let group = next_group(&mut source);
+    if group.is_some() {
+        let mut group = group.unwrap().stream().into_iter().peekable();
 
+        let mut tuple_type = Type {
+            is_option: false,
+            path: "".to_string(),
+        };
+
+        while let Some(next_ty) = next_type(&mut group) {
+            tuple_type.path.push_str(&format!("{}, ", next_ty.path));
+        }
+
+        return Some(tuple_type);
+    }
+
+    // read a path like a::b::c::d
+    let mut ty = next_ident(&mut source)?;
     while let Some(_) = next_exact_punct(&mut source, ":") {
         let _second_colon = next_exact_punct(&mut source, ":").expect("Expecting second :");
 
@@ -185,7 +201,6 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Opt
     }
 
     let angel_bracket = next_exact_punct(&mut source, "<");
-
     if angel_bracket.is_some() {
         let mut generic_type = next_type(source).expect("Expecting generic argument");
         while let Some(_comma) = next_exact_punct(&mut source, ",") {
