@@ -27,37 +27,50 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             let struct_fieldname = field.field_name.clone().unwrap();
             let json_fieldname =
                 shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+            let skip = shared::attrs_skip(&field.attributes);
+            if skip {
+                continue;
+            }
+            let proxied_field = if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+                format!(
+                    "{{let proxy: {} = Into::into(&self.{});proxy}}",
+                    proxy, struct_fieldname
+                )
+            } else {
+                format!("self.{}", struct_fieldname)
+            };
 
             if index == last {
                 if field.ty.is_option {
                     l!(
                         s,
-                        "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
-                        struct_fieldname,
+                        "if let Some(t) = &{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
+                        proxied_field,
                         json_fieldname
                     );
                 } else {
                     l!(
                         s,
-                        "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);",
+                        "s.field(d+1,\"{}\"); {}.ser_json(d+1, s);",
                         json_fieldname,
-                        struct_fieldname
+                        proxied_field
                     );
                 }
             } else {
                 if field.ty.is_option {
-                    l!(s, "if let Some(t) = &self.{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);s.conl();}};", struct_fieldname, json_fieldname);
+                    l!(s, "if let Some(t) = &{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);s.conl();}};", proxied_field, json_fieldname);
                 } else {
                     l!(
                         s,
-                        "s.field(d+1,\"{}\"); self.{}.ser_json(d+1, s);s.conl();",
+                        "s.field(d+1,\"{}\"); {}.ser_json(d+1, s);s.conl();",
                         json_fieldname,
-                        struct_fieldname
+                        proxied_field
                     );
                 }
             }
         }
     }
+
     format!(
         "
         impl SerJson for {} {{
@@ -78,6 +91,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut json_field_names = Vec::new();
+    let mut matches = Vec::new();
     let mut unwraps = Vec::new();
 
     let container_attr_default = defaults;
@@ -88,27 +102,40 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let field_attr_default = shared::attrs_default(&field.attributes);
         let json_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
+        let proxy = crate::shared::attrs_proxy(&field.attributes);
+        let skip = crate::shared::attrs_skip(&field.attributes);
 
-        if field.ty.is_option {
-            unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}}else {{ None }} }}",
-                localvar
-            ));
-        } else if container_attr_default || field_attr_default {
-            unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}}else {{ Default::default() }} }}",
-                localvar
-            ));
+        let proxified_t = if let Some(proxy) = proxy {
+            format!("From::<&{}>::from(&t)", proxy)
         } else {
-            unwraps.push(format!(
-                "{{if let Some(t) = {} {{t}} else {{return Err(s.err_nf(\"{}\"))}} }}",
-                localvar, struct_fieldname
-            ));
+            format!("t")
+        };
+
+        if skip == false {
+            if field.ty.is_option {
+                unwraps.push(format!(
+                    "{{if let Some(t) = {} {{ {} }} else {{ None }} }}",
+                    localvar, proxified_t
+                ));
+            } else if container_attr_default || field_attr_default {
+                unwraps.push(format!(
+                    "{{if let Some(t) = {} {{ {} }} else {{ Default::default() }} }}",
+                    localvar, proxified_t
+                ));
+            } else {
+                unwraps.push(format!(
+                    "{{if let Some(t) = {} {{ {} }} else {{return Err(s.err_nf(\"{}\"))}} }}",
+                    localvar, proxified_t, struct_fieldname
+                ));
+            }
+            matches.push((json_fieldname.clone(), localvar.clone()));
+            local_vars.push(localvar);
+        } else {
+            unwraps.push(format!("None"));
         }
 
         struct_field_names.push(struct_fieldname);
         json_field_names.push(json_fieldname);
-        local_vars.push(localvar);
     }
 
     let mut r = String::new();
@@ -119,8 +146,8 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     l!(r, "while let Some(_) = s.next_str() {");
 
     if json_field_names.len() != 0 {
-        l!(r, "match s.strbuf.as_ref() {");
-        for (json_field_name, local_var) in json_field_names.iter().zip(local_vars.iter()) {
+        l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
+        for (json_field_name, local_var) in matches.iter() {
             l!(
                 r,
                 "\"{}\" => {{s.next_colon(i) ?;{} = Some(DeJson::de_json(s, i) ?)}},",
@@ -176,111 +203,136 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
                 std::result::Result::Ok({{ {} }})
             }}
         }}", struct_.name, body)
+        .parse().unwrap()
+}
+
+pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
+    let mut r = String::new();
+
+    for variant in enum_.variants.iter() {
+        // Unit
+        if variant.fields.len() == 0 {
+            l!(
+                r,
+                "Self::{} => {{s.label(\"{}\");s.out.push_str(\":[]\");}},",
+                variant.name,
+                variant.name
+            );
+        }
+        // Named
+        else if variant.named {
+            let mut items = String::new();
+            let mut field_names = vec![];
+            let last = variant.fields.len() - 1;
+            for (index, field) in variant.fields.iter().enumerate() {
+                if let Some(name) = &&field.field_name {
+                    let proxied_field =
+                        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+                            format!("{{let proxy: {} = Into::into(&{});proxy}}", proxy, name)
+                        } else {
+                            format!("{}", name)
+                        };
+
+                    if index == last {
+                        if field.ty.is_option {
+                            l!(
+                                items,
+                                "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);}}",
+                                name,
+                                name,
+                                proxied_field
+                            )
+                        } else {
+                            l!(
+                                items,
+                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);",
+                                name,
+                                proxied_field
+                            )
+                        }
+                    } else {
+                        if field.ty.is_option {
+                            l!(
+                                items,
+                                "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
+                                name,
+                                name,
+                                proxied_field
+                            );
+                        } else {
+                            l!(
+                                items,
+                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
+                                name,
+                                proxied_field
+                            );
+                        }
+                    }
+                    field_names.push(name.clone());
+                }
+            }
+            l!(
+                r,
+                "Self::{} {{ {} }} => {{
+                        s.label(\"{}\");
+                        s.out.push(':');
+                        s.st_pre();
+                        {}
+                        s.st_post(d);
+                    }}",
+                variant.name,
+                field_names.join(","),
+                variant.name,
+                items
+            );
+        }
+        // Unnamed
+        else {
+            let mut names = Vec::new();
+            let mut inner = String::new();
+            let last = variant.fields.len() - 1;
+            for (index, _) in &mut variant.fields.iter().enumerate() {
+                let field_name = format!("f{}", index);
+                names.push(field_name.clone());
+                if index != last {
+                    l!(inner, "{}.ser_json(d, s); s.out.push(',');", field_name);
+                } else {
+                    l!(inner, "{}.ser_json(d, s);", field_name);
+                }
+            }
+            l!(
+                r,
+                "Self::{}  ({}) => {{
+                        s.label(\"{}\");
+                        s.out.push(':');
+                        s.out.push('[');
+                        {}
+                        s.out.push(']');
+                    }}",
+                variant.name,
+                names.join(","),
+                variant.name,
+                inner
+            );
+        }
+    }
+
+    format!(
+        "
+        impl SerJson for {} {{
+            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+                s.out.push('{{');
+                match self {{
+                    {}
+                }}
+                s.out.push('}}');
+            }}
+        }}",
+        enum_.name, r
+    )
     .parse()
     .unwrap()
 }
-
-// pub fn derive_ser_json_enum(input: &DeriveInput, enumeration: &DataEnum) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerJson);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-
-//     let ident = &input.ident;
-
-//     let mut match_item = Vec::new();
-
-//     for variant in &enumeration.variants {
-//         let ident = &variant.ident;
-//         let lit = LitStr::new(&ident.to_string(), ident.span());
-//         match &variant.fields {
-//             Fields::Unit => {
-//                 match_item.push(quote!{
-//                     Self::#ident => {s.label(#lit);s.out.push_str(":[]");},
-//                 })
-//             },
-//             Fields::Named(fields_named) => {
-//                 let mut items = Vec::new();
-//                 let mut field_names = Vec::new();
-//                 let last = fields_named.named.len() - 1;
-//                 for (index, field) in fields_named.named.iter().enumerate() {
-//                     if let Some(field_name) = &field.ident {
-//                         let field_string = LitStr::new(&field_name.to_string(), field_name.span());
-//                         if index == last{
-//                             if type_is_option(&field.ty) {
-//                                 items.push(quote!{if #field_name.is_some(){s.field(d+1, #field_string);#field_name.ser_json(d+1, s);}})
-//                             }
-//                             else{
-//                                 items.push(quote!{s.field(d+1, #field_string);#field_name.ser_json(d+1, s);})
-//                             }
-//                         }
-//                         else{
-//                             if type_is_option(&field.ty) {
-//                                 items.push(quote!{if #field_name.is_some(){s.field(d+1, #field_string);#field_name.ser_json(d+1, s);s.conl();}})
-//                             }
-//                             else{
-//                                 items.push(quote!{s.field(d+1, #field_string);#field_name.ser_json(d+1, s);s.conl();})
-//                             }
-//                         }
-//                         field_names.push(field_name);
-//                     }
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident {#(#field_names,) *} => {
-//                         s.label(#lit);
-//                         s.out.push(':');
-//                         s.st_pre();
-//                         #(
-//                             #items
-//                         )*
-//                         s.st_post(d);
-//                     }
-//                 });
-//             },
-//             Fields::Unnamed(fields_unnamed) => {
-//                 let mut field_names = Vec::new();
-//                 let mut str_names = Vec::new();
-//                 let last = fields_unnamed.unnamed.len() - 1;
-//                 for (index, field) in fields_unnamed.unnamed.iter().enumerate() {
-//                     let field_name = Ident::new(&format!("f{}", index), field.span());
-//                     if index != last{
-//                         str_names.push(quote!{
-//                             #field_name.ser_json(d, s); s.out.push(',');
-//                         });
-//                     }
-//                     else{
-//                         str_names.push(quote!{
-//                             #field_name.ser_json(d, s);
-//                         });
-//                     }
-//                     field_names.push(field_name);
-//                 }
-//                 match_item.push(quote!{
-//                     Self::#ident (#(#field_names,) *) => {
-//                         s.label(#lit);
-//                         s.out.push(':');
-//                         s.out.push('[');
-//                         #(#str_names) *
-//                         s.out.push(']');
-//                     }
-//                 });
-//             },
-//         }
-//     }
-
-//     quote! {
-//         impl #impl_generics SerJson for #ident #ty_generics #bounded_where_clause {
-//             fn ser_json(&self, d: usize, s: &mut makepad_tinyserde::SerJsonState) {
-//                 s.out.push('{');
-//                 match self {
-//                     #(
-//                         #match_item
-//                     ) *
-//                 }
-//                 s.out.push('}');
-//             }
-//         }
-//     }
-// }
 
 pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();

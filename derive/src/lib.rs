@@ -102,10 +102,9 @@ pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
     // ok we have an ident, its either a struct or a enum
     let ts = match &input {
-        parse::Data::Struct(struct_) if struct_.named => derive_ser_json_struct(struct_),
-        //parse::Data::Enum(enum_) => derive_ser_json_enum(enum_),
-        //parse::Data::Struct(struct_) => derive_ser_json_struct_unnamed(struct_),
-        _ => unimplemented!("Only named structs are supported"),
+        parse::Data::Struct(struct_) => derive_ser_json_struct(struct_),
+        parse::Data::Enum(enum_) => derive_ser_json_enum(enum_),
+        _ => unimplemented!(""),
     };
 
     ts

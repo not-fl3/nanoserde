@@ -33,3 +33,9 @@ pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> bool {
         .iter()
         .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "default")
 }
+
+pub fn attrs_skip(attributes: &[crate::parse::Attribute]) -> bool {
+    attributes
+        .iter()
+        .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "skip")
+}

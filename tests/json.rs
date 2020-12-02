@@ -210,7 +210,9 @@ fn one_field_map() {
         field: std::collections::HashMap<String, f32>,
     }
 
-    let test = OneField { field: std::collections::HashMap::new() };
+    let test = OneField {
+        field: std::collections::HashMap::new(),
+    };
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
     assert!(test == test_deserialized);
@@ -356,7 +358,7 @@ fn de_tuple_fields() {
     pub struct Foo {
         a: (f32, i32),
         b: [f32; 3],
-        c: Option<(f32, f32)>
+        c: Option<(f32, f32)>,
     }
 
     let json = r#"{
@@ -409,6 +411,42 @@ fn de_enum() {
 }
 
 #[test]
+fn de_ser_enum() {
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Foo {
+        A,
+        B { x: i32 },
+        C(i32, String),
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Bar {
+        foo1: Foo,
+        foo2: Foo,
+        foo3: Foo,
+    }
+
+    let json = r#"
+       {
+          "foo1": { "A": [] },
+          "foo2": { "B": {"x": 5} },
+          "foo3": { "C": [6, "HELLO"] }
+       }
+    "#;
+
+    let test: Bar = DeJson::deserialize_json(json).unwrap();
+
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+
+    assert_eq!(test.foo1, Foo::A);
+    assert_eq!(test.foo2, Foo::B { x: 5 });
+    assert_eq!(test.foo3, Foo::C(6, "HELLO".to_string()));
+}
+
+#[test]
 fn test_various_escapes() {
     let json = r#""\n\t\u0020\f\b\\\"\/\ud83d\uDE0B\r""#;
     let unescaped: String = DeJson::deserialize_json(json).unwrap();
@@ -440,4 +478,47 @@ fn test_surrogate_pairs_exhaustively() {
             assert_eq!(result.chars().count(), 1);
         }
     }
+}
+
+#[test]
+fn field_proxy() {
+    #[derive(PartialEq, Debug)]
+    pub struct NonSerializable {
+        foo: i32,
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Serializable {
+        x: i32,
+    }
+
+    impl From<&NonSerializable> for Serializable {
+        fn from(non_serializable: &NonSerializable) -> Serializable {
+            Serializable {
+                x: non_serializable.foo,
+            }
+        }
+    }
+    impl From<&Serializable> for NonSerializable {
+        fn from(serializable: &Serializable) -> NonSerializable {
+            NonSerializable {
+                foo: serializable.x,
+            }
+        }
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Test {
+        #[nserde(proxy = "Serializable")]
+        foo: NonSerializable,
+    }
+
+    let test = Test {
+        foo: NonSerializable { foo: 6 },
+    };
+
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
 }

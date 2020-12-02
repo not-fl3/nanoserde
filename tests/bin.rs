@@ -132,15 +132,14 @@ fn enums() {
         B(i32),
         C { x: String },
     }
-    
+
     #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub struct Test {
         foo1: Foo,
         foo2: Foo,
-        foo3: Foo
+        foo3: Foo,
     }
 
-    
     let test: Test = Test {
         foo1: Foo::A,
         foo2: Foo::B(23),
