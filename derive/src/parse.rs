@@ -337,6 +337,9 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
     let group = next_group(&mut source);
     // unit struct
     if group.is_none() {
+        // skip ; at the end of struct like this: "struct Foo;"
+        let _ = next_punct(&mut source);
+
         return Struct {
             name: struct_name,
             fields: vec![],
@@ -388,6 +391,8 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
         if next_eof(&mut body).is_some() {
             break;
         }
+
+        let _attributes = next_attributes_list(&mut body);
 
         let variant_name = next_ident(&mut body).expect("Unnamed variants are not supported");
         let group = next_group(&mut body);

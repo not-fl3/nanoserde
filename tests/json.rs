@@ -180,6 +180,17 @@ fn empty() {
 }
 
 #[test]
+fn empty2() {
+    #[derive(DeJson, SerJson)]
+    pub struct Empty;
+
+    let json = r#"{
+    }"#;
+
+    let _: Empty = DeJson::deserialize_json(json).unwrap();
+}
+
+#[test]
 fn one_field() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct OneField {
