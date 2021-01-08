@@ -162,3 +162,9 @@ fn enums() {
         }
     );
 }
+
+#[test]
+fn pub_tuple_struct() {
+    #[derive(DeBin, SerBin, PartialEq)]
+    struct Foo(pub [u8; 3]);
+}

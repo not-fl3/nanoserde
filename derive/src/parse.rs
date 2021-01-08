@@ -90,7 +90,14 @@ pub fn next_visibility_modifier(
     if let Some(TokenTree::Ident(ident)) = source.peek() {
         if format!("{}", ident) == "pub" {
             source.next();
-            next_group(source);
+
+            // skip (crate) and alike
+            if let Some(TokenTree::Group(group)) = source.peek() {
+                if group.delimiter() == Delimiter::Parenthesis {
+                    next_group(source);
+                }
+            }
+
             return Some("pub".to_string());
         }
     }
@@ -308,7 +315,6 @@ fn next_fields(
         }
 
         let attributes = next_attributes_list(&mut body);
-
         let _visibility = next_visibility_modifier(&mut body);
         let field_name = if named {
             let field_name = next_ident(&mut body).expect("Field name expected");
@@ -318,6 +324,7 @@ fn next_fields(
         } else {
             None
         };
+
         let ty = next_type(&mut body).expect("Expected field type");
         let _punct = next_punct(&mut body);
 
@@ -353,7 +360,7 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
         Delimiter::Parenthesis => false,
         Delimiter::Brace => true,
 
-        _ => panic!("Enum with unsupported delimiter"),
+        _ => panic!("Struct with unsupported delimiter"),
     };
 
     let mut body = group.stream().into_iter().peekable();
