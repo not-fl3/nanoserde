@@ -713,7 +713,7 @@ where
         if let Some(v) = self {
             v.ser_json(d, s);
         } else {
-            s.out.push_str("None");
+            s.out.push_str("null");
         }
     }
 }
