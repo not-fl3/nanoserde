@@ -1,6 +1,6 @@
 [package]
 name = "nanoserde"
-version = "0.1.22"
+version = "0.1.24"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = """
@@ -22,4 +22,4 @@ edition = "2018"
 repository = "https://github.com/not-fl3/nanoserde"
 
 [dependencies]
-nanoserde-derive = { path = "derive", version = "=0.1.14" }
+nanoserde-derive = { path = "derive", version = "=0.1.16" }
