@@ -177,6 +177,14 @@ fn empty() {
     }"#;
 
     let _: Empty = DeJson::deserialize_json(json).unwrap();
+
+    #[derive(DeJson)]
+    pub struct Empty2;
+
+    let json = r#"{
+    }"#;
+
+    let _: Empty2 = DeJson::deserialize_json(json).unwrap();
 }
 
 #[test]
@@ -518,6 +526,63 @@ fn field_proxy() {
     };
 
     let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
+
+#[test]
+fn tuple_struct() {
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct Test(i32);
+
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct Foo {
+        x: Test,
+    };
+
+    let test = Foo { x: Test(5) };
+    let bytes = SerJson::serialize_json(&test);
+
+    assert_eq!(bytes, "{\"x\":[5]}");
+
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
+
+#[test]
+fn tuple_struct_transparent() {
+    #[derive(DeJson, SerJson, PartialEq)]
+    #[nserde(transparent)]
+    pub struct Test(i32);
+
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct Foo {
+        x: Test,
+    };
+
+    let test = Foo { x: Test(5) };
+    let bytes = SerJson::serialize_json(&test);
+
+    assert_eq!(bytes, "{\"x\":5}");
+
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
+
+#[test]
+fn tuple_struct2() {
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct Test(i32, pub i32, pub(crate) String, f32);
+
+    #[derive(DeJson, SerJson, PartialEq)]
+    pub struct Vec2(pub(crate) f32, pub(crate) f32);
+
+    let test = Test(0, 1, "asd".to_string(), 2.);
+    let bytes = SerJson::serialize_json(&test);
+
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
 
     assert!(test == test_deserialized);

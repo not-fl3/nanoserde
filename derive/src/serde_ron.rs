@@ -238,7 +238,7 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
                 let r = DeRon::de_ron(s, i)?;
                 s.eat_comma_paren(i)?;
                 r
-            }}"
+            }},"
         );
     }
 
