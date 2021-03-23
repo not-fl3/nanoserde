@@ -390,64 +390,86 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
         }}", enum_.name, r).parse().unwrap()
 }
 
-// pub fn derive_ser_json_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let bound = parse_quote!(SerJson);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
-//     let ident = &input.ident;
+pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
 
-//     let mut str_names = Vec::new();
-//     let last = fields.unnamed.len() - 1;
-//     for (index, field) in fields.unnamed.iter().enumerate() {
-//         let field_name = LitInt::new(&format!("{}", index), field.span());
-//         if index != last{
-//             str_names.push(quote!{
-//                 self.#field_name.ser_json(d, s);
-//                 s.out.push(',');
-//             })
-//         }
-//         else{
-//             str_names.push(quote!{
-//                 self.#field_name.ser_json(d, s);
-//             })
-//         }
-//     }
-//     quote! {
-//         impl #impl_generics SerJson for #ident #ty_generics #bounded_where_clause {
-//             fn ser_json(&self, d: usize, s: &mut makepad_tinyserde::SerJsonState) {
-//                 s.out.push('[');
-//                 #(
-//                     #str_names
-//                 ) *
-//                 s.out.push(']');
-//             }
-//         }
-//     }
-// }
+    let transparent = shared::attrs_transparent(&struct_.attributes);
 
-// pub fn derive_de_json_struct_unnamed(input: &DeriveInput, fields:&FieldsUnnamed) -> TokenStream {
-//     let (impl_generics, ty_generics, _) = input.generics.split_for_impl();
-//     let ident = &input.ident;
-//     let bound = parse_quote!(DeJson);
-//     let bounded_where_clause = where_clause_with_bound(&input.generics, bound);
+    // encode empty struct as {}
+    if struct_.fields.len() == 0 {
+        l!(body, "s.out.push('}');");
+        l!(body, "s.out.push('{');");
+    }
+    // if its a newtype struct and it should be transparent - skip any curles
+    // and skip "container"
+    else if transparent && struct_.fields.len() == 1 {
+        l!(body, "self.{}.ser_json(d, s);", 0);
+    }
+    // if more than one field - encode as array []
+    else {
+        l!(body, "s.out.push('[');");
+        let last = struct_.fields.len() - 1;
+        for (n, _) in struct_.fields.iter().enumerate() {
+            l!(body, "self.{}.ser_json(d, s);", n);
+            if n != last {
+                l!(body, "s.out.push_str(\", \");");
+            }
+        }
+        l!(body, "s.out.push(']');");
+    }
 
-//     let mut items = Vec::new();
-//     for _ in &fields.unnamed {
-//         items.push(quote!{{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r}});
-//     }
+    format!(
+        "
+        impl SerJson for {} {{
+            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+                {}
+            }}
+        }}",
+        struct_.name, body
+    )
+    .parse()
+    .unwrap()
+}
 
-//     quote! {
-//         impl #impl_generics DeJson for #ident #ty_generics #bounded_where_clause {
-//             fn de_json(s: &mut makepad_tinyserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,DeJsonErr> {
-//                 s.block_open(i)?;
-//                 let r = Self(
-//                     #(
-//                         #items
-//                     ) *
-//                 );
-//                 s.block_close(i)?;
-//                 std::result::Result::Ok(r)
-//             }
-//         }
-//     }
-// }
+pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
+    let mut body = String::new();
+
+    let transparent = shared::attrs_transparent(&struct_.attributes);
+
+    for _ in &struct_.fields {
+        l!(body, "{ let r = DeJson::de_json(s, i)?;");
+        if struct_.fields.len() != 1 {
+            l!(body, "  s.eat_comma_block(i)?;");
+        }
+        l!(body, "  r");
+        l!(body, "},");
+    }
+
+    // no fields - was encoded as {}
+    let body = if struct_.fields.len() == 0 {
+        format!("s.curly_open(i)?;let r = Self;s.curly_close(i)?;")
+    }
+    // if it was transparent newtype struct - skip "container"
+    // and just deserialize content
+    else if transparent && struct_.fields.len() == 1 {
+        format!("let r = Self({});", body)
+    }
+    // more than one field, was an array []
+    else {
+        format!(
+            "s.block_open(i)?;
+             let r = Self({});
+             s.block_close(i)?;",
+            body
+        )
+    };
+
+    format! ("
+        impl DeJson for {} {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeJsonErr> {{
+                {}
+                std::result::Result::Ok(r)
+            }}
+        }}",struct_.name, body
+    ).parse().unwrap()
+}

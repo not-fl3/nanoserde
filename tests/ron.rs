@@ -378,3 +378,19 @@ fn test_surrogate_pairs_exhaustively() {
         }
     }
 }
+
+#[test]
+fn tuple_struct() {
+    #[derive(DeRon, SerRon, PartialEq)]
+    pub struct Test(i32, pub i32, pub(crate) String, f32);
+
+    #[derive(DeRon, SerRon, PartialEq)]
+    pub struct Vec2(pub(crate) f32, pub(crate) f32);
+
+    let test = Test(0, 1, "asd".to_string(), 2.);
+    let bytes = SerRon::serialize_ron(&test);
+
+    let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
