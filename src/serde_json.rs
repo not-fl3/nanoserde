@@ -731,6 +731,20 @@ where
     }
 }
 
+impl SerJson for () {
+    fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
+        s.out.push_str("")
+    }
+}
+
+impl DeJson for () {
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<(), DeJsonErr> {
+        // skip ""
+        s.next_tok(i)?;
+        return Ok(());
+    }
+}
+
 impl SerJson for bool {
     fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
         if *self {
