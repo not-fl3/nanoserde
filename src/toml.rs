@@ -364,7 +364,29 @@ impl TomlParser {
                 '"' => {
                     let mut val = String::new();
                     self.next(i);
-                    while self.cur != '"' {
+                    let mut braces = 1;
+                    while self.cur == '"' && braces < 3 {
+                        braces += 1;
+                        self.next(i);
+                    }
+                    let escaped_string = braces == 3;
+                    loop {
+                        if self.cur == '"' && escaped_string == false {
+                            break;
+                        }
+                        if self.cur == '"' && escaped_string {
+                            let mut tmp = String::new();
+                            let mut braces = 0;
+                            while self.cur == '"' {
+                                tmp.push('"');
+                                braces += 1;
+                                self.next(i);
+                            }
+                            if braces == 3 {
+                                break;
+                            }
+                            val.push_str(&tmp);
+                        }
                         if self.cur == '\\' {
                             self.next(i);
                         }
