@@ -21,8 +21,9 @@ pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     let mut s = String::new();
 
+    l!(s, "let mut first_field_was_serialized = false;");
+
     if struct_.fields.len() >= 1 {
-        let last = struct_.fields.len() - 1;
         for (index, field) in struct_.fields.iter().enumerate() {
             let struct_fieldname = field.field_name.clone().unwrap();
             let json_fieldname =
@@ -40,33 +41,21 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                 format!("self.{}", struct_fieldname)
             };
 
-            if index == last {
-                if field.ty.is_option {
-                    l!(
-                        s,
-                        "if let Some(t) = &{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
-                        proxied_field,
-                        json_fieldname
-                    );
-                } else {
-                    l!(
-                        s,
-                        "s.field(d+1,\"{}\"); {}.ser_json(d+1, s);",
-                        json_fieldname,
-                        proxied_field
-                    );
-                }
-            } else {
-                if field.ty.is_option {
-                    l!(s, "if let Some(t) = &{} {{ s.field(d+1, \"{}\");t.ser_json(d+1, s);s.conl();}};", proxied_field, json_fieldname);
-                } else {
-                    l!(
-                        s,
-                        "s.field(d+1,\"{}\"); {}.ser_json(d+1, s);s.conl();",
-                        json_fieldname,
-                        proxied_field
-                    );
-                }
+            if field.ty.is_option {
+                l!(
+                    s,
+                    "if let Some(t) = &{} {{ if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
+                    proxied_field,
+                    json_fieldname
+                );
+            }
+            else {
+                l!(
+                    s,
+                    "if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1,\"{}\"); {}.ser_json(d+1, s);",
+                    json_fieldname,
+                    proxied_field
+                );
             }
         }
     }
