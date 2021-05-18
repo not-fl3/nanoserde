@@ -348,7 +348,7 @@ fn exponents() {
         f: f64,
         g: f64,
         h: f64,
-    };
+    }
 
     let json = r#"{
         "a": 1e2,
@@ -573,7 +573,7 @@ fn tuple_struct() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct Foo {
         x: Test,
-    };
+    }
 
     let test = Foo { x: Test(5) };
     let bytes = SerJson::serialize_json(&test);
@@ -594,7 +594,7 @@ fn tuple_struct_transparent() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct Foo {
         x: Test,
-    };
+    }
 
     let test = Foo { x: Test(5) };
     let bytes = SerJson::serialize_json(&test);

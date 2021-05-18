@@ -262,7 +262,7 @@ fn exponents() {
         f: f64,
         g: f64,
         h: f64,
-    };
+    }
 
     let ron = r#"(
         a: 1e2,

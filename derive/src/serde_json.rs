@@ -24,7 +24,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     l!(s, "let mut first_field_was_serialized = false;");
 
     if struct_.fields.len() >= 1 {
-        for (index, field) in struct_.fields.iter().enumerate() {
+        for (_index, field) in struct_.fields.iter().enumerate() {
             let struct_fieldname = field.field_name.clone().unwrap();
             let json_fieldname =
                 shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
