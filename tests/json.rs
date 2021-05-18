@@ -24,6 +24,40 @@ fn de() {
 }
 
 #[test]
+fn de_options() {
+    #[derive(DeJson)]
+    pub struct Test {
+        a: Option<String>,
+        b: Option<String>,
+    }
+
+    let json = r#"{
+        "a": "asd",
+        "b": "qwe",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, Some("asd".to_string()));
+    assert_eq!(test.b, Some("qwe".to_string()));
+}
+
+
+#[test]
+fn de_option_one_field() {
+    #[derive(DeJson)]
+    pub struct Test {
+        a: Option<String>,
+    }
+
+    let json = r#"{
+        "a": "asd",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, Some("asd".to_string()));
+}
+
+#[test]
 fn de_non_exhaustive() {
     #[derive(DeJson)]
     pub struct Test {
