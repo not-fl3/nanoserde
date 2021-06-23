@@ -51,7 +51,9 @@ pub struct EnumVariant {
     pub name: String,
     pub named: bool,
     pub fields: Vec<Field>,
+    pub attributes: Vec<Attribute>,
 }
+
 #[derive(Debug)]
 pub struct Enum {
     pub name: String,
@@ -399,7 +401,7 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
             break;
         }
 
-        let _attributes = next_attributes_list(&mut body);
+        let attributes = next_attributes_list(&mut body);
 
         let variant_name = next_ident(&mut body).expect("Unnamed variants are not supported");
         let group = next_group(&mut body);
@@ -408,6 +410,7 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
                 name: variant_name,
                 named: false,
                 fields: vec![],
+                attributes,
             });
             let _maybe_comma = next_exact_punct(&mut body, ",");
             continue;
@@ -427,6 +430,7 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
                 name: variant_name,
                 named,
                 fields,
+                attributes,
             });
         }
         let _maybe_semicolon = next_exact_punct(&mut body, ";");
