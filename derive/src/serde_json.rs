@@ -199,13 +199,15 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
 
     for variant in enum_.variants.iter() {
+        let json_variant_name =
+            shared::attrs_rename(&variant.attributes).unwrap_or(variant.name.clone());
         // Unit
         if variant.fields.len() == 0 {
             l!(
                 r,
-                "Self::{} => {{s.label(\"{}\");s.out.push_str(\":[]\");}},",
+                "Self::{} => s.label(\"{}\"),",
                 variant.name,
-                variant.name
+                json_variant_name
             );
         }
         // Named
@@ -263,15 +265,17 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
             l!(
                 r,
                 "Self::{} {{ {} }} => {{
+                        s.out.push('{{');
                         s.label(\"{}\");
                         s.out.push(':');
                         s.st_pre();
                         {}
                         s.st_post(d);
+                        s.out.push('}}');
                     }}",
                 variant.name,
                 field_names.join(","),
-                variant.name,
+                json_variant_name,
                 items
             );
         }
@@ -292,15 +296,17 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
             l!(
                 r,
                 "Self::{}  ({}) => {{
+                        s.out.push('{{');
                         s.label(\"{}\");
                         s.out.push(':');
                         s.out.push('[');
                         {}
                         s.out.push(']');
+                        s.out.push('}}');
                     }}",
                 variant.name,
                 names.join(","),
-                variant.name,
+                json_variant_name,
                 inner
             );
         }
@@ -310,11 +316,9 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
         "
         impl SerJson for {} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
-                s.out.push('{{');
                 match self {{
                     {}
                 }}
-                s.out.push('}}');
             }}
         }}",
         enum_.name, r
@@ -324,15 +328,19 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
 }
 
 pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
-    let mut r = String::new();
+    let mut r_units = String::new();
+    let mut r_rest = String::new();
 
     for variant in &enum_.variants {
+        let json_variant_name =
+            shared::attrs_rename(&variant.attributes).unwrap_or(variant.name.clone());
+
         // Unit
         if variant.fields.len() == 0 {
             l!(
-                r,
-                "\"{}\" => {{s.block_open(i)?;s.block_close(i)?;Self::{} }},",
-                variant.name,
+                r_units,
+                "\"{}\" => Self::{},",
+                json_variant_name,
                 variant.name
             );
         }
@@ -340,7 +348,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
         else if variant.named {
             let body =
                 derive_de_json_named(&format!("Self::{}", variant.name), false, &variant.fields);
-            l!(r, "\"{}\" => {{ {} }}, ", variant.name, body);
+            l!(r_rest, "\"{}\" => {{ {} }}, ", json_variant_name, body);
         }
         // Unnamed
         else if variant.named == false {
@@ -353,30 +361,62 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                 );
             }
             l!(
-                r,
+                r_rest,
                 "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
-                variant.name,
+                json_variant_name,
                 variant.name,
                 field_names
             );
         }
     }
 
-    format!(
+    let mut r = format!(
         "impl DeJson for {} {{
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
-                // we are expecting an identifier
-                s.curly_open(i)?;
-                let _ = s.string(i)?;
-                s.colon(i)?;
-                let r = std::result::Result::Ok(match s.strbuf.as_ref() {{
-            {}
-                    _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
-                }});
-                s.curly_close(i)?;
-                r
-            }}
-        }}", enum_.name, r).parse().unwrap()
+                match s.tok {{",
+        enum_.name,
+    );
+
+    if !r_rest.is_empty() {
+        r.push_str(&format!(
+            "
+                    nanoserde::DeJsonTok::CurlyOpen => {{
+                        s.curly_open(i)?;
+                        let _ = s.string(i)?;
+                        s.colon(i)?;
+                        let r = std::result::Result::Ok(match s.strbuf.as_ref() {{
+                            {}
+                            _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
+                        }});
+                        s.curly_close(i)?;
+                        r
+                    }},",
+            r_rest,
+        ))
+    }
+
+    if !r_units.is_empty() {
+        r.push_str(&format!(
+            "
+                    nanoserde::DeJsonTok::Str => {{
+                        let _ = s.string(i)?;
+                        std::result::Result::Ok(match s.strbuf.as_ref() {{
+                            {}
+                            _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
+                        }})
+                    }},",
+            r_units,
+        ))
+    }
+
+    r.push_str(r#"
+                    _ => std::result::Result::Err(s.err_token("String or {")),
+                }
+            }
+        }
+"#);
+
+    r.parse().unwrap()
 }
 
 pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {

@@ -121,17 +121,31 @@ fn rename() {
         #[nserde(rename = "fooField")]
         pub a: i32,
         #[nserde(rename = "barField")]
-        pub b: i32,
+        pub b: Bar,
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Bar {
+        #[nserde(rename = "fooValue")]
+        A,
+        #[nserde(rename = "barValue")]
+        B,
+    }
+
+    impl Default for Bar {
+        fn default() -> Self {
+            Self::A
+        }
     }
 
     let json = r#"{
         "fooField": 1,
-        "barField": 2,
+        "barField": "fooValue",
     }"#;
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
     assert_eq!(test.a, 1);
-    assert_eq!(test.b, 2);
+    assert_eq!(test.b, Bar::A);
 
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
@@ -433,7 +447,7 @@ fn de_enum() {
 
     let json = r#"
        {
-          "foo1": { "A": [] },
+          "foo1": "A",
           "foo2": { "B": [ 1, "asd" ] },
           "foo3": { "C": { "a": 2, "b": "qwe" } }
        }
@@ -470,7 +484,7 @@ fn de_ser_enum() {
 
     let json = r#"
        {
-          "foo1": { "A": [] },
+          "foo1": "A",
           "foo2": { "B": {"x": 5} },
           "foo3": { "C": [6, "HELLO"] }
        }
