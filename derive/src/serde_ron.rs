@@ -112,13 +112,14 @@ pub fn derive_de_ron_named(
     let mut struct_field_names = Vec::new();
     let mut ron_field_names = Vec::new();
 
-    let container_attr_default = shared::attrs_default(attributes);
+    let container_attr_default = shared::attrs_default(attributes).is_some();
 
     let mut unwraps = Vec::new();
     for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
-        let field_attr_default = shared::attrs_default(&field.attributes);
+        let field_attr_default = shared::attrs_default(&field.attributes)
+            .map(|o| o.unwrap_or_else(|| String::from("Default::default")));
         let ron_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
 
@@ -133,16 +134,17 @@ pub fn derive_de_ron_named(
                 }}",
                 localvar
             ));
-        } else if container_attr_default || field_attr_default {
+        } else if container_attr_default || field_attr_default.is_some() {
             unwraps.push(format!(
                 "{{
                     if let Some(t) = {} {{
                         t
                     }} else {{
-                        Default::default()
+                        {}()
                     }}
                 }}",
-                localvar
+                localvar,
+                field_attr_default.unwrap_or_else(|| String::from("Default::default"))
             ));
         } else {
             unwraps.push(format!(
@@ -208,7 +210,7 @@ pub fn derive_de_ron_named(
             }};
             s.paren_close(i)?;
             {} {{
-                {}  
+                {}
             }}
         }}",
         local_lets, match_names, name, body

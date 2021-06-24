@@ -28,10 +28,16 @@ pub fn attrs_rename(attributes: &[crate::parse::Attribute]) -> Option<String> {
     })
 }
 
-pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> bool {
-    attributes
-        .iter()
-        .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "default")
+pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> Option<Option<String>> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 1 && attr.tokens[0] == "default" {
+            Some(None)
+        } else if attr.tokens.len() == 2 && attr.tokens[0] == "default" {
+            Some(Some(attr.tokens[1].clone()))
+        } else {
+            None
+        }
+    })
 }
 
 pub fn attrs_transparent(attributes: &[crate::parse::Attribute]) -> bool {
