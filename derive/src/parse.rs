@@ -132,9 +132,7 @@ pub fn next_exact_punct(
     return None;
 }
 
-pub fn next_literal(
-    source: &mut Peekable<impl Iterator<Item = TokenTree>>,
-) -> Option<String> {
+pub fn next_literal(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Option<String> {
     if let Some(TokenTree::Literal(lit)) = source.peek() {
         let mut literal = lit.to_string();
 
