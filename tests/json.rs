@@ -169,8 +169,10 @@ fn de_field_default() {
         #[nserde(default)]
         foo: Foo,
         foo2: Foo,
-        #[nserde(default = "some_value")]
+        #[nserde(default = "4.0")]
         b: f32,
+        #[nserde(default_with = "some_value")]
+        c: f32,
     }
 
     fn some_value() -> f32 {
@@ -184,7 +186,8 @@ fn de_field_default() {
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
     assert_eq!(test.a, 1);
-    assert_eq!(test.b, 3.0);
+    assert_eq!(test.b, 4.0);
+    assert_eq!(test.c, 3.0);
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
 }
