@@ -11,7 +11,7 @@ use std::iter::Peekable;
 #[derive(Debug)]
 pub struct Attribute {
     pub name: String,
-    pub tokens: Vec<(String, bool)>,
+    pub tokens: Vec<String>,
 }
 
 #[allow(dead_code)]
@@ -134,19 +134,17 @@ pub fn next_exact_punct(
 
 pub fn next_literal(
     source: &mut Peekable<impl Iterator<Item = TokenTree>>,
-) -> Option<(String, bool)> {
+) -> Option<String> {
     if let Some(TokenTree::Literal(lit)) = source.peek() {
         let mut literal = lit.to_string();
 
-        let mut is_string = false;
         // the only way to check that literal is string :/
         if literal.starts_with("\"") {
             literal.remove(0);
             literal.remove(literal.len() - 1);
-            is_string = true;
         }
         source.next();
-        return Some((literal, is_string));
+        return Some(literal);
     }
 
     return None;
@@ -271,7 +269,7 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
 
         loop {
             let attribute_name = next_ident(&mut args_group).expect("Expecting attribute name");
-            attr_tokens.push((attribute_name, false));
+            attr_tokens.push(attribute_name);
 
             // single-word attribute, like #[nserde(whatever)]
             if next_eof(&mut args_group).is_some() {

@@ -121,13 +121,20 @@ pub fn derive_de_ron_named(
         let field_attr_default = shared::attrs_default(&field.attributes);
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
-            if let Some((mut val, is_string)) = v {
-                if is_string && field.ty.path == "String" {
+            if let Some(mut val) = v {
+                if field.ty.path == "String" {
                     val = format!("\"{}\".to_string()", val)
+                }
+                if field.ty.is_option {
+                    val = format!("Some({})", val);
                 }
                 Some(val)
             } else {
-                Some(String::from("Default::default()"))
+                if !field.ty.is_option {
+                    Some(String::from("Default::default()"))
+                } else {
+                    Some(String::from("None"))
+                }
             }
         } else if let Some(mut v) = field_attr_default_with {
             v.push_str("()");
@@ -144,10 +151,11 @@ pub fn derive_de_ron_named(
                     if let Some(t) = {} {{
                         t
                     }} else {{
-                        None
+                        {}
                     }}
                 }}",
-                localvar
+                localvar,
+                default_val.unwrap_or_else(|| String::from("None"))
             ));
         } else if container_attr_default || default_val.is_some() {
             unwraps.push(format!(
