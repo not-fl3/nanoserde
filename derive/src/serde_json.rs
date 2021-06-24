@@ -90,7 +90,14 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let field_attr_default = shared::attrs_default(&field.attributes);
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
-            Some(v.unwrap_or_else(|| String::from("Default::default()")))
+            if let Some((mut val, is_string)) = v {
+                if is_string && field.ty.path == "String" {
+                    val = format!("\"{}\".to_string()", val)
+                }
+                Some(val)
+            } else {
+                Some(String::from("Default::default()"))
+            }
         } else if let Some(mut v) = field_attr_default_with {
             v.push_str("()");
             Some(v)
