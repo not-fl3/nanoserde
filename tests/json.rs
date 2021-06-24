@@ -164,15 +164,26 @@ fn de_field_default() {
     }
 
     #[derive(DeJson)]
+    struct Bar {
+        x: i32,
+    }
+
+    #[derive(DeJson)]
     pub struct Test {
         a: i32,
         #[nserde(default)]
         foo: Foo,
         foo2: Foo,
-        #[nserde(default = "4.0")]
+        #[nserde(default = 4.0)]
         b: f32,
         #[nserde(default_with = "some_value")]
         c: f32,
+        #[nserde(default = 1)]
+        d: i32,
+        #[nserde(default = "hello")]
+        e: String,
+        #[nserde(default = "Bar{x:3}")]
+        f: Bar,
     }
 
     fn some_value() -> f32 {
@@ -188,6 +199,9 @@ fn de_field_default() {
     assert_eq!(test.a, 1);
     assert_eq!(test.b, 4.0);
     assert_eq!(test.c, 3.0);
+    assert_eq!(test.d, 1);
+    assert_eq!(test.e, "hello");
+    assert_eq!(test.f.x, 3);
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
 }
