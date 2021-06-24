@@ -164,11 +164,6 @@ fn de_field_default() {
     }
 
     #[derive(DeJson)]
-    struct Bar {
-        x: i32,
-    }
-
-    #[derive(DeJson)]
     pub struct Test {
         a: i32,
         #[nserde(default)]
@@ -182,8 +177,8 @@ fn de_field_default() {
         d: i32,
         #[nserde(default = "hello")]
         e: String,
-        #[nserde(default = "Bar{x:3}")]
-        f: Bar,
+        #[nserde(default = "Foo{x:3}")]
+        f: Foo,
         #[nserde(default = 5)]
         g: Option<i32>,
         #[nserde(default = "world")]
