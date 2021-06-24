@@ -48,8 +48,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                     proxied_field,
                     json_fieldname
                 );
-            }
-            else {
+            } else {
                 l!(
                     s,
                     "if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1,\"{}\"); {}.ser_json(d+1, s);",
@@ -88,7 +87,8 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
-        let field_attr_default = shared::attrs_default(&field.attributes);
+        let field_attr_default = shared::attrs_default(&field.attributes)
+            .map(|o| o.unwrap_or_else(|| String::from("Default::default")));
         let json_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
         let proxy = crate::shared::attrs_proxy(&field.attributes);
@@ -106,10 +106,12 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
                     "{{if let Some(t) = {} {{ {} }} else {{ None }} }}",
                     localvar, proxified_t
                 ));
-            } else if container_attr_default || field_attr_default {
+            } else if container_attr_default || field_attr_default.is_some() {
                 unwraps.push(format!(
-                    "{{if let Some(t) = {} {{ {} }} else {{ Default::default() }} }}",
-                    localvar, proxified_t
+                    "{{if let Some(t) = {} {{ {} }} else {{ {}() }} }}",
+                    localvar,
+                    proxified_t,
+                    field_attr_default.unwrap_or_else(|| String::from("Default::default"))
                 ));
             } else {
                 unwraps.push(format!(
@@ -181,7 +183,7 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_json_named(
         &struct_.name,
-        shared::attrs_default(&struct_.attributes),
+        shared::attrs_default(&struct_.attributes).is_some(),
         &struct_.fields[..],
     );
 
@@ -409,12 +411,14 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
         ))
     }
 
-    r.push_str(r#"
+    r.push_str(
+        r#"
                     _ => std::result::Result::Err(s.err_token("String or {")),
                 }
             }
         }
-"#);
+"#,
+    );
 
     r.parse().unwrap()
 }
