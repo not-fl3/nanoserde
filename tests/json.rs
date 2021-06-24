@@ -184,6 +184,10 @@ fn de_field_default() {
         e: String,
         #[nserde(default = "Bar{x:3}")]
         f: Bar,
+        #[nserde(default = 5)]
+        g: Option<i32>,
+        #[nserde(default = "world")]
+        h: Option<String>,
     }
 
     fn some_value() -> f32 {
@@ -202,6 +206,8 @@ fn de_field_default() {
     assert_eq!(test.d, 1);
     assert_eq!(test.e, "hello");
     assert_eq!(test.f.x, 3);
+    assert_eq!(test.g, Some(5));
+    assert_eq!(test.h, Some(String::from("world")));
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
 }
