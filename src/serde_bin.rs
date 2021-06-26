@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::hash::Hash;
+use std::{any::type_name, collections::HashMap};
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -51,6 +51,7 @@ pub trait DeBin: Sized {
 /// The error message when failing to deserialize from raw bytes.
 #[derive(Clone)]
 pub struct DeBinErr {
+    pub type_name: &'static str,
     pub o: usize,
     pub l: usize,
     pub s: usize,
@@ -60,8 +61,8 @@ impl std::fmt::Debug for DeBinErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
-            self.o, self.l, self.s
+            "Bin deserialize error for `{}` at offset {}: wanted {} bytes but only {} bytes available",
+            self.type_name, self.o, self.l, self.s
         )
     }
 }
@@ -90,6 +91,7 @@ macro_rules! impl_ser_de_bin_for {
                 let l = std::mem::size_of::<$ty>();
                 if *o + l > d.len() {
                     return Err(DeBinErr {
+                        type_name: ::std::any::type_name::<$ty>(),
                         o: *o,
                         l: l,
                         s: d.len(),
@@ -133,6 +135,7 @@ impl DeBin for usize {
         let l = std::mem::size_of::<u64>();
         if *o + l > d.len() {
             return Err(DeBinErr {
+                type_name: type_name::<usize>(),
                 o: *o,
                 l: l,
                 s: d.len(),
@@ -155,6 +158,7 @@ impl DeBin for u8 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<u8, DeBinErr> {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
+                type_name: type_name::<u8>(),
                 o: *o,
                 l: 1,
                 s: d.len(),
@@ -182,6 +186,7 @@ impl DeBin for bool {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<bool, DeBinErr> {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
+                type_name: type_name::<bool>(),
                 o: *o,
                 l: 1,
                 s: d.len(),
@@ -210,6 +215,7 @@ impl DeBin for String {
         let len: usize = DeBin::de_bin(o, d)?;
         if *o + len > d.len() {
             return Err(DeBinErr {
+                type_name: type_name::<String>(),
                 o: *o,
                 l: 1,
                 s: d.len(),
@@ -269,6 +275,7 @@ where
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Option<T>, DeBinErr> {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
+                type_name: type_name::<Option<T>>(),
                 o: *o,
                 l: 1,
                 s: d.len(),

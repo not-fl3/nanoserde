@@ -230,15 +230,15 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
     }
 
     format!(
-        "impl  DeBin for {} {{
+        "impl  DeBin for {name} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
                 let id: u16 = DeBin::de_bin(o,d)?;
                 Ok(match id {{
-                    {}
-                    _ => return std::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
+                    {r}
+                    _ => return std::result::Result::Err(nanoserde::DeBinErr{{type_name: ::std::any::type_name::<{name}>(),o:*o, l:0, s:d.len()}})
                 }})
             }}
-        }}", enum_.name, r)
+        }}", name=enum_.name, r=r)
         .parse()
         .unwrap()
 }
