@@ -1,6 +1,6 @@
 [package]
 name = "nanoserde-derive"
-version = "0.1.17"
+version = "0.1.18"
 authors = ["Makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 edition = "2018"
 description = "Fork of makepad-tinyserde derive without any external dependencies"
