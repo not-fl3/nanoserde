@@ -1,6 +1,6 @@
 [package]
 name = "nanoserde"
-version = "0.1.28"
+version = "0.1.29"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = """

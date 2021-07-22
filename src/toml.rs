@@ -43,7 +43,40 @@ pub enum Toml {
     Bool(bool),
     Num(f64),
     Date(String),
-    Array(Vec<Toml>),
+    Array(Vec<HashMap<String, Toml>>),
+    SimpleArray(Vec<Toml>),
+}
+
+impl std::ops::Index<usize> for Toml {
+    type Output = HashMap<String, Toml>;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match self {
+            Toml::Array(array) => &array[index],
+            _ => panic!(),
+        }
+    }
+}
+
+impl Toml {
+    pub fn num(&self) -> f64 {
+        match self {
+            Toml::Num(num) => *num,
+            _ => panic!(),
+        }
+    }
+    pub fn str(&self) -> &str {
+        match self {
+            Toml::Str(string) => string,
+            _ => panic!(),
+        }
+    }
+    pub fn arr(&self) -> &Vec<HashMap<String, Toml>> {
+        match self {
+            Toml::Array(array) => array,
+            _ => panic!(),
+        }
+    }
 }
 
 /// The error message when failing to parse a TOML string.
@@ -72,6 +105,40 @@ impl std::fmt::Display for TomlErr {
     }
 }
 
+struct Out {
+    out: HashMap<String, Toml>,
+    active_array_element: Option<(String, usize)>,
+}
+impl Out {
+    fn start_array(&mut self, key: &str) {
+        if self.out.contains_key(key) == false {
+            self.out.insert(key.to_string(), Toml::Array(vec![]));
+        }
+
+        let n = match self.out.get_mut(key).unwrap() {
+            Toml::Array(array) => {
+                let n = array.len();
+                array.push(HashMap::new());
+                n
+            }
+            _ => unreachable!(),
+        };
+
+        self.active_array_element = Some((key.to_string(), n));
+    }
+
+    fn out(&mut self) -> &mut HashMap<String, Toml> {
+        if let Some((table, n)) = self.active_array_element.clone() {
+            match self.out.get_mut(&table).unwrap() {
+                Toml::Array(array) => &mut array[n],
+                _ => unreachable!(),
+            }
+        } else {
+            &mut self.out
+        }
+    }
+}
+
 impl std::error::Error for TomlErr {}
 
 impl TomlParser {
@@ -80,46 +147,79 @@ impl TomlParser {
         let i = &mut data.chars();
         let mut t = TomlParser::default();
         t.next(i);
-        let mut out = HashMap::new();
+        let mut out = Out {
+            out: HashMap::new(),
+            active_array_element: None,
+        };
         let mut local_scope = String::new();
-        loop {
-            let tok = t.next_tok(i)?;
-            match tok {
-                TomlTok::Eof => {
-                    // at eof.
-                    return Ok(out);
-                }
-                TomlTok::BlockOpen => {
-                    // its a scope
-                    // we should expect an ident or a string
-                    let tok = t.next_tok(i)?;
-                    match tok {
-                        TomlTok::Str(key) => {
-                            // a key
-                            local_scope = key;
-                        }
-                        TomlTok::Ident(key) => {
-                            // also a key
-                            local_scope = key;
-                        }
-                        _ => return Err(t.err_token(tok)),
-                    }
-                    let tok = t.next_tok(i)?;
-                    if tok != TomlTok::BlockClose {
-                        return Err(t.err_token(tok));
-                    }
-                }
-                TomlTok::Str(key) => {
-                    // a key
-                    t.parse_key_value(&local_scope, key, i, &mut out)?;
-                }
-                TomlTok::Ident(key) => {
-                    // also a key
-                    t.parse_key_value(&local_scope, key, i, &mut out)?;
-                }
-                _ => return Err(t.err_token(tok)),
+        while t.parse_line(i, &mut local_scope, &mut out)? {}
+
+        Ok(out.out)
+    }
+
+    fn parse_line(
+        &mut self,
+        i: &mut Chars,
+        local_scope: &mut String,
+        out: &mut Out,
+    ) -> Result<bool, TomlErr> {
+        let tok = self.next_tok(i)?;
+        match tok {
+            TomlTok::Eof => {
+                // at eof.
+                return Ok(false);
             }
+            TomlTok::BlockOpen => {
+                // its a scope
+                // we should expect an ident or a string
+                let tok = self.next_tok(i)?;
+                match tok {
+                    TomlTok::Str(key) => {
+                        // a key
+                        *local_scope = key;
+                        let tok = self.next_tok(i)?;
+                        if tok != TomlTok::BlockClose {
+                            return Err(self.err_token(tok));
+                        }
+                    }
+                    TomlTok::Ident(key) => {
+                        // also a key
+                        *local_scope = key;
+                        let tok = self.next_tok(i)?;
+                        if tok != TomlTok::BlockClose {
+                            return Err(self.err_token(tok));
+                        }
+                    }
+                    TomlTok::BlockOpen => {
+                        let tok = self.next_tok(i)?;
+                        let key = match tok {
+                            TomlTok::Ident(key) => key,
+                            _ => return Err(self.err_token(tok)),
+                        };
+                        let tok = self.next_tok(i)?;
+                        if tok != TomlTok::BlockClose {
+                            return Err(self.err_token(tok));
+                        }
+                        let tok = self.next_tok(i)?;
+                        if tok != TomlTok::BlockClose {
+                            return Err(self.err_token(tok));
+                        }
+                        out.start_array(&key);
+                    }
+                    _ => return Err(self.err_token(tok)),
+                }
+            }
+            TomlTok::Str(key) => {
+                // a key
+                self.parse_key_value(&local_scope, key, i, out.out())?;
+            }
+            TomlTok::Ident(key) => {
+                // also a key
+                self.parse_key_value(&local_scope, key, i, out.out())?;
+            }
+            _ => return Err(self.err_token(tok)),
         }
+        return Ok(true);
     }
 
     pub fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
@@ -135,7 +235,7 @@ impl TomlParser {
                         vals.push(self.to_val(tok, i)?);
                     }
                 }
-                Ok(Toml::Array(vals))
+                Ok(Toml::SimpleArray(vals))
             }
             TomlTok::Str(v) => Ok(Toml::Str(v)),
             TomlTok::U64(v) => Ok(Toml::Num(v as f64)),
