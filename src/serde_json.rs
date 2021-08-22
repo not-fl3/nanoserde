@@ -575,9 +575,7 @@ impl DeJsonState {
                 self.tok = DeJsonTok::Str;
                 Ok(())
             }
-            _ => {
-                Err(self.err_token("tokenizer"))
-            }
+            _ => Err(self.err_token("tokenizer")),
         }
     }
 
