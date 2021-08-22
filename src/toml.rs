@@ -255,7 +255,7 @@ impl TomlParser {
 
     pub fn parse_key_value(
         &mut self,
-        local_scope: &String,
+        local_scope: &str,
         key: String,
         i: &mut Chars,
         out: &mut HashMap<String, Toml>,
@@ -280,10 +280,8 @@ impl TomlParser {
             self.cur = c;
             if self.cur == '\n' {
                 self.line += 1;
-                self.col = 0;
-            } else {
-                self.col = 0;
             }
+            self.col = 0;
         } else {
             self.cur = '\0';
         }

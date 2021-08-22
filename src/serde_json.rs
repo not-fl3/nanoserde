@@ -562,14 +562,13 @@ impl DeJsonState {
                             }
                             _ => self.strbuf.push(self.cur),
                         }
-                        self.next(i);
                     } else {
                         if self.cur == '\0' {
                             return Err(self.err_parse("string"));
                         }
                         self.strbuf.push(self.cur);
-                        self.next(i);
                     }
+                    self.next(i);
                 }
                 self.next(i);
                 self.tok = DeJsonTok::Str;
@@ -1019,8 +1018,7 @@ where
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
         let len = self.len();
-        let mut index = 0;
-        for (k, v) in self {
+        for (index, (k, v)) in self.iter().enumerate() {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
@@ -1028,7 +1026,6 @@ where
             if (index + 1) < len {
                 s.conl();
             }
-            index += 1;
         }
         s.indent(d);
         s.out.push('}');
@@ -1040,18 +1037,18 @@ where
     K: DeJson + Eq + Hash,
     V: DeJson,
 {
-    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
-        let mut h = HashMap::new();
-        s.curly_open(i)?;
-        while s.tok != DeJsonTok::CurlyClose {
-            let k = DeJson::de_json(s, i)?;
-            s.colon(i)?;
-            let v = DeJson::de_json(s, i)?;
-            s.eat_comma_curly(i)?;
-            h.insert(k, v);
+    fn de_json(state: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
+        let mut hashmap = HashMap::new();
+        state.curly_open(i)?;
+        while state.tok != DeJsonTok::CurlyClose {
+            let k = DeJson::de_json(state, i)?;
+            state.colon(i)?;
+            let v = DeJson::de_json(state, i)?;
+            state.eat_comma_curly(i)?;
+            hashmap.insert(k, v);
         }
-        s.curly_close(i)?;
-        Ok(h)
+        state.curly_close(i)?;
+        Ok(hashmap)
     }
 }
 

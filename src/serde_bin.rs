@@ -434,12 +434,12 @@ where
     K: DeBin + Eq + Hash,
     V: DeBin,
 {
-    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
-        let len: usize = DeBin::de_bin(o, d)?;
+    fn de_bin(offset: &mut usize, bytes: &[u8]) -> Result<Self, DeBinErr> {
+        let len: usize = DeBin::de_bin(offset, bytes)?;
         let mut h = HashMap::new();
         for _ in 0..len {
-            let k = DeBin::de_bin(o, d)?;
-            let v = DeBin::de_bin(o, d)?;
+            let k = DeBin::de_bin(offset, bytes)?;
+            let v = DeBin::de_bin(offset, bytes)?;
             h.insert(k, v);
         }
         Ok(h)

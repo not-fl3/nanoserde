@@ -161,10 +161,8 @@ impl DeRonState {
             self.cur = c;
             if self.cur == '\n' {
                 self.line += 1;
-                self.col = 0;
-            } else {
-                self.col = 0;
-            }
+            }       
+            self.col = 0;
         } else {
             self.cur = '\0';
         }
@@ -600,14 +598,13 @@ impl DeRonState {
                                 }
                                 _ => self.strbuf.push(self.cur),
                             }
-                            self.next(i);
                         } else {
                             if self.cur == '\0' {
                                 return Err(self.err_parse("string"));
                             }
                             self.strbuf.push(self.cur);
-                            self.next(i);
                         }
+                        self.next(i);
                     }
                     self.next(i);
                     self.tok = DeRonTok::Str;
@@ -1061,18 +1058,18 @@ where
     K: DeRon + Eq + Hash,
     V: DeRon,
 {
-    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
-        let mut h = HashMap::new();
-        s.curly_open(i)?;
-        while s.tok != DeRonTok::CurlyClose {
-            let k = DeRon::de_ron(s, i)?;
-            s.colon(i)?;
-            let v = DeRon::de_ron(s, i)?;
-            s.eat_comma_curly(i)?;
-            h.insert(k, v);
+    fn de_ron(state: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
+        let mut hashmap = HashMap::new();
+        state.curly_open(i)?;
+        while state.tok != DeRonTok::CurlyClose {
+            let k = DeRon::de_ron(state, i)?;
+            state.colon(i)?;
+            let v = DeRon::de_ron(state, i)?;
+            state.eat_comma_curly(i)?;
+            hashmap.insert(k, v);
         }
-        s.curly_close(i)?;
-        Ok(h)
+        state.curly_close(i)?;
+        Ok(hashmap)
     }
 }
 
