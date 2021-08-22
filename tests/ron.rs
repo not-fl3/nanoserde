@@ -301,7 +301,7 @@ fn ronerror() {
 
     let res: Result<Foo, _> = DeRon::deserialize_ron(ron);
     match res {
-        Ok(_) => assert!(false),
+        Ok(_) => panic!(),
         Err(e) => {
             let _dyn_e: Box<dyn std::error::Error> = std::convert::From::from(e);
         }

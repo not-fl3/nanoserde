@@ -422,7 +422,7 @@ fn jsonerror() {
 
     let res: Result<Foo, _> = DeJson::deserialize_json(json);
     match res {
-        Ok(_) => assert!(false),
+        Ok(_) => panic!(),
         Err(e) => {
             let _dyn_e: Box<dyn std::error::Error> = std::convert::From::from(e);
         }
