@@ -161,7 +161,7 @@ impl DeRonState {
             self.cur = c;
             if self.cur == '\n' {
                 self.line += 1;
-            }       
+            }
             self.col = 0;
         } else {
             self.cur = '\0';
