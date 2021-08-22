@@ -91,14 +91,14 @@ macro_rules! impl_ser_de_bin_for {
                 if *o + l > d.len() {
                     return Err(DeBinErr {
                         o: *o,
-                        l: l,
+                        l,
                         s: d.len(),
                     });
                 }
                 let mut m = [0 as $ty];
                 unsafe {
                     std::ptr::copy_nonoverlapping(
-                        d.as_ptr().offset(*o as isize) as *const $ty,
+                        d.as_ptr().add(*o) as *const $ty,
                         m.as_mut_ptr() as *mut $ty,
                         1,
                     )
@@ -134,14 +134,14 @@ impl DeBin for usize {
         if *o + l > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                l: l,
+                l,
                 s: d.len(),
             });
         }
-        let mut m = [0 as u64];
+        let mut m = [0_u64];
         unsafe {
             std::ptr::copy_nonoverlapping(
-                d.as_ptr().offset(*o as isize) as *const u64,
+                d.as_ptr().add(*o) as *const u64,
                 m.as_mut_ptr() as *mut u64,
                 1,
             )

@@ -421,32 +421,32 @@ impl DeJsonState {
             ':' => {
                 self.next(i);
                 self.tok = DeJsonTok::Colon;
-                return Ok(());
+                Ok(())
             }
             ',' => {
                 self.next(i);
                 self.tok = DeJsonTok::Comma;
-                return Ok(());
+                Ok(())
             }
             '[' => {
                 self.next(i);
                 self.tok = DeJsonTok::BlockOpen;
-                return Ok(());
+                Ok(())
             }
             ']' => {
                 self.next(i);
                 self.tok = DeJsonTok::BlockClose;
-                return Ok(());
+                Ok(())
             }
             '{' => {
                 self.next(i);
                 self.tok = DeJsonTok::CurlyOpen;
-                return Ok(());
+                Ok(())
             }
             '}' => {
                 self.next(i);
                 self.tok = DeJsonTok::CurlyClose;
-                return Ok(());
+                Ok(())
             }
             '-' | '+' | '0'..='9' => {
                 self.numbuf.truncate(0);
@@ -488,9 +488,9 @@ impl DeJsonState {
                 if is_float {
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::F64(num);
-                        return Ok(());
+                        Ok(())
                     } else {
-                        return Err(self.err_parse("number"));
+                        Err(self.err_parse("number"))
                     }
                 } else {
                     if is_neg {
@@ -503,9 +503,9 @@ impl DeJsonState {
                     }
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::U64(num);
-                        return Ok(());
+                        Ok(())
                     } else {
-                        return Err(self.err_parse("number"));
+                        Err(self.err_parse("number"))
                     }
                 }
             }
@@ -573,10 +573,10 @@ impl DeJsonState {
                 }
                 self.next(i);
                 self.tok = DeJsonTok::Str;
-                return Ok(());
+                Ok(())
             }
             _ => {
-                return Err(self.err_token("tokenizer"));
+                Err(self.err_token("tokenizer"))
             }
         }
     }
@@ -741,7 +741,7 @@ impl DeJson for () {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<(), DeJsonErr> {
         // skip ""
         s.next_tok(i)?;
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -759,7 +759,7 @@ impl DeJson for bool {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<bool, DeJsonErr> {
         let val = s.as_bool()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -803,7 +803,7 @@ impl DeJson for String {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<String, DeJsonErr> {
         let val = s.as_string()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -813,7 +813,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
