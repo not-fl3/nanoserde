@@ -112,6 +112,8 @@ macro_rules! impl_ser_de_bin_for {
 
 impl_ser_de_bin_for!(f64);
 impl_ser_de_bin_for!(f32);
+impl_ser_de_bin_for!(u128);
+impl_ser_de_bin_for!(i128);
 impl_ser_de_bin_for!(u64);
 impl_ser_de_bin_for!(i64);
 impl_ser_de_bin_for!(u32);
