@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::convert::TryInto;
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -78,10 +79,8 @@ macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
         impl SerBin for $ty {
             fn ser_bin(&self, s: &mut Vec<u8>) {
-                let du8 = unsafe {
-                    std::mem::transmute::<&$ty, &[u8; std::mem::size_of::<$ty>()]>(&self)
-                };
-                s.extend_from_slice(du8);
+                let du8 = self.to_ne_bytes();
+                s.extend_from_slice(&du8);
             }
         }
 
@@ -96,13 +95,7 @@ macro_rules! impl_ser_de_bin_for {
                     });
                 }
                 let mut m = [0 as $ty];
-                unsafe {
-                    std::ptr::copy_nonoverlapping(
-                        d.as_ptr().offset(*o as isize) as *const $ty,
-                        m.as_mut_ptr() as *mut $ty,
-                        1,
-                    )
-                }
+                m[0] = <$ty>::from_ne_bytes(d[*o..(*o+l)].try_into().unwrap());
                 *o += l;
                 Ok(m[0])
             }
@@ -124,9 +117,8 @@ impl_ser_de_bin_for!(i16);
 impl SerBin for usize {
     fn ser_bin(&self, s: &mut Vec<u8>) {
         let u64usize = *self as u64;
-        let du8 =
-            unsafe { std::mem::transmute::<&u64, &[u8; std::mem::size_of::<u64>()]>(&u64usize) };
-        s.extend_from_slice(du8);
+        let du8 = u64usize.to_ne_bytes();
+        s.extend_from_slice(&du8);
     }
 }
 
