@@ -111,12 +111,12 @@ fn struct_proxy() {
 #[test]
 fn tuple_struct() {
     #[derive(DeBin, SerBin, PartialEq)]
-    pub struct Test(i32, pub i32, pub(crate) String, f32);
+    pub struct Test(i32, pub i32, pub(crate) String, f32, [u64; 100]);
 
     #[derive(DeBin, SerBin, PartialEq)]
     pub struct Vec2(pub(crate) f32, pub(crate) f32);
 
-    let test = Test(0, 1, "asd".to_string(), 2.);
+    let test = Test(0, 1, "asd".to_string(), 2., [3_u64 ; 100]);
     let bytes = SerBin::serialize_bin(&test);
 
     let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
