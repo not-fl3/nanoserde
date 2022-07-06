@@ -125,23 +125,20 @@ impl SerBin for usize {
 impl DeBin for usize {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<usize, DeBinErr> {
         let l = std::mem::size_of::<u64>();
-        if *o + l > d.len() {
-            return Err(DeBinErr {
-                o: *o,
-                l: l,
-                s: d.len(),
-            });
-        }
-        let mut m = [0 as u64];
-        unsafe {
-            std::ptr::copy_nonoverlapping(
-                d.as_ptr().offset(*o as isize) as *const u64,
-                m.as_mut_ptr() as *mut u64,
-                1,
-            )
-        }
+
+        let m = match d.get(*o..*o + l) {
+            Some(data) => u64::from_ne_bytes(data.try_into().unwrap()),
+            None => {
+                return Err(DeBinErr {
+                    o: *o,
+                    l,
+                    s: d.len(),
+                });
+            }
+        };
+
         *o += l;
-        Ok(m[0] as usize)
+        Ok(m as usize)
     }
 }
 
