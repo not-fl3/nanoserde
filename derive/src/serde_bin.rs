@@ -1,7 +1,7 @@
 use alloc::format;
 use alloc::string::String;
 
-use crate::parse::{Enum, Struct};
+use crate::parse::{Enum, Struct, struct_bounds_strings, enum_bounds_strings};
 
 use proc_macro::TokenStream;
 
@@ -35,6 +35,7 @@ pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerBin");
 
     for field in &struct_.fields {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
@@ -54,12 +55,12 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
         }
     }
     format!(
-        "impl SerBin for {} {{
+        "impl{} SerBin for {}{} {{
             fn ser_bin(&self, s: &mut Vec<u8>) {{
                 {}
             }}
         }}",
-        struct_.name, body
+        generic_w_bounds, struct_.name, generic_no_bounds, body
     )
     .parse()
     .unwrap()
@@ -67,6 +68,7 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
 
 pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerBin");
 
     for (n, field) in struct_.fields.iter().enumerate() {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
@@ -77,12 +79,12 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
         }
     }
     format!(
-        "impl SerBin for {} {{
+        "impl{} SerBin for {}{} {{
             fn ser_bin(&self, s: &mut Vec<u8>) {{
                 {}
             }}
         }}",
-        struct_.name, body
+        generic_w_bounds, struct_.name, generic_no_bounds, body
     )
     .parse()
     .unwrap()
@@ -90,6 +92,7 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
 
 pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeBin");
 
     for field in &struct_.fields {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
@@ -106,22 +109,23 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
         }
     }
 
-    format!(
-        "impl DeBin for {} {{
+    let tmp = format!(
+        "impl{} DeBin for {}{} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 core::result::Result::Ok(Self {{
                     {}
                 }})
             }}
         }}",
-        struct_.name, body
-    )
-    .parse()
+        generic_w_bounds, struct_.name, generic_no_bounds, body
+    );
+    tmp.parse()
     .unwrap()
 }
 
 pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeBin");
 
     for (n, field) in struct_.fields.iter().enumerate() {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
@@ -135,14 +139,14 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
 
     format!(
-        "impl DeBin for {} {{
+        "impl{} DeBin for {}{} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 core::result::Result::Ok(Self {{
                     {}
                 }})
             }}
         }}",
-        struct_.name, body
+        generic_w_bounds, struct_.name, generic_no_bounds, body
     )
     .parse()
     .unwrap()
@@ -150,6 +154,7 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
 
 pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "SerBin");
 
     for (index, variant) in enum_.variants.iter().enumerate() {
         let lit = format!("{}u16", index);
@@ -187,14 +192,14 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
     }
 
     format!(
-        "impl SerBin for {} {{
+        "impl{} SerBin for {}{} {{
             fn ser_bin(&self, s: &mut Vec<u8>) {{
                 match self {{
                   {}
                 }}
             }}
         }}",
-        enum_.name, r
+        generic_w_bounds,enum_.name,generic_no_bounds, r
     )
     .parse()
     .unwrap()
@@ -202,6 +207,8 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
 
 pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeBin");
+
 
     for (index, variant) in enum_.variants.iter().enumerate() {
         let lit = format!("{}u16", index);
@@ -233,7 +240,7 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
     }
 
     format!(
-        "impl  DeBin for {} {{
+        "impl{}  DeBin for {}{} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 let id: u16 = DeBin::de_bin(o,d)?;
                 Ok(match id {{
@@ -241,7 +248,7 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
                     _ => return core::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
                 }})
             }}
-        }}", enum_.name, r)
+        }}", generic_w_bounds,enum_.name,generic_no_bounds, r)
         .parse()
         .unwrap()
 }
