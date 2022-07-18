@@ -6,8 +6,8 @@ use crate::shared;
 
 pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        "impl ::nanoserde::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut ::nanoserde::SerRonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_ron(d, s);
             }}
@@ -20,10 +20,10 @@ pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl DeRon for {} {{
-            fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeRonErr> {{
-                let proxy: {} = DeRon::deserialize_ron(i)?;
-                std::result::Result::Ok(Into::into(&proxy))
+        "impl ::nanoserde::DeRon for {} {{
+            fn de_ron(_s: &mut ::nanoserde::DeRonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeRonErr> {{
+                let proxy: {} = ::nanoserde::DeRon::deserialize_ron(i)?;
+                ::std::result::Result::Ok(::std::convert::Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -42,7 +42,7 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
         if field.ty.is_option {
             l!(
                 s,
-                "if let Some(t) = &self.{} {{
+                "if let ::std::option::Option::Some(t) = &self.{} {{
                     s.field(d+1, \"{}\");
                     t.ser_ron(d+1, s);
                     s.conl();
@@ -64,8 +64,8 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl ::nanoserde::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut ::nanoserde::SerRonState) {{
                 s.st_pre();
                 {}
                 s.st_post(d);
@@ -90,8 +90,8 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
     format!(
         "
-        impl SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl ::nanoserde::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut ::nanoserde::SerRonState) {{
                 s.out.push('(');
                 {}
                 s.out.push(')');
@@ -122,18 +122,18 @@ pub fn derive_de_ron_named(
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
             if let Some(mut val) = v {
-                if field.ty.path == "String" {
+                if field.ty.path == "::std::string::String" {
                     val = format!("\"{}\".to_string()", val)
                 }
                 if field.ty.is_option {
-                    val = format!("Some({})", val);
+                    val = format!("::std::option::Option::Some({})", val);
                 }
                 Some(val)
             } else {
                 if !field.ty.is_option {
-                    Some(String::from("Default::default()"))
+                    Some(String::from("::std::default::Default::default()"))
                 } else {
-                    Some(String::from("None"))
+                    Some(String::from("::std::option::Option::None"))
                 }
             }
         } else if let Some(mut v) = field_attr_default_with {
@@ -148,34 +148,34 @@ pub fn derive_de_ron_named(
         if field.ty.is_option {
             unwraps.push(format!(
                 "{{
-                    if let Some(t) = {} {{
+                    if let ::std::option::Option::Some(t) = {} {{
                         t
                     }} else {{
                         {}
                     }}
                 }}",
                 localvar,
-                default_val.unwrap_or_else(|| String::from("None"))
+                default_val.unwrap_or_else(|| String::from("::std::option::Option::None"))
             ));
         } else if container_attr_default || default_val.is_some() {
             unwraps.push(format!(
                 "{{
-                    if let Some(t) = {} {{
+                    if let ::std::option::Option::Some(t) = {} {{
                         t
                     }} else {{
                         {}
                     }}
                 }}",
                 localvar,
-                default_val.unwrap_or_else(|| String::from("Default::default()"))
+                default_val.unwrap_or_else(|| String::from("::std::default::Default::default()"))
             ));
         } else {
             unwraps.push(format!(
                 "{{
-                    if let Some(t) = {} {{
+                    if let ::std::option::Option::Some(t) = {} {{
                         t
                     }} else {{
-                        return Err(s.err_nf(\"{}\"))
+                        return ::std::result::Result::Err(s.err_nf(\"{}\"))
                     }}
                 }}",
                 localvar, struct_fieldname
@@ -190,7 +190,7 @@ pub fn derive_de_ron_named(
     let mut local_lets = String::new();
 
     for local in &local_vars {
-        l!(local_lets, "let mut {} = None;", local)
+        l!(local_lets, "let mut {} = ::std::option::Option::None;", local)
     }
 
     let match_names = if ron_field_names.len() != 0 {
@@ -200,7 +200,7 @@ pub fn derive_de_ron_named(
                 inner,
                 "\"{}\" => {{
                     s.next_colon(i)?;
-                    {} = Some(DeRon::de_ron(s, i)?)
+                    {} = ::std::option::Option::Some(DeRon::de_ron(s, i)?)
                 }},",
                 ron_field_name,
                 local_var
@@ -209,7 +209,7 @@ pub fn derive_de_ron_named(
         format!(
             "match s.identbuf.as_ref() {{
                 {}
-                _ => return std::result::Result::Err(s.err_exp(&s.identbuf))
+                _ => return ::std::result::Result::Err(s.err_exp(&s.identbuf))
             }}",
             inner
         )
@@ -227,7 +227,7 @@ pub fn derive_de_ron_named(
         "{{
             {}
             s.paren_open(i)?;
-            while let Some(_) = s.next_ident() {{
+            while let ::std::option::Option::Some(_) = s.next_ident() {{
                 {}
                 s.eat_comma_paren(i)?;
             }};
@@ -244,9 +244,9 @@ pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_ron_named(&struct_.name, &struct_.fields, &struct_.attributes);
 
     format!(
-        "impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
-                std::result::Result::Ok({})
+        "impl ::nanoserde::DeRon for {} {{
+            fn de_ron(s: &mut ::nanoserde::DeRonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeRonErr> {{
+                ::std::result::Result::Ok({})
             }}
         }}", struct_.name, body)
     .parse()
@@ -260,7 +260,7 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
         l!(
             body,
             "{{
-                let r = DeRon::de_ron(s, i)?;
+                let r = ::nanoserde::DeRon::de_ron(s, i)?;
                 s.eat_comma_paren(i)?;
                 r
             }},"
@@ -268,12 +268,12 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
 
     format! ("
-        impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+        impl ::nanoserde::DeRon for {} {{
+            fn de_ron(s: &mut ::nanoserde::DeRonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeRonErr> {{
                 s.paren_open(i)?;
                 let r = Self({});
                 s.paren_close(i)?;
-                std::result::Result::Ok(r)
+                ::std::result::Result::Ok(r)
             }}
         }}",struct_.name, body
     ).parse().unwrap()
@@ -363,8 +363,8 @@ pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
     }
     format!(
         "
-        impl SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl ::nanoserde::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut ::nanoserde::SerRonState) {{
                 match self {{
                     {}
                 }}
@@ -398,7 +398,7 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                 l!(
                     inner,
                     "{
-                        let r = DeRon::de_ron(s, i)?;
+                        let r = ::nanoserde::DeRon::de_ron(s, i)?;
                         s.eat_comma_paren(i)?;
                         r
                     }, "
@@ -420,13 +420,13 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
     }
 
     format! ("
-        impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+        impl ::nanoserde::DeRon for {} {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeRonErr> {{
                 // we are expecting an identifier
                 s.ident(i)?;
-                std::result::Result::Ok(match s.identbuf.as_ref() {{
+                ::std::result::Result::Ok(match s.identbuf.as_ref() {{
                     {}
-                    _ => return std::result::Result::Err(s.err_enum(&s.identbuf))
+                    _ => return ::std::result::Result::Err(s.err_enum(&s.identbuf))
                 }})
             }}
         }}", enum_.name, body).parse().unwrap()

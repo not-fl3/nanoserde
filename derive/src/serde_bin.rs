@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 
 pub fn derive_ser_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl SerBin for {} {{
-            fn ser_bin(&self, s: &mut Vec<u8>) {{
+        "impl ::nanoserde::SerBin for {} {{
+            fn ser_bin(&self, s: &mut ::std::vec::Vec<u8>) {{
                 let proxy: {} = self.into();
                 proxy.ser_bin(s);
             }}
@@ -18,10 +18,10 @@ pub fn derive_ser_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                let proxy: {} = DeBin::de_bin(o, d)?;
-                std::result::Result::Ok(Into::into(&proxy))
+        "impl ::nanoserde::DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> ::std::result::Result<Self, ::nanoserde::DeBinErr> {{
+                let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;
+                ::std::result::Result::Ok(::std::convert::Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -37,7 +37,7 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(
                 body,
-                "let proxy: {} = Into::into(&self.{});",
+                "let proxy: {} = ::std::convert::Into::into(&self.{});",
                 proxy,
                 field.field_name.as_ref().unwrap()
             );
@@ -51,8 +51,8 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
         }
     }
     format!(
-        "impl SerBin for {} {{
-            fn ser_bin(&self, s: &mut Vec<u8>) {{
+        "impl ::nanoserde::SerBin for {} {{
+            fn ser_bin(&self, s: &mut ::std::vec::Vec<u8>) {{
                 {}
             }}
         }}",
@@ -67,15 +67,15 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     for (n, field) in struct_.fields.iter().enumerate() {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-            l!(body, "let proxy: {} = Into::into(&self.{});", proxy, n);
+            l!(body, "let proxy: {} = ::std::convert::Into::into(&self.{});", proxy, n);
             l!(body, "proxy.ser_bin(s);");
         } else {
             l!(body, "self.{}.ser_bin(s);", n);
         }
     }
     format!(
-        "impl SerBin for {} {{
-            fn ser_bin(&self, s: &mut Vec<u8>) {{
+        "impl ::nanoserde::SerBin for {} {{
+            fn ser_bin(&self, s: &mut ::std::vec::Vec<u8>) {{
                 {}
             }}
         }}",
@@ -91,22 +91,22 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
     for field in &struct_.fields {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", field.field_name.as_ref().unwrap());
-            l!(body, "let proxy: {} = DeBin::de_bin(o, d)?;", proxy);
-            l!(body, "Into::into(&proxy)");
+            l!(body, "let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;", proxy);
+            l!(body, "::std::convert::Into::into(&proxy)");
             l!(body, "},")
         } else {
             l!(
                 body,
-                "{}: DeBin::de_bin(o, d)?,",
+                "{}: ::nanoserde::DeBin::de_bin(o, d)?,",
                 field.field_name.as_ref().unwrap()
             );
         }
     }
 
     format!(
-        "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                std::result::Result::Ok(Self {{
+        "impl ::nanoserde::DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> ::std::result::Result<Self, ::nanoserde::DeBinErr> {{
+                ::std::result::Result::Ok(Self {{
                     {}
                 }})
             }}
@@ -123,18 +123,18 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     for (n, field) in struct_.fields.iter().enumerate() {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", n);
-            l!(body, "let proxy: {} = DeBin::de_bin(o, d)?;", proxy);
-            l!(body, "Into::into(&proxy)");
+            l!(body, "let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;", proxy);
+            l!(body, "::std::convert::Into::into(&proxy)");
             l!(body, "},")
         } else {
-            l!(body, "{}: DeBin::de_bin(o, d)?,", n);
+            l!(body, "{}: ::nanoserde::DeBin::de_bin(o, d)?,", n);
         }
     }
 
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                std::result::Result::Ok(Self {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> ::std::result::Result<Self, ::nanoserde::DeBinErr> {{
+                ::std::result::Result::Ok(Self {{
                     {}
                 }})
             }}
@@ -184,8 +184,8 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
     }
 
     format!(
-        "impl SerBin for {} {{
-            fn ser_bin(&self, s: &mut Vec<u8>) {{
+        "impl ::nanoserde::SerBin for {} {{
+            fn ser_bin(&self, s: &mut ::std::vec::Vec<u8>) {{
                 match self {{
                   {}
                 }}
@@ -213,7 +213,7 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
             for field in &variant.fields {
                 l!(
                     r,
-                    "{}: DeBin::de_bin(o, d)?,",
+                    "{}: ::nanoserde::DeBin::de_bin(o, d)?,",
                     field.field_name.as_ref().unwrap()
                 );
             }
@@ -223,19 +223,19 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
         else if variant.named == false {
             l!(r, "{} => Self::{} (", lit, variant.name);
             for _ in &variant.fields {
-                l!(r, "DeBin::de_bin(o, d)?,");
+                l!(r, "::nanoserde::DeBin::de_bin(o, d)?,");
             }
             l!(r, "),");
         }
     }
 
     format!(
-        "impl  DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                let id: u16 = DeBin::de_bin(o,d)?;
+        "impl ::nanoserde::DeBin for {} {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> ::std::result::Result<Self, ::nanoserde::DeBinErr> {{
+                let id: u16 = ::nanoserde::DeBin::de_bin(o,d)?;
                 Ok(match id {{
                     {}
-                    _ => return std::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
+                    _ => return ::std::result::Result::Err(::nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
                 }})
             }}
         }}", enum_.name, r)
