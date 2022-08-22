@@ -768,30 +768,12 @@ impl SerJson for String {
         s.out.push('"');
         for c in self.chars() {
             match c {
-                '\n' => {
-                    s.out.push('\\');
-                    s.out.push('n');
-                }
-                '\r' => {
-                    s.out.push('\\');
-                    s.out.push('r');
-                }
-                '\t' => {
-                    s.out.push('\\');
-                    s.out.push('t');
-                }
-                '\0' => {
-                    s.out.push('\\');
-                    s.out.push('0');
-                }
-                '\\' => {
-                    s.out.push('\\');
-                    s.out.push('\\');
-                }
-                '"' => {
-                    s.out.push('\\');
-                    s.out.push('"');
-                }
+                '\n' => s.out += "\\n",
+                '\r' => s.out += "\\r",
+                '\t' => s.out += "\\t",
+                '\0' => s.out += "\\0",
+                '\\' => s.out += "\\\\",
+                '"' => s.out += "\\\"",
                 _ => s.out.push(c),
             }
         }
@@ -861,9 +843,12 @@ where
     }
 }
 
-impl<T, const N: usize> DeJson for [T; N] where T: DeJson {
-    fn de_json(o:&mut DeJsonState, d:&mut Chars) -> Result<Self, DeJsonErr> {
-        unsafe{
+impl<T, const N: usize> DeJson for [T; N]
+where
+    T: DeJson,
+{
+    fn de_json(o: &mut DeJsonState, d: &mut Chars) -> Result<Self, DeJsonErr> {
+        unsafe {
             let mut to = std::mem::MaybeUninit::<[T; N]>::uninit();
             let top: *mut T = std::mem::transmute(&mut to);
             de_json_array_impl_inner(top, N, o, d)?;
