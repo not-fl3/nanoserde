@@ -768,10 +768,15 @@ impl SerJson for String {
         s.out.push('"');
         for c in self.chars() {
             match c {
+                '\x08' => s.out += "\\b",
+                '\x0C' => s.out += "\\f",
                 '\n' => s.out += "\\n",
                 '\r' => s.out += "\\r",
                 '\t' => s.out += "\\t",
-                '\0' => s.out += "\\0",
+                _ if c.is_ascii_control() => {
+                    use std::fmt::Write as _;
+                    let _ = write!(s.out, "\\u{:04x}", c as u32);
+                }
                 '\\' => s.out += "\\\\",
                 '"' => s.out += "\\\"",
                 _ => s.out.push(c),
