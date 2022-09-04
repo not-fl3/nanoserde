@@ -34,7 +34,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             }
             let proxied_field = if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
                 format!(
-                    "{{let proxy: {} = ::std::convert::Into::into(&self.{});proxy}}",
+                    "{{let proxy: {} = Into::into(&self.{});proxy}}",
                     proxy, struct_fieldname
                 )
             } else {
@@ -95,14 +95,14 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
                     val = format!("\"{}\".to_string()", val)
                 }
                 if field.ty.is_option {
-                    val = format!("::std::option::Option::Some({})", val);
+                    val = format!("Option::Some({})", val);
                 }
                 Some(val)
             } else {
                 if !field.ty.is_option {
                     Some(String::from("::std::default::Default::default()"))
                 } else {
-                    Some(String::from("::std::option::Option::None"))
+                    Some(String::from("Option::None"))
                 }
             }
         } else if let Some(mut v) = field_attr_default_with {
@@ -117,7 +117,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let skip = crate::shared::attrs_skip(&field.attributes);
 
         let proxified_t = if let Some(proxy) = proxy {
-            format!("::std::convert::From::<&{}>::from(&t)", proxy)
+            format!("From::<&{}>::from(&t)", proxy)
         } else {
             format!("t")
         };
@@ -125,28 +125,28 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         if skip == false {
             if field.ty.is_option {
                 unwraps.push(format!(
-                    "{{if let ::std::option::Option::Some(t) = {} {{ {} }} else {{ {} }} }}",
+                    "{{if let Option::Some(t) = {} {{ {} }} else {{ {} }} }}",
                     localvar,
                     proxified_t,
-                    default_val.unwrap_or_else(|| String::from("::std::option::Option::None"))
+                    default_val.unwrap_or_else(|| String::from("Option::None"))
                 ));
             } else if container_attr_default || default_val.is_some() {
                 unwraps.push(format!(
-                    "{{if let ::std::option::Option::Some(t) = {} {{ {} }} else {{ {} }} }}",
+                    "{{if let Option::Some(t) = {} {{ {} }} else {{ {} }} }}",
                     localvar,
                     proxified_t,
                     default_val.unwrap_or_else(|| String::from("::std::default::Default::default()"))
                 ));
             } else {
                 unwraps.push(format!(
-                    "{{if let ::std::option::Option::Some(t) = {} {{ {} }} else {{return ::std::result::Result::Err(s.err_nf(\"{}\"))}} }}",
+                    "{{if let Option::Some(t) = {} {{ {} }} else {{return ::std::result::Result::Err(s.err_nf(\"{}\"))}} }}",
                     localvar, proxified_t, struct_fieldname
                 ));
             }
             matches.push((json_fieldname.clone(), localvar.clone()));
             local_vars.push(localvar);
         } else {
-            unwraps.push(format!("::std::option::Option::None"));
+            unwraps.push(format!("Option::None"));
         }
 
         struct_field_names.push(struct_fieldname);
@@ -155,17 +155,17 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
 
     let mut r = String::new();
     for local_var in &local_vars {
-        l!(r, "let mut {} = ::std::option::Option::None;", local_var);
+        l!(r, "let mut {} = Option::None;", local_var);
     }
     l!(r, "s.curly_open(i) ?;");
-    l!(r, "while let ::std::option::Option::Some(_) = s.next_str() {");
+    l!(r, "while let Option::Some(_) = s.next_str() {");
 
     if json_field_names.len() != 0 {
-        l!(r, "match ::std::convert::AsRef::<str>::as_ref(&s.strbuf) {");
+        l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
         for (json_field_name, local_var) in matches.iter() {
             l!(
                 r,
-                "\"{}\" => {{s.next_colon(i) ?;{} = ::std::option::Option::Some(::nanoserde::DeJson::de_json(s, i) ?)}},",
+                "\"{}\" => {{s.next_colon(i) ?;{} = Option::Some(::nanoserde::DeJson::de_json(s, i) ?)}},",
                 json_field_name,
                 local_var
             );
@@ -195,7 +195,7 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
         "impl ::nanoserde::DeJson for {} {{
             fn de_json(_s: &mut ::nanoserde::DeJsonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeJsonErr> {{
                 let proxy: {} = DeJson::deserialize_json(i)?;
-                ::std::result::Result::Ok(::std::convert::Into::into(&proxy))
+                ::std::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -246,7 +246,7 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
                 if let Some(name) = &&field.field_name {
                     let proxied_field =
                         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-                            format!("{{let proxy: {} = ::std::convert::Into::into(&{});proxy}}", proxy, name)
+                            format!("{{let proxy: {} = Into::into(&{});proxy}}", proxy, name)
                         } else {
                             format!("{}", name)
                         };

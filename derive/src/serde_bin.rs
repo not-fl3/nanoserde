@@ -21,7 +21,7 @@ pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
         "impl ::nanoserde::DeBin for {} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> ::std::result::Result<Self, ::nanoserde::DeBinErr> {{
                 let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;
-                ::std::result::Result::Ok(::std::convert::Into::into(&proxy))
+                ::std::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -37,7 +37,7 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(
                 body,
-                "let proxy: {} = ::std::convert::Into::into(&self.{});",
+                "let proxy: {} = Into::into(&self.{});",
                 proxy,
                 field.field_name.as_ref().unwrap()
             );
@@ -67,7 +67,7 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     for (n, field) in struct_.fields.iter().enumerate() {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-            l!(body, "let proxy: {} = ::std::convert::Into::into(&self.{});", proxy, n);
+            l!(body, "let proxy: {} = Into::into(&self.{});", proxy, n);
             l!(body, "proxy.ser_bin(s);");
         } else {
             l!(body, "self.{}.ser_bin(s);", n);
@@ -92,7 +92,7 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", field.field_name.as_ref().unwrap());
             l!(body, "let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;", proxy);
-            l!(body, "::std::convert::Into::into(&proxy)");
+            l!(body, "Into::into(&proxy)");
             l!(body, "},")
         } else {
             l!(
@@ -124,7 +124,7 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", n);
             l!(body, "let proxy: {} = ::nanoserde::DeBin::de_bin(o, d)?;", proxy);
-            l!(body, "::std::convert::Into::into(&proxy)");
+            l!(body, "Into::into(&proxy)");
             l!(body, "},")
         } else {
             l!(body, "{}: ::nanoserde::DeBin::de_bin(o, d)?,", n);

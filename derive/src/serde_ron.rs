@@ -23,7 +23,7 @@ pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
         "impl ::nanoserde::DeRon for {} {{
             fn de_ron(_s: &mut ::nanoserde::DeRonState, i: &mut ::std::str::Chars) -> ::std::result::Result<Self, ::nanoserde::DeRonErr> {{
                 let proxy: {} = ::nanoserde::DeRon::deserialize_ron(i)?;
-                ::std::result::Result::Ok(::std::convert::Into::into(&proxy))
+                ::std::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -42,7 +42,7 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
         if field.ty.is_option {
             l!(
                 s,
-                "if let ::std::option::Option::Some(t) = &self.{} {{
+                "if let Option::Some(t) = &self.{} {{
                     s.field(d+1, \"{}\");
                     t.ser_ron(d+1, s);
                     s.conl();
@@ -126,14 +126,14 @@ pub fn derive_de_ron_named(
                     val = format!("\"{}\".to_string()", val)
                 }
                 if field.ty.is_option {
-                    val = format!("::std::option::Option::Some({})", val);
+                    val = format!("Option::Some({})", val);
                 }
                 Some(val)
             } else {
                 if !field.ty.is_option {
                     Some(String::from("::std::default::Default::default()"))
                 } else {
-                    Some(String::from("::std::option::Option::None"))
+                    Some(String::from("Option::None"))
                 }
             }
         } else if let Some(mut v) = field_attr_default_with {
@@ -148,19 +148,19 @@ pub fn derive_de_ron_named(
         if field.ty.is_option {
             unwraps.push(format!(
                 "{{
-                    if let ::std::option::Option::Some(t) = {} {{
+                    if let Option::Some(t) = {} {{
                         t
                     }} else {{
                         {}
                     }}
                 }}",
                 localvar,
-                default_val.unwrap_or_else(|| String::from("::std::option::Option::None"))
+                default_val.unwrap_or_else(|| String::from("Option::None"))
             ));
         } else if container_attr_default || default_val.is_some() {
             unwraps.push(format!(
                 "{{
-                    if let ::std::option::Option::Some(t) = {} {{
+                    if let Option::Some(t) = {} {{
                         t
                     }} else {{
                         {}
@@ -172,7 +172,7 @@ pub fn derive_de_ron_named(
         } else {
             unwraps.push(format!(
                 "{{
-                    if let ::std::option::Option::Some(t) = {} {{
+                    if let Option::Some(t) = {} {{
                         t
                     }} else {{
                         return ::std::result::Result::Err(s.err_nf(\"{}\"))
@@ -190,7 +190,7 @@ pub fn derive_de_ron_named(
     let mut local_lets = String::new();
 
     for local in &local_vars {
-        l!(local_lets, "let mut {} = ::std::option::Option::None;", local)
+        l!(local_lets, "let mut {} = Option::None;", local)
     }
 
     let match_names = if ron_field_names.len() != 0 {
@@ -200,7 +200,7 @@ pub fn derive_de_ron_named(
                 inner,
                 "\"{}\" => {{
                     s.next_colon(i)?;
-                    {} = ::std::option::Option::Some(DeRon::de_ron(s, i)?)
+                    {} = Option::Some(DeRon::de_ron(s, i)?)
                 }},",
                 ron_field_name,
                 local_var
@@ -227,7 +227,7 @@ pub fn derive_de_ron_named(
         "{{
             {}
             s.paren_open(i)?;
-            while let ::std::option::Option::Some(_) = s.next_ident() {{
+            while let Option::Some(_) = s.next_ident() {{
                 {}
                 s.eat_comma_paren(i)?;
             }};
