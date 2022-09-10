@@ -1,5 +1,10 @@
-use std::collections::HashMap;
-use std::str::Chars;
+use core::str::Chars;
+
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::{vec, vec::Vec};
+
+use hashbrown::HashMap;
 
 /// A parser for TOML string values.
 ///
@@ -47,7 +52,7 @@ pub enum Toml {
     SimpleArray(Vec<Toml>),
 }
 
-impl std::ops::Index<usize> for Toml {
+impl core::ops::Index<usize> for Toml {
     type Output = HashMap<String, Toml>;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -87,8 +92,8 @@ pub struct TomlErr {
     pub col: usize,
 }
 
-impl std::fmt::Debug for TomlErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for TomlErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "Toml error: {}, line:{} col:{}",
@@ -99,9 +104,9 @@ impl std::fmt::Debug for TomlErr {
     }
 }
 
-impl std::fmt::Display for TomlErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+impl core::fmt::Display for TomlErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(self, f)
     }
 }
 
@@ -139,7 +144,7 @@ impl Out {
     }
 }
 
-impl std::error::Error for TomlErr {}
+impl core::error::Error for TomlErr {}
 
 impl TomlParser {
     /// Parse a TOML string.
@@ -242,11 +247,11 @@ impl TomlParser {
             TomlTok::I64(v) => Ok(Toml::Num(v as f64)),
             TomlTok::F64(v) => Ok(Toml::Num(v as f64)),
             TomlTok::Bool(v) => Ok(Toml::Bool(v)),
-            TomlTok::Nan(v) => Ok(Toml::Num(if v { -std::f64::NAN } else { std::f64::NAN })),
+            TomlTok::Nan(v) => Ok(Toml::Num(if v { -core::f64::NAN } else { core::f64::NAN })),
             TomlTok::Inf(v) => Ok(Toml::Num(if v {
-                -std::f64::INFINITY
+                -core::f64::INFINITY
             } else {
-                std::f64::INFINITY
+                core::f64::INFINITY
             })),
             TomlTok::Date(v) => Ok(Toml::Date(v)),
             _ => Err(self.err_token(tok)),

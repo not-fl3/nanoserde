@@ -163,11 +163,11 @@ fn one_field() {
 fn one_field_map() {
     #[derive(DeRon, SerRon, PartialEq)]
     pub struct OneField {
-        field: std::collections::HashMap<String, f32>,
+        field: hashbrown::HashMap<String, f32>,
     }
 
     let test = OneField {
-        field: std::collections::HashMap::new(),
+        field: hashbrown::HashMap::new(),
     };
     let bytes = SerRon::serialize_ron(&test);
     let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
@@ -234,7 +234,7 @@ fn path_type() {
 fn hashmaps() {
     #[derive(DeRon)]
     struct Foo {
-        map: std::collections::HashMap<String, i32>,
+        map: hashbrown::HashMap<String, i32>,
     }
 
     let ron = r#"(

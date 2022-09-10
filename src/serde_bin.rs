@@ -1,6 +1,11 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::convert::TryInto;
+use core::convert::TryInto;
+use core::hash::Hash;
+
+use alloc::boxed::Box;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+
+use hashbrown::HashMap;
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -57,8 +62,8 @@ pub struct DeBinErr {
     pub s: usize,
 }
 
-impl std::fmt::Debug for DeBinErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for DeBinErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
@@ -67,13 +72,13 @@ impl std::fmt::Debug for DeBinErr {
     }
 }
 
-impl std::fmt::Display for DeBinErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+impl core::fmt::Display for DeBinErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(self, f)
     }
 }
 
-impl std::error::Error for DeBinErr {}
+impl core::error::Error for DeBinErr {}
 
 macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
@@ -86,7 +91,7 @@ macro_rules! impl_ser_de_bin_for {
 
         impl DeBin for $ty {
             fn de_bin(o: &mut usize, d: &[u8]) -> Result<$ty, DeBinErr> {
-                let l = std::mem::size_of::<$ty>();
+                let l = core::mem::size_of::<$ty>();
                 if *o + l > d.len() {
                     return Err(DeBinErr {
                         o: *o,
@@ -95,7 +100,7 @@ macro_rules! impl_ser_de_bin_for {
                     });
                 }
                 let mut m = [0 as $ty];
-                m[0] = <$ty>::from_ne_bytes(d[*o..(*o+l)].try_into().unwrap());
+                m[0] = <$ty>::from_ne_bytes(d[*o..(*o + l)].try_into().unwrap());
                 *o += l;
                 Ok(m[0])
             }
@@ -124,7 +129,7 @@ impl SerBin for usize {
 
 impl DeBin for usize {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<usize, DeBinErr> {
-        let l = std::mem::size_of::<u64>();
+        let l = core::mem::size_of::<u64>();
 
         let m = match d.get(*o..*o + l) {
             Some(data) => u64::from_ne_bytes(data.try_into().unwrap()),
@@ -206,7 +211,9 @@ impl DeBin for String {
                 s: d.len(),
             });
         }
-        let r = std::str::from_utf8(&d[*o..(*o + len)]).unwrap().to_string();
+        let r = core::str::from_utf8(&d[*o..(*o + len)])
+            .unwrap()
+            .to_string();
         *o += len;
         Ok(r)
     }
@@ -286,11 +293,14 @@ where
     }
 }
 
-impl<T, const N: usize> DeBin for [T; N] where T: DeBin {
-    fn de_bin(o:&mut usize, d:&[u8]) -> Result<Self, DeBinErr> {
-        unsafe{
-            let mut to = std::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = std::mem::transmute(&mut to);
+impl<T, const N: usize> DeBin for [T; N]
+where
+    T: DeBin,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
+        unsafe {
+            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
+            let top: *mut T = core::mem::transmute(&mut to);
             for c in 0..N {
                 top.add(c).write(DeBin::de_bin(o, d)?);
             }

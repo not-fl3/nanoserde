@@ -1,3 +1,6 @@
+#![no_std]
+
+extern crate alloc;
 extern crate proc_macro;
 
 #[macro_use]
@@ -118,6 +121,7 @@ pub fn derive_de_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     if let Some(proxy) = shared::attrs_proxy(&input.attributes()) {
         return derive_de_json_proxy(&proxy, &input.name());
     }
+
     // ok we have an ident, its either a struct or a enum
     let ts = match &input {
         parse::Data::Struct(struct_) if struct_.named => derive_de_json_struct(struct_),

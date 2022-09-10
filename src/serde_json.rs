@@ -1,6 +1,12 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::str::Chars;
+use core::hash::Hash;
+use core::str::Chars;
+
+use alloc::boxed::Box;
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+
+use hashbrown::HashMap;
 
 /// The internal state of a JSON serialization.
 pub struct SerJsonState {
@@ -138,8 +144,8 @@ pub struct DeJsonErr {
     pub col: usize,
 }
 
-impl std::fmt::Debug for DeJsonErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for DeJsonErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "Json Deserialize error: {}, line:{} col:{}",
@@ -150,13 +156,13 @@ impl std::fmt::Debug for DeJsonErr {
     }
 }
 
-impl std::fmt::Display for DeJsonErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+impl core::fmt::Display for DeJsonErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(self, f)
     }
 }
 
-impl std::error::Error for DeJsonErr {}
+impl core::error::Error for DeJsonErr {}
 
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {
@@ -315,7 +321,7 @@ impl DeJsonState {
     pub fn next_str(&mut self) -> Option<()> {
         if let DeJsonTok::Str = &mut self.tok {
             //let mut s = String::new();
-            //std::mem::swap(&mut s, name);
+            //core::mem::swap(&mut s, name);
             Some(())
         } else {
             None
@@ -403,7 +409,7 @@ impl DeJsonState {
     pub fn as_string(&mut self) -> Result<String, DeJsonErr> {
         if let DeJsonTok::Str = &mut self.tok {
             let mut val = String::new();
-            std::mem::swap(&mut val, &mut self.strbuf);
+            core::mem::swap(&mut val, &mut self.strbuf);
             return Ok(val);
         }
         Err(self.err_token("string"))
@@ -625,9 +631,9 @@ impl DeJsonState {
             // like `\u+123` and such which makes it less attractive.
             (0..4).try_fold(0u16, |acc, _| {
                 let n = match de.cur {
-                    '0'..='9' => (de.cur as u16 - '0' as u16),
-                    'a'..='f' => (de.cur as u16 - 'a' as u16) + 10,
-                    'A'..='F' => (de.cur as u16 - 'A' as u16) + 10,
+                    '0'..='9' => de.cur as u16 - '0' as u16,
+                    'a'..='f' => de.cur as u16 - 'a' as u16 + 10,
+                    'A'..='F' => de.cur as u16 - 'A' as u16 + 10,
                     _ => return None,
                 };
                 de.next(i);
@@ -693,15 +699,15 @@ macro_rules! impl_ser_de_json_float {
     };
 }
 
-impl_ser_de_json_unsigned!(usize, std::u64::MAX);
-impl_ser_de_json_unsigned!(u64, std::u64::MAX);
-impl_ser_de_json_unsigned!(u32, std::u32::MAX);
-impl_ser_de_json_unsigned!(u16, std::u16::MAX);
-impl_ser_de_json_unsigned!(u8, std::u8::MAX);
-impl_ser_de_json_signed!(i64, std::i64::MIN, std::i64::MAX);
-impl_ser_de_json_signed!(i32, std::i64::MIN, std::i64::MAX);
-impl_ser_de_json_signed!(i16, std::i64::MIN, std::i64::MAX);
-impl_ser_de_json_signed!(i8, std::i64::MIN, std::i8::MAX);
+impl_ser_de_json_unsigned!(usize, core::u64::MAX);
+impl_ser_de_json_unsigned!(u64, core::u64::MAX);
+impl_ser_de_json_unsigned!(u32, core::u32::MAX);
+impl_ser_de_json_unsigned!(u16, core::u16::MAX);
+impl_ser_de_json_unsigned!(u8, core::u8::MAX);
+impl_ser_de_json_signed!(i64, core::i64::MIN, core::i64::MAX);
+impl_ser_de_json_signed!(i32, core::i64::MIN, core::i64::MAX);
+impl_ser_de_json_signed!(i16, core::i64::MIN, core::i64::MAX);
+impl_ser_de_json_signed!(i8, core::i64::MIN, core::i8::MAX);
 impl_ser_de_json_float!(f64);
 impl_ser_de_json_float!(f32);
 
@@ -774,7 +780,7 @@ impl SerJson for String {
                 '\r' => s.out += "\\r",
                 '\t' => s.out += "\\t",
                 _ if c.is_ascii_control() => {
-                    use std::fmt::Write as _;
+                    use core::fmt::Write as _;
                     let _ = write!(s.out, "\\u{:04x}", c as u32);
                 }
                 '\\' => s.out += "\\\\",
@@ -854,8 +860,8 @@ where
 {
     fn de_json(o: &mut DeJsonState, d: &mut Chars) -> Result<Self, DeJsonErr> {
         unsafe {
-            let mut to = std::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = std::mem::transmute(&mut to);
+            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
+            let top: *mut T = core::mem::transmute(&mut to);
             de_json_array_impl_inner(top, N, o, d)?;
             Ok(to.assume_init())
         }

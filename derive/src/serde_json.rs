@@ -1,8 +1,13 @@
-use crate::parse::{Enum, Field, Struct};
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::{vec, vec::Vec};
+
+use crate::{
+    parse::{Enum, Field, Struct},
+    shared,
+};
 
 use proc_macro::TokenStream;
-
-use crate::shared;
 
 pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
@@ -173,7 +178,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         // TODO: maybe introduce "exhaustive" attribute?
         // l!(
         //     r,
-        //     "_ => return std::result::Result::Err(s.err_exp(&s.strbuf))"
+        //     "_ => return core::result::Result::Err(s.err_exp(&s.strbuf))"
         // );
         l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
         l!(r, "}");
@@ -193,9 +198,9 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
 pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeJson for {} {{
-            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
                 let proxy: {} = DeJson::deserialize_json(i)?;
-                std::result::Result::Ok(Into::into(&proxy))
+                core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -214,9 +219,9 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl DeJson for {} {{
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,
             nanoserde::DeJsonErr> {{
-                std::result::Result::Ok({{ {} }})
+                core::result::Result::Ok({{ {} }})
             }}
         }}", struct_.name, body)
         .parse().unwrap()
@@ -399,7 +404,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
 
     let mut r = format!(
         "impl DeJson for {} {{
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
                 match s.tok {{",
         enum_.name,
     );
@@ -411,9 +416,9 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                         s.curly_open(i)?;
                         let _ = s.string(i)?;
                         s.colon(i)?;
-                        let r = std::result::Result::Ok(match s.strbuf.as_ref() {{
+                        let r = core::result::Result::Ok(match s.strbuf.as_ref() {{
                             {}
-                            _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
+                            _ => return core::result::Result::Err(s.err_enum(&s.strbuf))
                         }});
                         s.curly_close(i)?;
                         r
@@ -427,9 +432,9 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
             "
                     nanoserde::DeJsonTok::Str => {{
                         let _ = s.string(i)?;
-                        std::result::Result::Ok(match s.strbuf.as_ref() {{
+                        core::result::Result::Ok(match s.strbuf.as_ref() {{
                             {}
-                            _ => return std::result::Result::Err(s.err_enum(&s.strbuf))
+                            _ => return core::result::Result::Err(s.err_enum(&s.strbuf))
                         }})
                     }},",
             r_units,
@@ -438,7 +443,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
 
     r.push_str(
         r#"
-                    _ => std::result::Result::Err(s.err_token("String or {")),
+                    _ => core::result::Result::Err(s.err_token("String or {")),
                 }
             }
         }
@@ -524,9 +529,9 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format! ("
         impl DeJson for {} {{
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeJsonErr> {{
                 {}
-                std::result::Result::Ok(r)
+                core::result::Result::Ok(r)
             }}
         }}",struct_.name, body
     ).parse().unwrap()

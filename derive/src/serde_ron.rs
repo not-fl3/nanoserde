@@ -1,3 +1,7 @@
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::{vec, vec::Vec};
+
 use crate::parse::{Attribute, Enum, Field, Struct};
 
 use proc_macro::TokenStream;
@@ -21,9 +25,9 @@ pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeRon for {} {{
-            fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self, nanoserde::DeRonErr> {{
+            fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeRonErr> {{
                 let proxy: {} = DeRon::deserialize_ron(i)?;
-                std::result::Result::Ok(Into::into(&proxy))
+                core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -209,7 +213,7 @@ pub fn derive_de_ron_named(
         format!(
             "match s.identbuf.as_ref() {{
                 {}
-                _ => return std::result::Result::Err(s.err_exp(&s.identbuf))
+                _ => return core::result::Result::Err(s.err_exp(&s.identbuf))
             }}",
             inner
         )
@@ -245,8 +249,8 @@ pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
-                std::result::Result::Ok({})
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeRonErr> {{
+                core::result::Result::Ok({})
             }}
         }}", struct_.name, body)
     .parse()
@@ -269,11 +273,11 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format! ("
         impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeRonErr> {{
                 s.paren_open(i)?;
                 let r = Self({});
                 s.paren_close(i)?;
-                std::result::Result::Ok(r)
+                core::result::Result::Ok(r)
             }}
         }}",struct_.name, body
     ).parse().unwrap()
@@ -421,12 +425,12 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
 
     format! ("
         impl DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut std::str::Chars) -> std::result::Result<Self,nanoserde::DeRonErr> {{
+            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeRonErr> {{
                 // we are expecting an identifier
                 s.ident(i)?;
-                std::result::Result::Ok(match s.identbuf.as_ref() {{
+                core::result::Result::Ok(match s.identbuf.as_ref() {{
                     {}
-                    _ => return std::result::Result::Err(s.err_enum(&s.identbuf))
+                    _ => return core::result::Result::Err(s.err_enum(&s.identbuf))
                 }})
             }}
         }}", enum_.name, body).parse().unwrap()
