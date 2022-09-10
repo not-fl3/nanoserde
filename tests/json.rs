@@ -284,11 +284,11 @@ fn one_field() {
 fn one_field_map() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct OneField {
-        field: std::collections::HashMap<String, f32>,
+        field: hashbrown::HashMap<String, f32>,
     }
 
     let test = OneField {
-        field: std::collections::HashMap::new(),
+        field: hashbrown::HashMap::new(),
     };
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
@@ -355,7 +355,7 @@ fn path_type() {
 fn hashmaps() {
     #[derive(DeJson)]
     struct Foo {
-        map: std::collections::HashMap<String, i32>,
+        map: hashbrown::HashMap<String, i32>,
     }
 
     let json = r#"{

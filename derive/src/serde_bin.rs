@@ -1,3 +1,6 @@
+use alloc::format;
+use alloc::string::String;
+
 use crate::parse::{Enum, Struct};
 
 use proc_macro::TokenStream;
@@ -19,9 +22,9 @@ pub fn derive_ser_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 pub fn derive_de_bin_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 let proxy: {} = DeBin::de_bin(o, d)?;
-                std::result::Result::Ok(Into::into(&proxy))
+                core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -105,8 +108,8 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                std::result::Result::Ok(Self {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
+                core::result::Result::Ok(Self {{
                     {}
                 }})
             }}
@@ -133,8 +136,8 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
-                std::result::Result::Ok(Self {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
+                core::result::Result::Ok(Self {{
                     {}
                 }})
             }}
@@ -231,11 +234,11 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
 
     format!(
         "impl  DeBin for {} {{
-            fn de_bin(o:&mut usize, d:&[u8]) -> std::result::Result<Self, nanoserde::DeBinErr> {{
+            fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 let id: u16 = DeBin::de_bin(o,d)?;
                 Ok(match id {{
                     {}
-                    _ => return std::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
+                    _ => return core::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
                 }})
             }}
         }}", enum_.name, r)

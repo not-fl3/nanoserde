@@ -1,6 +1,12 @@
-use std::collections::HashMap;
-use std::hash::Hash;
-use std::str::Chars;
+use core::hash::Hash;
+use core::str::Chars;
+
+use alloc::boxed::Box;
+use alloc::format;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+
+use hashbrown::HashMap;
 
 /// The internal state of a RON serialization.
 pub struct SerRonState {
@@ -135,8 +141,8 @@ pub struct DeRonErr {
     pub col: usize,
 }
 
-impl std::fmt::Debug for DeRonErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for DeRonErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
             "Ron Deserialize error: {}, line:{} col:{}",
@@ -147,13 +153,14 @@ impl std::fmt::Debug for DeRonErr {
     }
 }
 
-impl std::fmt::Display for DeRonErr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
+impl core::fmt::Display for DeRonErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(self, f)
     }
 }
 
-impl std::error::Error for DeRonErr {}
+// NOTE: core::error::Error requires nightly for now
+impl core::error::Error for DeRonErr {}
 
 impl DeRonState {
     pub fn next(&mut self, i: &mut Chars) {
@@ -393,7 +400,7 @@ impl DeRonState {
     pub fn as_string(&mut self) -> Result<String, DeRonErr> {
         if let DeRonTok::Str = &mut self.tok {
             let mut val = String::new();
-            std::mem::swap(&mut val, &mut self.strbuf);
+            core::mem::swap(&mut val, &mut self.strbuf);
             return Ok(val);
         }
         Err(self.err_token("string"))
@@ -664,9 +671,9 @@ impl DeRonState {
             // like `\u+123` and such which makes it less attractive.
             (0..4).try_fold(0u16, |acc, _| {
                 let n = match de.cur {
-                    '0'..='9' => (de.cur as u16 - '0' as u16),
-                    'a'..='f' => (de.cur as u16 - 'a' as u16) + 10,
-                    'A'..='F' => (de.cur as u16 - 'A' as u16) + 10,
+                    '0'..='9' => de.cur as u16 - '0' as u16,
+                    'a'..='f' => de.cur as u16 - 'a' as u16 + 10,
+                    'A'..='F' => de.cur as u16 - 'A' as u16 + 10,
                     _ => return None,
                 };
                 de.next(i);
@@ -733,15 +740,15 @@ macro_rules! impl_ser_de_ron_float {
     };
 }
 
-impl_ser_de_ron_unsigned!(usize, std::u64::MAX);
-impl_ser_de_ron_unsigned!(u64, std::u64::MAX);
-impl_ser_de_ron_unsigned!(u32, std::u32::MAX);
-impl_ser_de_ron_unsigned!(u16, std::u16::MAX);
-impl_ser_de_ron_unsigned!(u8, std::u8::MAX);
-impl_ser_de_ron_signed!(i64, std::i64::MIN, std::i64::MAX);
-impl_ser_de_ron_signed!(i32, std::i64::MIN, std::i64::MAX);
-impl_ser_de_ron_signed!(i16, std::i64::MIN, std::i64::MAX);
-impl_ser_de_ron_signed!(i8, std::i64::MIN, std::i8::MAX);
+impl_ser_de_ron_unsigned!(usize, core::u64::MAX);
+impl_ser_de_ron_unsigned!(u64, core::u64::MAX);
+impl_ser_de_ron_unsigned!(u32, core::u32::MAX);
+impl_ser_de_ron_unsigned!(u16, core::u16::MAX);
+impl_ser_de_ron_unsigned!(u8, core::u8::MAX);
+impl_ser_de_ron_signed!(i64, core::i64::MIN, core::i64::MAX);
+impl_ser_de_ron_signed!(i32, core::i64::MIN, core::i64::MAX);
+impl_ser_de_ron_signed!(i16, core::i64::MIN, core::i64::MAX);
+impl_ser_de_ron_signed!(i8, core::i64::MIN, core::i8::MAX);
 impl_ser_de_ron_float!(f64);
 impl_ser_de_ron_float!(f32);
 
@@ -903,11 +910,14 @@ where
     Ok(())
 }
 
-impl<T, const N: usize> DeRon for [T; N] where T: DeRon {
+impl<T, const N: usize> DeRon for [T; N]
+where
+    T: DeRon,
+{
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
         unsafe {
-            let mut to = std::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = std::mem::transmute(&mut to);
+            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
+            let top: *mut T = core::mem::transmute(&mut to);
             de_ron_array_impl_inner(top, N, s, i)?;
             Ok(to.assume_init())
         }

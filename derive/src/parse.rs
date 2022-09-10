@@ -4,9 +4,13 @@
 //! https://docs.rs/syn/0.15.44/syn/enum.Type.html
 //! https://ziglang.org/documentation/0.5.0/#toc-typeInfo
 
-use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
+use core::iter::Peekable;
 
-use std::iter::Peekable;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
+use alloc::{format, vec};
+
+use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 #[derive(Debug)]
 pub struct Attribute {
@@ -178,10 +182,11 @@ pub fn next_group(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Opt
     }
 }
 
-#[allow(dead_code)]
-pub fn debug_current_token(source: &mut Peekable<impl Iterator<Item = TokenTree>>) {
-    println!("{:?}", source.peek());
-}
+// TODO: Replace with no_std equivalent.
+// #[allow(dead_code)]
+// pub fn debug_current_token(source: &mut Peekable<impl Iterator<Item = TokenTree>>) {
+//     println!("{:?}", source.peek());
+// }
 
 fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Option<Type> {
     let group = next_group(&mut source);

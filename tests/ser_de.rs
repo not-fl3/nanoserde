@@ -8,10 +8,10 @@ fn ser_de() {
         pub b: f32,
         c: Option<String>,
         d: Option<String>,
-        e: Option<std::collections::HashMap<String, String>>,
+        e: Option<hashbrown::HashMap<String, String>>,
     }
 
-    let mut map = std::collections::HashMap::new();
+    let mut map = hashbrown::HashMap::new();
     map.insert("a".to_string(), "b".to_string());
 
     let test: Test = Test {
