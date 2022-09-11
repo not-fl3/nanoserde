@@ -17,10 +17,10 @@
 //! `nanoserde` supports some serialization customisation with `#[nserde()]` attributes.
 //! For `#[nserde(..)]` supported attributes for each format check [Features support matrix](https://github.com/not-fl3/nanoserde#features-support-matrix)
 
-#![no_std]
+#![cfg_attr(features = "no_std", no_std)]
 // Possibly stable in 1.65.
 // See: https://github.com/rust-lang/rust/pull/99917
-#![feature(error_in_core)]
+#![cfg_attr(features = "no_std", feature(error_in_core))]
 
 extern crate alloc;
 

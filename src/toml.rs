@@ -4,7 +4,11 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 
+#[cfg(features = "no_std")]
 use hashbrown::HashMap;
+
+#[cfg(not(features = "no_std"))]
+use std::collections::HashMap;
 
 /// A parser for TOML string values.
 ///
@@ -144,7 +148,11 @@ impl Out {
     }
 }
 
+#[cfg(features = "no_std")]
 impl core::error::Error for TomlErr {}
+
+#[cfg(not(features = "no_std"))]
+impl std::error::Error for TomlErr {}
 
 impl TomlParser {
     /// Parse a TOML string.

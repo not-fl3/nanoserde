@@ -1,5 +1,7 @@
 use nanoserde::{DeRon, SerRon};
 
+use std::collections::HashMap;
+
 #[test]
 fn ron_de() {
     #[derive(DeRon)]
@@ -163,11 +165,11 @@ fn one_field() {
 fn one_field_map() {
     #[derive(DeRon, SerRon, PartialEq)]
     pub struct OneField {
-        field: hashbrown::HashMap<String, f32>,
+        field: HashMap<String, f32>,
     }
 
     let test = OneField {
-        field: hashbrown::HashMap::new(),
+        field: HashMap::new(),
     };
     let bytes = SerRon::serialize_ron(&test);
     let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
@@ -234,7 +236,7 @@ fn path_type() {
 fn hashmaps() {
     #[derive(DeRon)]
     struct Foo {
-        map: hashbrown::HashMap<String, i32>,
+        map: HashMap<String, i32>,
     }
 
     let ron = r#"(
