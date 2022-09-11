@@ -6,7 +6,11 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
+#[cfg(features = "no_std")]
 use hashbrown::HashMap;
+
+#[cfg(not(features = "no_std"))]
+use std::collections::HashMap;
 
 /// The internal state of a RON serialization.
 pub struct SerRonState {
@@ -159,8 +163,11 @@ impl core::fmt::Display for DeRonErr {
     }
 }
 
-// NOTE: core::error::Error requires nightly for now
+#[cfg(features = "no_std")]
 impl core::error::Error for DeRonErr {}
+
+#[cfg(not(features = "no_std"))]
+impl std::error::Error for DeRonErr {}
 
 impl DeRonState {
     pub fn next(&mut self, i: &mut Chars) {

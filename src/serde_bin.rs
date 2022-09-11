@@ -5,7 +5,11 @@ use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
+#[cfg(features = "no_std")]
 use hashbrown::HashMap;
+
+#[cfg(not(features = "no_std"))]
+use std::collections::HashMap;
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -78,7 +82,11 @@ impl core::fmt::Display for DeBinErr {
     }
 }
 
+#[cfg(features = "no_std")]
 impl core::error::Error for DeBinErr {}
+
+#[cfg(not(features = "no_std"))]
+impl std::error::Error for DeBinErr {}
 
 macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {

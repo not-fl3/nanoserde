@@ -1,5 +1,7 @@
 use nanoserde::{DeJson, SerJson};
 
+use std::collections::HashMap;
+
 #[test]
 fn de() {
     #[derive(DeJson)]
@@ -284,11 +286,11 @@ fn one_field() {
 fn one_field_map() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct OneField {
-        field: hashbrown::HashMap<String, f32>,
+        field: HashMap<String, f32>,
     }
 
     let test = OneField {
-        field: hashbrown::HashMap::new(),
+        field: HashMap::new(),
     };
     let bytes = SerJson::serialize_json(&test);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
@@ -355,7 +357,7 @@ fn path_type() {
 fn hashmaps() {
     #[derive(DeJson)]
     struct Foo {
-        map: hashbrown::HashMap<String, i32>,
+        map: HashMap<String, i32>,
     }
 
     let json = r#"{

@@ -182,8 +182,6 @@ pub fn next_group(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Opt
     }
 }
 
-// TODO: Replace with no_std equivalent.
-// #[allow(dead_code)]
 // pub fn debug_current_token(source: &mut Peekable<impl Iterator<Item = TokenTree>>) {
 //     println!("{:?}", source.peek());
 // }

@@ -6,7 +6,11 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
+#[cfg(features = "no_std")]
 use hashbrown::HashMap;
+
+#[cfg(not(features = "no_std"))]
+use std::collections::HashMap;
 
 /// The internal state of a JSON serialization.
 pub struct SerJsonState {
@@ -162,7 +166,11 @@ impl core::fmt::Display for DeJsonErr {
     }
 }
 
+#[cfg(features = "no_std")]
 impl core::error::Error for DeJsonErr {}
+
+#[cfg(not(features = "no_std"))]
+impl std::error::Error for DeJsonErr {}
 
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {

@@ -1,5 +1,7 @@
 use nanoserde::{DeBin, DeJson, SerBin, SerJson};
 
+use std::collections::HashMap;
+
 #[test]
 fn ser_de() {
     #[derive(DeBin, SerBin, DeJson, SerJson, PartialEq)]
@@ -8,10 +10,10 @@ fn ser_de() {
         pub b: f32,
         c: Option<String>,
         d: Option<String>,
-        e: Option<hashbrown::HashMap<String, String>>,
+        e: Option<HashMap<String, String>>,
     }
 
-    let mut map = hashbrown::HashMap::new();
+    let mut map = HashMap::new();
     map.insert("a".to_string(), "b".to_string());
 
     let test: Test = Test {
