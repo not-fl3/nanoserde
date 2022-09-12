@@ -10,7 +10,6 @@ use hashbrown::HashMap;
 
 #[cfg(not(features = "no_std"))]
 use std::collections::HashMap;
-use core::hash::Hash;
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
