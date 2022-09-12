@@ -9,4 +9,9 @@ license = "MIT"
 [lib]
 proc-macro = true
 
+[features]
+default = []
+no_std = ["dep:hashbrown"]
+
 [dependencies]
+hashbrown = { version = "0.12.3", optional = true }

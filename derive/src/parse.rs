@@ -13,6 +13,13 @@ use alloc::{format, vec};
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 
+#[cfg(features = "no_std")]
+use hashbrown::HashSet;
+
+#[cfg(not(features = "no_std"))]
+use std::collections::HashSet;
+
+
 #[derive(Debug)]
 pub struct Attribute {
     pub name: String,
