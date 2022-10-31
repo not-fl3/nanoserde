@@ -209,7 +209,6 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
     let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeBin");
 
-
     for (index, variant) in enum_.variants.iter().enumerate() {
         let lit = format!("{}u16", index);
 
