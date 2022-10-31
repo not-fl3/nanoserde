@@ -245,7 +245,6 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>, generi
             })
         }
     } else {
-        // panic!("{} \n{:?}", &ty, generic_typenames);
         Some(Type {
             path: ty.clone(),
             is_option: false,
@@ -565,8 +564,8 @@ pub fn parse_data(input: TokenStream) -> Data {
         "struct" => {
             let mut struct_ = next_struct(&mut source);
             struct_.attributes = attributes;
+
             res = Data::Struct(struct_);
-            
         }
         "enum" => {
             let enum_ = next_enum(&mut source);
@@ -580,5 +579,6 @@ pub fn parse_data(input: TokenStream) -> Data {
         source.next().is_none(),
         "Unexpected data after end of the struct"
     );
+
     res
 }
