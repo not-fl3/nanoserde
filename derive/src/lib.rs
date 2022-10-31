@@ -1,7 +1,4 @@
 #![cfg_attr(features = "no_std", no_std)]
-// Possibly stable in 1.65.
-// See: https://github.com/rust-lang/rust/pull/99917
-#![cfg_attr(features = "no_std", feature(error_in_core))]
 
 extern crate alloc;
 extern crate proc_macro;
