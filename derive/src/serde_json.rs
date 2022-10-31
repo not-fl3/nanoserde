@@ -3,7 +3,7 @@ use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 
 use crate::{
-    parse::{Enum, Field, Struct},
+    parse::{Enum, Field, Struct, struct_bounds_strings, enum_bounds_strings},
     shared,
 };
 
@@ -25,6 +25,7 @@ pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     let mut s = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerJson");
 
     l!(s, "let mut first_field_was_serialized = false;");
 
@@ -66,7 +67,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl SerJson for {} {{
+        impl{} SerJson for {}{} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 s.st_pre();
                 {}
@@ -74,7 +75,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             }}
         }}
     ",
-        struct_.name, s
+        generic_w_bounds, struct_.name, generic_no_bounds, s
     )
     .parse()
     .unwrap()
@@ -216,14 +217,15 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
             || shared::attrs_default_with(&struct_.attributes).is_some(),
         &struct_.fields[..],
     );
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeJson");
 
     format!(
-        "impl DeJson for {} {{
+        "impl{} DeJson for {}{} {{
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,
             nanoserde::DeJsonErr> {{
                 core::result::Result::Ok({{ {} }})
             }}
-        }}", struct_.name, body)
+        }}", generic_w_bounds, struct_.name, generic_no_bounds, body)
         .parse().unwrap()
 }
 
@@ -362,6 +364,7 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
 pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     let mut r_units = String::new();
     let mut r_rest = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeJson");
 
     for variant in &enum_.variants {
         let json_variant_name =
@@ -403,10 +406,10 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     }
 
     let mut r = format!(
-        "impl DeJson for {} {{
+        "impl{} DeJson for {}{} {{
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
                 match s.tok {{",
-        enum_.name,
+        generic_w_bounds, generic_no_bounds, enum_.name,
     );
 
     if !r_rest.is_empty() {
@@ -455,6 +458,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
 
 pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerJson");
 
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
@@ -483,12 +487,12 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl SerJson for {} {{
+        impl{} SerJson for {}{} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 {}
             }}
         }}",
-        struct_.name, body
+        generic_w_bounds, struct_.name, generic_no_bounds, body
     )
     .parse()
     .unwrap()
@@ -496,6 +500,7 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
 pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeJson");
 
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
@@ -528,11 +533,11 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     };
 
     format! ("
-        impl DeJson for {} {{
+        impl{} DeJson for {}{} {{
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeJsonErr> {{
                 {}
                 core::result::Result::Ok(r)
             }}
-        }}",struct_.name, body
+        }}",generic_w_bounds, struct_.name, generic_no_bounds, body
     ).parse().unwrap()
 }
