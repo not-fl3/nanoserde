@@ -109,7 +109,7 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
         }
     }
 
-    let tmp = format!(
+    format!(
         "impl{} DeBin for {}{} {{
             fn de_bin(o:&mut usize, d:&[u8]) -> core::result::Result<Self, nanoserde::DeBinErr> {{
                 core::result::Result::Ok(Self {{
@@ -118,8 +118,8 @@ pub fn derive_de_bin_struct(struct_: &Struct) -> TokenStream {
             }}
         }}",
         generic_w_bounds, struct_.name, generic_no_bounds, body
-    );
-    tmp.parse()
+    )
+    .parse()
     .unwrap()
 }
 
@@ -208,7 +208,6 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
 pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
     let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeBin");
-
 
     for (index, variant) in enum_.variants.iter().enumerate() {
         let lit = format!("{}u16", index);
