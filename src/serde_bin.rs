@@ -2,14 +2,15 @@ use core::convert::TryInto;
 use core::hash::Hash;
 
 use alloc::boxed::Box;
+use alloc::collections::{LinkedList, BTreeSet};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 #[cfg(features = "no_std")]
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 
 #[cfg(not(features = "no_std"))]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -249,6 +250,87 @@ where
         let mut out = Vec::new();
         for _ in 0..len {
             out.push(DeBin::de_bin(o, d)?)
+        }
+        Ok(out)
+    }
+}
+
+impl<T> SerBin for LinkedList<T>
+where
+    T: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let len = self.len();
+        len.ser_bin(s);
+        for item in self.iter() {
+            item.ser_bin(s);
+        }
+    }
+}
+
+impl<T> DeBin for LinkedList<T>
+where
+    T: DeBin,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<LinkedList<T>, DeBinErr> {
+        let len: usize = DeBin::de_bin(o, d)?;
+        let mut out = LinkedList::new();
+        for _ in 0..len {
+            out.push_back(DeBin::de_bin(o, d)?)
+        }
+        Ok(out)
+    }
+}
+
+impl<T> SerBin for HashSet<T>
+where
+    T: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let len = self.len();
+        len.ser_bin(s);
+        for item in self.iter() {
+            item.ser_bin(s);
+        }
+    }
+}
+
+impl<T> DeBin for HashSet<T>
+where
+    T: DeBin + Hash + Eq,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<HashSet<T>, DeBinErr> {
+        let len: usize = DeBin::de_bin(o, d)?;
+        let mut out = HashSet::new();
+        for _ in 0..len {
+            out.insert(DeBin::de_bin(o, d)?);
+        }
+        Ok(out)
+    }
+}
+
+impl<T> SerBin for BTreeSet<T>
+where
+    T: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let len = self.len();
+        len.ser_bin(s);
+        for item in self.iter() {
+            item.ser_bin(s);
+        }
+    }
+}
+
+impl<T> DeBin for BTreeSet<T>
+where
+    T: DeBin + Ord,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<BTreeSet<T>, DeBinErr> {
+        let len: usize = DeBin::de_bin(o, d)?;
+        let mut out = BTreeSet::new();
+        for _ in 0..len {
+            out.insert(DeBin::de_bin(o, d)?);
         }
         Ok(out)
     }

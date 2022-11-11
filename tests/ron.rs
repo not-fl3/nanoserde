@@ -1,6 +1,6 @@
 use nanoserde::{DeRon, SerRon};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList, HashSet, BTreeSet};
 
 #[test]
 fn ron_de() {
@@ -205,6 +205,30 @@ fn array() {
     assert_eq!(bar.ints[2], 3);
     assert_eq!(bar.floats_b.unwrap()[2], 2.);
     assert_eq!(bar.floats_a, None);
+}
+
+#[test]
+fn collections() {
+    #[derive(DeRon, SerRon, PartialEq, Debug)]
+    pub struct Test {
+        pub a: Vec<i32>,
+        pub b: LinkedList<f32>,
+        pub c: HashSet<i32>,
+        pub d: BTreeSet<i32>,
+    }
+
+    let test: Test = Test {
+        a: vec![1, 2, 3],
+        b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
+        c: vec![1, 2, 3, 4, 5].into_iter().collect(),
+        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect()
+    };
+
+    let bytes = SerRon::serialize_ron(&test);
+
+    let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
+
+    assert_eq!(test, test_deserialized);
 }
 
 #[test]
