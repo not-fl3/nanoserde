@@ -2,15 +2,16 @@ use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
+use alloc::collections::{LinkedList, BTreeSet};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 #[cfg(features = "no_std")]
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 
 #[cfg(not(features = "no_std"))]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// The internal state of a JSON serialization.
 pub struct SerJsonState {
@@ -844,6 +845,119 @@ where
         Ok(out)
     }
 }
+
+impl<T> SerJson for HashSet<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_json(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeJson for HashSet<T>
+where
+    T: DeJson + Hash + Eq,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<HashSet<T>, DeJsonErr> {
+        let mut out = HashSet::new();
+        s.block_open(i)?;
+
+        while s.tok != DeJsonTok::BlockClose {
+            out.insert(DeJson::de_json(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
+impl<T> SerJson for LinkedList<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_json(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeJson for LinkedList<T>
+where
+    T: DeJson,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<LinkedList<T>, DeJsonErr> {
+        let mut out = LinkedList::new();
+        s.block_open(i)?;
+
+        while s.tok != DeJsonTok::BlockClose {
+            out.push_back(DeJson::de_json(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
+impl<T> SerJson for BTreeSet<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_json(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeJson for BTreeSet<T>
+where
+    T: DeJson + Ord,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<BTreeSet<T>, DeJsonErr> {
+        let mut out = BTreeSet::new();
+        s.block_open(i)?;
+
+        while s.tok != DeJsonTok::BlockClose {
+            out.insert(DeJson::de_json(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
+
 
 impl<T> SerJson for [T]
 where

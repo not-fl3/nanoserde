@@ -2,15 +2,16 @@ use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
+use alloc::collections::{LinkedList, BTreeSet};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 #[cfg(features = "no_std")]
-use hashbrown::HashMap;
+use hashbrown::{HashMap, HashSet};
 
 #[cfg(not(features = "no_std"))]
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// The internal state of a RON serialization.
 pub struct SerRonState {
@@ -50,7 +51,7 @@ impl SerRonState {
 pub trait SerRon {
     /// Serialize Self to a RON string.
     ///
-    /// This is a convenient wrapper around `ser_json`.
+    /// This is a convenient wrapper around `ser_ron`.
     fn serialize_ron(&self) -> String {
         let mut s = SerRonState { out: String::new() };
         self.ser_ron(0, &mut s);
@@ -881,6 +882,118 @@ where
         Ok(out)
     }
 }
+
+impl<T> SerRon for HashSet<T>
+where
+    T: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_ron(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeRon for HashSet<T>
+where
+    T: DeRon + Hash + Eq,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<HashSet<T>, DeRonErr> {
+        let mut out = HashSet::new();
+        s.block_open(i)?;
+
+        while s.tok != DeRonTok::BlockClose {
+            out.insert(DeRon::de_ron(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
+impl<T> SerRon for LinkedList<T>
+where
+    T: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_ron(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeRon for LinkedList<T>
+where
+    T: DeRon,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<LinkedList<T>, DeRonErr> {
+        let mut out = LinkedList::new();
+        s.block_open(i)?;
+
+        while s.tok != DeRonTok::BlockClose {
+            out.push_back(DeRon::de_ron(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
+impl<T> SerRon for BTreeSet<T>
+where
+    T: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        s.out.push('[');
+        if self.len() > 0 {
+            let last = self.len() - 1;
+            for (index, item) in self.iter().enumerate() {
+                s.indent(d + 1);
+                item.ser_ron(d + 1, s);
+                if index != last {
+                    s.out.push(',');
+                }
+            }
+        }
+        s.out.push(']');
+    }
+}
+
+impl<T> DeRon for BTreeSet<T>
+where
+    T: DeRon + Ord,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<BTreeSet<T>, DeRonErr> {
+        let mut out = BTreeSet::new();
+        s.block_open(i)?;
+
+        while s.tok != DeRonTok::BlockClose {
+            out.insert(DeRon::de_ron(s, i)?);
+            s.eat_comma_block(i)?;
+        }
+        s.block_close(i)?;
+        Ok(out)
+    }
+}
+
 
 impl<T> SerRon for [T]
 where
