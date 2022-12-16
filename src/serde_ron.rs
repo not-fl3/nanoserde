@@ -2,7 +2,7 @@ use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
-use alloc::collections::{LinkedList, BTreeSet};
+use alloc::collections::{BTreeSet, LinkedList};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -993,7 +993,6 @@ where
         Ok(out)
     }
 }
-
 
 impl<T> SerRon for [T]
 where

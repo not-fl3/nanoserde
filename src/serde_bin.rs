@@ -2,7 +2,7 @@ use core::convert::TryInto;
 use core::hash::Hash;
 
 use alloc::boxed::Box;
-use alloc::collections::{LinkedList, BTreeSet};
+use alloc::collections::{BTreeSet, LinkedList};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 

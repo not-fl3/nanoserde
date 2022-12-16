@@ -1,9 +1,29 @@
 on: [push, pull_request]
 
-name: Cross-compile
+name: CI
 
 jobs:
-  build:
+  rustfmt:
+      name: Rustfmt
+      runs-on: ${{ matrix.config.os }}
+      strategy:
+        fail-fast: true
+        matrix:
+          config:
+            - { os: ubuntu-latest, target: 'x86_64-unknown-linux-gnu' }
+      steps:
+        - uses: actions/checkout@v2
+        - uses: actions-rs/toolchain@v1
+          with:
+            toolchain: stable
+            target: ${{ matrix.config.target }}
+            override: true      
+        - uses: actions-rs/cargo@v1
+          with:
+            command: fmt
+            args: --check
+        
+  build_all:
     name: Build
     runs-on: ${{ matrix.config.os }}
     strategy:
