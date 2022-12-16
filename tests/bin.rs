@@ -28,7 +28,7 @@ fn binary() {
 
 #[test]
 fn binary_generics() {
-    #[derive(DeBin, SerBin, PartialEq, Eq)]
+    #[derive(DeBin, SerBin, PartialEq)]
     pub struct TestStruct<A, B> {
         pub a: A,
         b: Option<B>,
@@ -42,7 +42,7 @@ fn binary_generics() {
 
     assert!(test == test_deserialized);
 
-    #[derive(DeBin, SerBin, PartialEq, Eq)]
+    #[derive(DeBin, SerBin, PartialEq)]
     pub enum TestEnum<A, B> {
         Test(A, B),
     }
@@ -58,12 +58,12 @@ fn binary_generics() {
 
 #[test]
 fn field_proxy() {
-    #[derive(PartialEq, Eq)]
+    #[derive(PartialEq)]
     pub struct NonSerializable {
         foo: i32,
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Eq)]
+    #[derive(DeBin, SerBin, PartialEq)]
     pub struct Serializable {
         x: i32,
     }
@@ -79,7 +79,7 @@ fn field_proxy() {
         }
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Eq)]
+    #[derive(DeBin, SerBin, PartialEq)]
     pub struct Test {
         #[nserde(proxy = "Serializable")]
         foo: NonSerializable,
@@ -108,7 +108,7 @@ fn struct_proxy() {
         simd_data: NonSerializable<u64>,
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub struct PortableVec2 {
         x: u64,
         y: u64,
@@ -158,14 +158,14 @@ fn tuple_struct() {
 
 #[test]
 fn enums() {
-    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub enum Foo {
         A,
         B(i32),
         C { x: String },
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub struct Test {
         foo1: Foo,
         foo2: Foo,

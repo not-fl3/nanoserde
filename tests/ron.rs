@@ -50,7 +50,7 @@ fn de_container_default() {
 
 #[test]
 fn rename() {
-    #[derive(DeRon, SerRon, PartialEq, Eq)]
+    #[derive(DeRon, SerRon, PartialEq)]
     #[nserde(default)]
     pub struct Test {
         #[nserde(rename = "fooField")]
@@ -336,14 +336,14 @@ fn ronerror() {
 
 #[test]
 fn de_enum() {
-    #[derive(DeRon, PartialEq, Eq, Debug)]
+    #[derive(DeRon, PartialEq, Debug)]
     pub enum Foo {
         A,
         B(i32, String),
         C { a: i32, b: String },
     }
 
-    #[derive(DeRon, PartialEq, Eq, Debug)]
+    #[derive(DeRon, PartialEq, Debug)]
     pub struct Bar {
         foo1: Foo,
         foo2: Foo,
