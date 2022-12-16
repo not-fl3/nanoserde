@@ -1,6 +1,6 @@
 use nanoserde::{DeJson, SerJson};
 
-use std::collections::{HashMap, LinkedList, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
 
 #[test]
 fn de() {
@@ -116,7 +116,7 @@ fn de_container_default() {
 
 #[test]
 fn rename() {
-    #[derive(DeJson, SerJson, PartialEq)]
+    #[derive(DeJson, SerJson, PartialEq, Eq)]
     #[nserde(default)]
     pub struct Test {
         #[nserde(rename = "fooField")]
@@ -125,7 +125,7 @@ fn rename() {
         pub b: Bar,
     }
 
-    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[derive(DeJson, SerJson, PartialEq, Eq, Debug)]
     pub enum Bar {
         #[nserde(rename = "fooValue")]
         A,
@@ -424,7 +424,7 @@ fn collections() {
         a: vec![1, 2, 3],
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
         c: vec![1, 2, 3, 4, 5].into_iter().collect(),
-        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect()
+        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
     };
 
     let bytes = SerJson::serialize_json(&test);
@@ -478,14 +478,14 @@ fn de_tuple_fields() {
 
 #[test]
 fn de_enum() {
-    #[derive(DeJson, PartialEq, Debug)]
+    #[derive(DeJson, PartialEq, Eq, Debug)]
     pub enum Foo {
         A,
         B(i32, String),
         C { a: i32, b: String },
     }
 
-    #[derive(DeJson, PartialEq, Debug)]
+    #[derive(DeJson, PartialEq, Eq, Debug)]
     pub struct Bar {
         foo1: Foo,
         foo2: Foo,
@@ -515,14 +515,14 @@ fn de_enum() {
 
 #[test]
 fn de_ser_enum() {
-    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[derive(DeJson, SerJson, PartialEq, Eq, Debug)]
     pub enum Foo {
         A,
         B { x: i32 },
         C(i32, String),
     }
 
-    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[derive(DeJson, SerJson, PartialEq, Eq, Debug)]
     pub struct Bar {
         foo1: Foo,
         foo2: Foo,
@@ -585,12 +585,12 @@ fn test_surrogate_pairs_exhaustively() {
 
 #[test]
 fn field_proxy() {
-    #[derive(PartialEq, Debug)]
+    #[derive(PartialEq, Eq, Debug)]
     pub struct NonSerializable {
         foo: i32,
     }
 
-    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[derive(DeJson, SerJson, PartialEq, Eq, Debug)]
     pub struct Serializable {
         x: i32,
     }
@@ -610,7 +610,7 @@ fn field_proxy() {
         }
     }
 
-    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[derive(DeJson, SerJson, PartialEq, Eq, Debug)]
     pub struct Test {
         #[nserde(proxy = "Serializable")]
         foo: NonSerializable,
@@ -628,10 +628,10 @@ fn field_proxy() {
 
 #[test]
 fn tuple_struct() {
-    #[derive(DeJson, SerJson, PartialEq)]
+    #[derive(DeJson, SerJson, PartialEq, Eq)]
     pub struct Test(i32);
 
-    #[derive(DeJson, SerJson, PartialEq)]
+    #[derive(DeJson, SerJson, PartialEq, Eq)]
     pub struct Foo {
         x: Test,
     }
@@ -648,11 +648,11 @@ fn tuple_struct() {
 
 #[test]
 fn tuple_struct_transparent() {
-    #[derive(DeJson, SerJson, PartialEq)]
+    #[derive(DeJson, SerJson, PartialEq, Eq)]
     #[nserde(transparent)]
     pub struct Test(i32);
 
-    #[derive(DeJson, SerJson, PartialEq)]
+    #[derive(DeJson, SerJson, PartialEq, Eq)]
     pub struct Foo {
         x: Test,
     }

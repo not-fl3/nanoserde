@@ -1,4 +1,4 @@
-use std::collections::{LinkedList, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashSet, LinkedList};
 
 use nanoserde::{DeBin, SerBin};
 
@@ -28,7 +28,7 @@ fn binary() {
 
 #[test]
 fn binary_generics() {
-    #[derive(DeBin, SerBin, PartialEq)]
+    #[derive(DeBin, SerBin, PartialEq, Eq)]
     pub struct TestStruct<A, B> {
         pub a: A,
         b: Option<B>,
@@ -42,7 +42,7 @@ fn binary_generics() {
 
     assert!(test == test_deserialized);
 
-    #[derive(DeBin, SerBin, PartialEq)]
+    #[derive(DeBin, SerBin, PartialEq, Eq)]
     pub enum TestEnum<A, B> {
         Test(A, B),
     }
@@ -58,12 +58,12 @@ fn binary_generics() {
 
 #[test]
 fn field_proxy() {
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Eq)]
     pub struct NonSerializable {
         foo: i32,
     }
 
-    #[derive(DeBin, SerBin, PartialEq)]
+    #[derive(DeBin, SerBin, PartialEq, Eq)]
     pub struct Serializable {
         x: i32,
     }
@@ -79,7 +79,7 @@ fn field_proxy() {
         }
     }
 
-    #[derive(DeBin, SerBin, PartialEq)]
+    #[derive(DeBin, SerBin, PartialEq, Eq)]
     pub struct Test {
         #[nserde(proxy = "Serializable")]
         foo: NonSerializable,
@@ -108,7 +108,7 @@ fn struct_proxy() {
         simd_data: NonSerializable<u64>,
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
     pub struct PortableVec2 {
         x: u64,
         y: u64,
@@ -158,14 +158,14 @@ fn tuple_struct() {
 
 #[test]
 fn enums() {
-    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
     pub enum Foo {
         A,
         B(i32),
         C { x: String },
     }
 
-    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    #[derive(DeBin, SerBin, PartialEq, Eq, Debug)]
     pub struct Test {
         foo1: Foo,
         foo2: Foo,
@@ -215,7 +215,7 @@ fn collections() {
         a: vec![1, 2, 3],
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
         c: vec![1, 2, 3, 4, 5].into_iter().collect(),
-        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect()
+        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
     };
 
     let bytes = SerBin::serialize_bin(&test);

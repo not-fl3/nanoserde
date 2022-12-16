@@ -2,7 +2,7 @@ use core::convert::TryInto;
 use core::hash::Hash;
 
 use alloc::boxed::Box;
-use alloc::collections::{LinkedList, BTreeSet};
+use alloc::collections::{BTreeSet, LinkedList};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
@@ -104,7 +104,7 @@ macro_rules! impl_ser_de_bin_for {
                 if *o + l > d.len() {
                     return Err(DeBinErr {
                         o: *o,
-                        l: l,
+                        l,
                         s: d.len(),
                     });
                 }
@@ -179,7 +179,7 @@ impl SerBin for u8 {
 
 impl SerBin for bool {
     fn ser_bin(&self, s: &mut Vec<u8>) {
-        s.push(if *self { 1 } else { 0 });
+        s.push(u8::from(*self));
     }
 }
 
@@ -390,7 +390,7 @@ where
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         unsafe {
             let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = core::mem::transmute(&mut to);
+            let top: *mut T = &mut to as *mut std::mem::MaybeUninit<[T; N]> as *mut T;
             for c in 0..N {
                 top.add(c).write(DeBin::de_bin(o, d)?);
             }

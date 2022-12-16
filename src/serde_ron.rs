@@ -2,7 +2,7 @@ use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
-use alloc::collections::{LinkedList, BTreeSet};
+use alloc::collections::{BTreeSet, LinkedList};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
@@ -802,7 +802,7 @@ impl DeRon for bool {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<bool, DeRonErr> {
         let val = s.as_bool()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -846,7 +846,7 @@ impl DeRon for String {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<String, DeRonErr> {
         let val = s.as_string()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -889,7 +889,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -926,7 +926,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -963,7 +963,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -993,7 +993,6 @@ where
         Ok(out)
     }
 }
-
 
 impl<T> SerRon for [T]
 where
@@ -1037,7 +1036,7 @@ where
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
         unsafe {
             let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = core::mem::transmute(&mut to);
+            let top: *mut T = &mut to as *mut std::mem::MaybeUninit<[T; N]> as *mut T;
             de_ron_array_impl_inner(top, N, s, i)?;
             Ok(to.assume_init())
         }
@@ -1165,7 +1164,7 @@ where
         for (k, v) in self {
             s.indent(d + 1);
             k.ser_ron(d + 1, s);
-            s.out.push_str(":");
+            s.out.push(':');
             v.ser_ron(d + 1, s);
             s.conl();
         }

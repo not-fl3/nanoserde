@@ -120,7 +120,7 @@ struct Out {
 }
 impl Out {
     fn start_array(&mut self, key: &str) {
-        if self.out.contains_key(key) == false {
+        if !self.out.contains_key(key) {
             self.out.insert(key.to_string(), Toml::Array(vec![]));
         }
 
@@ -224,15 +224,15 @@ impl TomlParser {
             }
             TomlTok::Str(key) => {
                 // a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
+                self.parse_key_value(local_scope, key, i, out.out())?;
             }
             TomlTok::Ident(key) => {
                 // also a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
+                self.parse_key_value(local_scope, key, i, out.out())?;
             }
             _ => return Err(self.err_token(tok)),
         }
-        return Ok(true);
+        Ok(true)
     }
 
     pub fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
@@ -279,7 +279,7 @@ impl TomlParser {
         }
         let tok = self.next_tok(i)?;
         let val = self.to_val(tok, i)?;
-        let key = if local_scope.len() > 0 {
+        let key = if !local_scope.is_empty() {
             format!("{}.{}", local_scope, key)
         } else {
             key
@@ -484,7 +484,7 @@ impl TomlParser {
                     }
                     let escaped_string = braces == 3;
                     loop {
-                        if self.cur == '"' && escaped_string == false {
+                        if self.cur == '"' && !escaped_string {
                             break;
                         }
                         if self.cur == '"' && escaped_string {

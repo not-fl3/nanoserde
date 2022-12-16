@@ -1,6 +1,6 @@
 use nanoserde::{DeRon, SerRon};
 
-use std::collections::{HashMap, LinkedList, HashSet, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
 
 #[test]
 fn ron_de() {
@@ -50,7 +50,7 @@ fn de_container_default() {
 
 #[test]
 fn rename() {
-    #[derive(DeRon, SerRon, PartialEq)]
+    #[derive(DeRon, SerRon, PartialEq, Eq)]
     #[nserde(default)]
     pub struct Test {
         #[nserde(rename = "fooField")]
@@ -221,7 +221,7 @@ fn collections() {
         a: vec![1, 2, 3],
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
         c: vec![1, 2, 3, 4, 5].into_iter().collect(),
-        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect()
+        d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
     };
 
     let bytes = SerRon::serialize_ron(&test);
@@ -336,14 +336,14 @@ fn ronerror() {
 
 #[test]
 fn de_enum() {
-    #[derive(DeRon, PartialEq, Debug)]
+    #[derive(DeRon, PartialEq, Eq, Debug)]
     pub enum Foo {
         A,
         B(i32, String),
         C { a: i32, b: String },
     }
 
-    #[derive(DeRon, PartialEq, Debug)]
+    #[derive(DeRon, PartialEq, Eq, Debug)]
     pub struct Bar {
         foo1: Foo,
         foo2: Foo,
