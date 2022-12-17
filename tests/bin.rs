@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet, HashMap, LinkedList};
+use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
 
 use nanoserde::{DeBin, SerBin};
 
@@ -29,13 +29,20 @@ fn binary() {
 #[test]
 fn binary_generics() {
     #[derive(DeBin, SerBin, PartialEq)]
-    pub struct TestStruct<A: Eq, B> where A: std::hash::Hash, {
+    pub struct TestStruct<A: Eq, B>
+    where
+        A: std::hash::Hash,
+    {
         pub a: A,
         b: Option<B>,
         c: HashMap<A, B>,
     }
 
-    let test: TestStruct<i32, f32> = TestStruct { a: 1, b: Some(2.), c: HashMap::from([(12, 15.0)]) };
+    let test: TestStruct<i32, f32> = TestStruct {
+        a: 1,
+        b: Some(2.),
+        c: HashMap::from([(12, 15.0)]),
+    };
 
     let bytes = SerBin::serialize_bin(&test);
 
