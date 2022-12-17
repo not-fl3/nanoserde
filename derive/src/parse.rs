@@ -12,14 +12,6 @@ use alloc::{format, vec};
 
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
-
-#[cfg(features = "no_std")]
-use hashbrown::HashMap;
-
-#[cfg(not(features = "no_std"))]
-use std::collections::HashMap;
-
-
 #[derive(Debug)]
 pub struct Attribute {
     pub name: String,
@@ -196,7 +188,7 @@ pub fn next_group(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Opt
 //     println!("{:?}", source.peek());
 // }
 
-fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>, generic_typenames: &HashMap<&String, &Vec<String>> ) -> Option<Type> {
+fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Option<Type> {
     let group = next_group(&mut source);
     if group.is_some() {
         let mut group = group.unwrap().stream().into_iter().peekable();
@@ -206,7 +198,7 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>, generi
             path: "".to_string(),
         };
 
-        while let Some(next_ty) = next_type(&mut group, &generic_typenames) {
+        while let Some(next_ty) = next_type(&mut group) {
             tuple_type.path.push_str(&format!("{}, ", next_ty.path));
         }
 
@@ -224,9 +216,9 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>, generi
 
     let angel_bracket = next_exact_punct(&mut source, "<");
     if angel_bracket.is_some() {
-        let mut generic_type = next_type(source, generic_typenames).expect("Expecting generic argument");
+        let mut generic_type = next_type(source).expect("Expecting generic argument");
         while let Some(_comma) = next_exact_punct(&mut source, ",") {
-            let next_ty = next_type(source, generic_typenames).expect("Expecting generic argument");
+            let next_ty = next_type(source).expect("Expecting generic argument");
             generic_type.path.push_str(&format!(", {}", next_ty.path));
         }
 
@@ -321,7 +313,6 @@ fn next_attributes_list(source: &mut Peekable<impl Iterator<Item = TokenTree>>) 
 fn next_fields(
     mut body: &mut Peekable<impl Iterator<Item = TokenTree>>,
     named: bool,
-    generic_typenames: HashMap<&String, &Vec<String>>
 ) -> Vec<Field> {
     let mut fields = vec![];
 
@@ -341,7 +332,7 @@ fn next_fields(
             None
         };
 
-        let ty = next_type(&mut body, &generic_typenames).expect("Expected field type");
+        let ty = next_type(&mut body).expect("Expected field type");
         let _punct = next_punct(&mut body);
 
         fields.push(Field {
@@ -382,7 +373,7 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
     };
 
     let mut body = group.stream().into_iter().peekable();
-    let fields = next_fields(&mut body, named, generic_types.iter().map(|(name, bounds)| (name, bounds)).collect() );
+    let fields = next_fields(&mut body, named );
 
     if named == false {
         next_exact_punct(&mut source, ";").expect("Expected ; on the end of tuple struct");
@@ -442,7 +433,7 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
         };
         {
             let mut body = group.stream().into_iter().peekable();
-            let fields = next_fields(&mut body, named, generic_types.iter().map(|(name, bounds)| (name, bounds)).collect());
+            let fields = next_fields(&mut body, named);
             variants.push(EnumVariant {
                 name: variant_name,
                 named,
