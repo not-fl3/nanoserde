@@ -29,19 +29,24 @@ fn binary() {
 #[test]
 fn binary_generics() {
     #[derive(DeBin, SerBin, PartialEq)]
-    pub struct TestStruct<A: Eq, B>
+    struct TestGenericsWSkip<A, B, C, DD: Eq + std::hash::Hash, EE>
     where
-        A: std::hash::Hash,
+        EE: Eq + std::hash::Hash,
     {
-        pub a: A,
-        b: Option<B>,
-        c: HashMap<A, B>,
+        test1: A,
+        test2: B,
+        test3: C,
+        #[nserde(skip)]
+        test4: HashMap<DD, A>,
+        test5: HashMap<EE, A>,
     }
 
-    let test: TestStruct<i32, f32> = TestStruct {
-        a: 1,
-        b: Some(2.),
-        c: HashMap::from([(12, 15.0)]),
+    let test: TestGenericsWSkip<i32, usize, String, Option<bool>, u128> = TestGenericsWSkip {
+        test1: 0,
+        test2: 42,
+        test3: String::from("test123"),
+        test4: vec![(Some(true), 1)].into_iter().collect(),
+        test5: vec![(15_u128, 1)].into_iter().collect(),
     };
 
     let bytes = SerBin::serialize_bin(&test);
