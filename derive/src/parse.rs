@@ -48,7 +48,7 @@ pub struct Struct {
     pub named: bool,
     pub fields: Vec<Field>,
     pub attributes: Vec<Attribute>,
-    pub generics: Vec<(String, Vec<String>)>
+    pub generics: Vec<(String, Vec<String>)>,
 }
 
 #[derive(Debug)]
@@ -64,7 +64,7 @@ pub struct Enum {
     pub name: String,
     pub variants: Vec<EnumVariant>,
     pub attributes: Vec<Attribute>,
-    pub generics: Vec<(String, Vec<String>)>
+    pub generics: Vec<(String, Vec<String>)>,
 }
 
 #[allow(dead_code)]
@@ -74,6 +74,7 @@ pub enum Data {
     Union(()),
 }
 
+#[allow(dead_code)]
 impl Data {
     pub fn name(&self) -> &str {
         match self {
@@ -232,7 +233,7 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Opt
             })
         } else {
             Some(Type {
-                path: format!("{}<{}>", ty, generic_type.path),
+                path: format!("{}<{}>", ty, generic_type.path.clone()),
                 is_option: false,
             })
         }
@@ -246,7 +247,7 @@ fn next_type<T: Iterator<Item = TokenTree>>(mut source: &mut Peekable<T>) -> Opt
 
 fn next_attribute<T: Iterator<Item = TokenTree>>(
     mut source: &mut Peekable<T>,
-) -> Option<Option<Attribute>> {
+) -> Option<Option<Vec<Attribute>>> {
     // all attributes, even doc-comments, starts with "#"
     let next_attr_punct = next_punct(&mut source);
     if let Some("#") = next_attr_punct.as_deref() {
@@ -268,31 +269,62 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
             .into_iter()
             .peekable();
 
+        let mut attrs = vec![];
         let mut attr_tokens = vec![];
 
         loop {
             let attribute_name = next_ident(&mut args_group).expect("Expecting attribute name");
             attr_tokens.push(attribute_name);
 
-            // single-word attribute, like #[nserde(whatever)]
-            if next_eof(&mut args_group).is_some() {
-                break;
+            // single-word attribute, like #[structdiff(whatever)]
+            match (
+                next_eof(&mut args_group).is_some(),
+                next_punct(&mut source).as_deref() == Some(","),
+            ) {
+                (true, _) => {
+                    attrs.push(Attribute {
+                        name: name.clone(),
+                        tokens: std::mem::take(&mut attr_tokens),
+                    });
+                    break;
+                }
+                (false, true) => {
+                    attrs.push(Attribute {
+                        name: name.clone(),
+                        tokens: std::mem::take(&mut attr_tokens),
+                    });
+                }
+                _ => {}
             }
+
             let _ = next_exact_punct(&mut args_group, "=")
                 .expect("Expecting = after attribute argument name");
             let value = next_literal(&mut args_group).expect("Expecting argument value");
 
-            attr_tokens.push(value);
+            attr_tokens.push(value.clone());
 
-            if next_eof(&mut args_group).is_some() {
-                break;
+            match (
+                next_eof(&mut args_group).is_some(),
+                next_exact_punct(&mut args_group, ",").as_deref() == Some(","),
+            ) {
+                (true, _) => {
+                    attrs.push(Attribute {
+                        name: name.clone(),
+                        tokens: std::mem::take(&mut attr_tokens),
+                    });
+                    break;
+                }
+                (false, true) => {
+                    attrs.push(Attribute {
+                        name: name.clone(),
+                        tokens: std::mem::take(&mut attr_tokens),
+                    });
+                }
+                _ => {}
             }
         }
 
-        return Some(Some(Attribute {
-            name,
-            tokens: attr_tokens,
-        }));
+        return Some(Some(attrs));
     }
 
     None
@@ -302,8 +334,8 @@ fn next_attributes_list(source: &mut Peekable<impl Iterator<Item = TokenTree>>) 
     let mut attributes = vec![];
 
     while let Some(attr) = next_attribute(source) {
-        if let Some(nserde_attr) = attr {
-            attributes.push(nserde_attr);
+        if let Some(structdiff_attr) = attr {
+            attributes.extend(structdiff_attr.into_iter());
         }
     }
 
@@ -359,10 +391,10 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
             fields: vec![],
             attributes: vec![],
             named: false,
-            generics: Default::default(),
+            generics: vec![],
         };
     };
-    
+
     let group = group.unwrap();
     let delimiter = group.delimiter();
     let named = match delimiter {
@@ -373,7 +405,7 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
     };
 
     let mut body = group.stream().into_iter().peekable();
-    let fields = next_fields(&mut body, named );
+    let fields = next_fields(&mut body, named);
 
     if named == false {
         next_exact_punct(&mut source, ";").expect("Expected ; on the end of tuple struct");
@@ -384,7 +416,7 @@ fn next_struct(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> St
         named,
         fields,
         attributes: vec![],
-        generics: generic_types
+        generics: generic_types.into_iter().collect(),
     }
 }
 
@@ -398,7 +430,8 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
             name: enum_name,
             variants: vec![],
             attributes: vec![],
-            generics: Default::default(),        };
+            generics: vec![],
+        };
     };
     let group = group.unwrap();
     let mut body = group.stream().into_iter().peekable();
@@ -449,165 +482,150 @@ fn next_enum(mut source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Enum
         name: enum_name,
         variants,
         attributes: vec![],
-        generics: generic_types
+        generics: generic_types.into_iter().collect(),
     }
 }
 
-fn get_bounds(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Vec<(String, Vec<String>)> {
+fn get_bounds(
+    source: &mut Peekable<impl Iterator<Item = TokenTree>>,
+) -> Vec<(String, Vec<String>)> {
     let mut ret = Vec::new();
 
     // Angle bracket generics + bounds
     match source.peek() {
         Some(content) if content.to_string() == "<" => {
             source.next();
-            let mut typename = "".to_string(); 
+            let mut typename: Option<String> = None;
+            let mut boundname: Option<String> = None;
             let mut generic_bounds = Vec::new();
             let mut in_type = true;
             while let Some(tok) = source.next() {
                 match tok.to_string().as_str() {
                     ">" => {
-                        ret.push((typename.clone(), std::mem::take(&mut generic_bounds)));
-                        typename.clear();
-                        break
-                    },
-                    ":" => {
+                        if let Some(boundname) = boundname.take() {
+                            generic_bounds.push(boundname)
+                        }
+                        if let Some(typename) = typename.take() {
+                            ret.push((typename, std::mem::take(&mut generic_bounds)))
+                        }
+                        break;
+                    }
+                    colon @ ":" => {
                         if in_type {
-                            in_type = false
-                        } 
-                    },
+                            in_type = false;
+                        } else {
+                            if let Some(boundname) = boundname.as_mut() {
+                                *boundname += colon
+                            } else {
+                                boundname = Some(String::from(colon))
+                            }
+                        }
+                    }
                     "," => {
-                        ret.push((typename.clone(), std::mem::take(&mut generic_bounds)));
-                        typename.clear();
+                        if let Some(boundname) = boundname.take() {
+                            generic_bounds.push(boundname)
+                        }
+                        if let Some(typename) = typename.take() {
+                            ret.push((typename, std::mem::take(&mut generic_bounds)))
+                        }
                         in_type = true
-                    },
+                    }
+                    "+" => {
+                        if let Some(boundname) = boundname.take() {
+                            generic_bounds.push(boundname)
+                        }
+                    }
                     c => {
                         if in_type {
-                            typename+=c;
+                            if let Some(typename) = typename.as_mut() {
+                                *typename += c
+                            } else {
+                                typename = Some(String::from(c))
+                            }
                         } else {
-                            generic_bounds.push(c.to_owned());
+                            if let Some(boundname) = boundname.as_mut() {
+                                *boundname += c
+                            } else {
+                                boundname = Some(String::from(c))
+                            }
                         }
                     }
                 }
+                eprint!("\n");
             }
-        },
-        _ => ()
+        }
+        _ => (),
     }
 
     // "where" generics + bounds
     if let Some(content) = source.peek() {
-        if content.to_string() != "where"  {
+        if content.to_string() != "where" {
             return ret;
         } else {
             source.next();
         }
 
-        let mut typename = "".to_string(); 
+        let mut typename = "".to_string();
         let mut bound = "".to_string();
         let mut generic_bounds = Vec::new();
         let mut in_type = true;
         while let Some(tok) = source.peek() {
             match tok.to_string().as_str() {
                 end if end.starts_with("{") => {
-                    if typename.is_empty() { break;}
+                    if typename.is_empty() {
+                        break;
+                    }
                     if let Some(entry) = ret.iter_mut().find(|x| typename == x.0) {
                         if !bound.is_empty() {
                             generic_bounds.push(std::mem::take(&mut bound));
                         }
-                        entry.1.extend((std::mem::take(&mut generic_bounds)).into_iter());
+                        entry
+                            .1
+                            .extend((std::mem::take(&mut generic_bounds)).into_iter());
                     } else {
                         panic!("Generics in where bounds must be previously declared in <angle brackets>")
                     }
-                    break
-                },
+                    break;
+                }
                 colon @ ":" => {
                     if in_type {
                         in_type = false;
                     } else {
-                        bound+=colon;
+                        bound += colon;
                     }
-                    
-                },
+                }
                 "," => {
                     if !bound.is_empty() {
                         generic_bounds.push(std::mem::take(&mut bound));
                     }
                     if let Some(entry) = ret.iter_mut().find(|x| typename == x.0) {
-                        entry.1.extend((std::mem::take(&mut generic_bounds)).into_iter());
+                        entry
+                            .1
+                            .extend((std::mem::take(&mut generic_bounds)).into_iter());
                     } else {
                         panic!("Generics in where bounds must be previously declared in <angle brackets>")
                     }
                     typename.clear();
                     in_type = true
-                },
+                }
                 "+" => {
                     if !bound.is_empty() {
                         generic_bounds.push(std::mem::take(&mut bound));
                     }
-                },
+                }
                 c => {
                     if in_type {
-                        typename+=c;
+                        typename += c;
                     } else {
-                        bound+=c;
+                        bound += c;
                     }
                 }
             }
             source.next();
         }
     }
-    
+
     ret
-}
-
-pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (String, String) {
-    let generics: &Vec<_> = &struct_.generics;
-
-    if generics.is_empty() {
-        return ("".to_string(), "".to_string());
-    }
-    let mut generic_w_bounds = "<".to_string();
-    for (generic, bounds) in generics.iter() {
-        let mut bounds = bounds.join("+");
-        if !bounds.is_empty() {
-            bounds += " + ";
-        }
-        bounds += &format!("nanoserde::{}", bound_name);
-
-        generic_w_bounds += &format!("{}: {}, ", generic, bounds);
-    }
-    generic_w_bounds += ">";
-
-    let mut generic_no_bounds = "<".to_string();
-    for (generic, _bounds) in generics.iter() {
-        generic_no_bounds += &format!("{}, ", generic);
-    }
-    generic_no_bounds += ">";
-    return (generic_w_bounds, generic_no_bounds);
-}
-
-pub(crate) fn enum_bounds_strings(enum_: &Enum, bound_name: &str) -> (String, String) {
-    let generics: &Vec<_> = &enum_.generics;
-
-    if generics.is_empty() {
-        return ("".to_string(), "".to_string());
-    }
-    let mut generic_w_bounds = "<".to_string();
-    for (generic, bounds) in generics.iter() {
-        let mut bounds = bounds.join("+");
-        if !bounds.is_empty() {
-            bounds += " + ";
-        }
-        bounds += &format!("nanoserde::{}", bound_name);
-        generic_w_bounds += &format!("{}: {}, ", generic, bounds);
-    }
-    generic_w_bounds += ">";
-
-    let mut generic_no_bounds = "<".to_string();
-    for (generic, _bounds) in generics.iter() {
-        generic_no_bounds += &format!("{}, ", generic);
-    }
-    generic_no_bounds += ">";
-    return (generic_w_bounds, generic_no_bounds);
 }
 
 pub fn parse_data(input: TokenStream) -> Data {
@@ -629,7 +647,6 @@ pub fn parse_data(input: TokenStream) -> Data {
         "struct" => {
             let mut struct_ = next_struct(&mut source);
             struct_.attributes = attributes;
-
             res = Data::Struct(struct_);
         }
         "enum" => {
@@ -644,6 +661,5 @@ pub fn parse_data(input: TokenStream) -> Data {
         source.next().is_none(),
         "Unexpected data after end of the struct"
     );
-
     res
 }

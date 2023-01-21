@@ -2,8 +2,9 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 
+use crate::shared::{enum_bounds_strings, struct_bounds_strings};
 use crate::{
-    parse::{Enum, Field, Struct, struct_bounds_strings, enum_bounds_strings},
+    parse::{Enum, Field, Struct},
     shared,
 };
 

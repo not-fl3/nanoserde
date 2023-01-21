@@ -1,7 +1,10 @@
 use alloc::format;
 use alloc::string::String;
 
-use crate::parse::{Enum, Struct, struct_bounds_strings, enum_bounds_strings};
+use crate::{
+    parse::{Enum, Struct},
+    shared::{enum_bounds_strings, struct_bounds_strings},
+};
 
 use proc_macro::TokenStream;
 
@@ -199,7 +202,7 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
                 }}
             }}
         }}",
-        generic_w_bounds,enum_.name,generic_no_bounds, r
+        generic_w_bounds, enum_.name, generic_no_bounds, r
     )
     .parse()
     .unwrap()
