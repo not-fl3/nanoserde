@@ -224,3 +224,27 @@ fn collections() {
 
     assert_eq!(test, test_deserialized);
 }
+
+#[test]
+#[should_panic]
+fn skip() {
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub struct Test {
+        pub a: u8,
+        #[nserde(skip)]
+        pub b: Vec<f32>,
+    }
+
+    let test: Test = Test {
+        a: 1,
+        b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
+    };
+
+    let bytes = SerBin::serialize_bin(&test);
+
+    assert_eq!(bytes.len(), 1);
+
+    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+
+    assert_eq!(test, test_deserialized);
+}
