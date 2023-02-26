@@ -551,7 +551,6 @@ fn get_bounds(
                         }
                     }
                 }
-                eprint!("\n");
             }
         }
         _ => (),
