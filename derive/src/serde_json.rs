@@ -2,6 +2,7 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 
+use crate::parse::{Category, Type};
 use crate::shared::{enum_bounds_strings, struct_bounds_strings};
 use crate::{
     parse::{Enum, Field, Struct},
@@ -48,7 +49,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                 format!("self.{}", struct_fieldname)
             };
 
-            if field.ty.is_option {
+            if field.ty.base() == "Option" {
                 l!(
                     s,
                     "if let Some(t) = &{} {{ if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
@@ -76,7 +77,13 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             }}
         }}
     ",
-        generic_w_bounds, struct_.name, generic_no_bounds, s
+        generic_w_bounds,
+        struct_
+            .name
+            .as_ref()
+            .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
+        s
     )
     .parse()
     .unwrap()
@@ -98,15 +105,19 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
             if let Some(mut val) = v {
-                if field.ty.path == "String" {
+                if field.ty.base() == "String"
+                    || field.ty.wraps.as_ref().map_or(false, |wrapped| {
+                        wrapped.iter().any(|ty| ty.base() == "String")
+                    })
+                {
                     val = format!("\"{}\".to_string()", val)
                 }
-                if field.ty.is_option {
+                if field.ty.base() == "Option" {
                     val = format!("Some({})", val);
                 }
                 Some(val)
             } else {
-                if !field.ty.is_option {
+                if field.ty.base() != "Option" {
                     Some(String::from("Default::default()"))
                 } else {
                     Some(String::from("None"))
@@ -130,7 +141,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         };
 
         if skip == false {
-            if field.ty.is_option {
+            if field.ty.base() == "Option" {
                 unwraps.push(format!(
                     "{{if let Some(t) = {} {{ {} }} else {{ {} }} }}",
                     localvar,
@@ -213,7 +224,10 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_json_named(
-        &struct_.name,
+        &struct_
+            .name
+            .as_ref()
+            .expect("Cannot implement for anonymous struct"),
         shared::attrs_default(&struct_.attributes).is_some()
             || shared::attrs_default_with(&struct_.attributes).is_some(),
         &struct_.fields[..],
@@ -226,7 +240,7 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
             nanoserde::DeJsonErr> {{
                 core::result::Result::Ok({{ {} }})
             }}
-        }}", generic_w_bounds, struct_.name, generic_no_bounds, body)
+        }}", generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body)
         .parse().unwrap()
 }
 
@@ -234,117 +248,133 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
     let mut r = String::new();
 
     for variant in enum_.variants.iter() {
+        let field_name = variant.field_name.clone().unwrap();
         let json_variant_name =
-            shared::attrs_rename(&variant.attributes).unwrap_or(variant.name.clone());
-        // Unit
-        if variant.fields.len() == 0 {
-            l!(
-                r,
-                "Self::{} => s.label(\"{}\"),",
-                variant.name,
-                json_variant_name
-            );
-        }
-        // Named
-        else if variant.named {
-            let mut items = String::new();
-            let mut field_names = vec![];
-            let last = variant.fields.len() - 1;
-            for (index, field) in variant.fields.iter().enumerate() {
-                if let Some(name) = &&field.field_name {
-                    let proxied_field =
-                        if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-                            format!("{{let proxy: {} = Into::into(&{});proxy}}", proxy, name)
-                        } else {
-                            format!("{}", name)
-                        };
+            shared::attrs_rename(&variant.attributes).unwrap_or(field_name.clone());
 
-                    if index == last {
-                        if field.ty.is_option {
-                            l!(
-                                items,
-                                "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);}}",
-                                name,
-                                name,
-                                proxied_field
-                            )
+        match &variant.ty {
+            Type {
+                wraps: None,
+                ident: Category::None,
+                ..
+            } => {
+                // unit variant
+                l!(
+                    r,
+                    "Self::{} => s.label(\"{}\"),",
+                    &field_name,
+                    json_variant_name
+                );
+            }
+
+            Type {
+                ident: Category::AnonymousStruct { contents },
+                ..
+            } => {
+                let mut items = String::new();
+                let mut field_names = vec![];
+                let last = contents.fields.len() - 1;
+                for (index, field) in contents.fields.iter().enumerate() {
+                    if let Some(name) = &&field.field_name {
+                        let proxied_field =
+                            if let Some(proxy) = crate::shared::attrs_proxy(&variant.attributes) {
+                                format!("{{let proxy: {} = Into::into(&{});proxy}}", proxy, name)
+                            } else {
+                                format!("{}", name)
+                            };
+
+                        if index == last {
+                            if field.ty.base() == "Option" {
+                                l!(
+                                    items,
+                                    "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);}}",
+                                    name,
+                                    name,
+                                    proxied_field
+                                )
+                            } else {
+                                l!(
+                                    items,
+                                    "s.field(d+1, \"{}\");{}.ser_json(d+1, s);",
+                                    name,
+                                    proxied_field
+                                )
+                            }
                         } else {
-                            l!(
-                                items,
-                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);",
-                                name,
-                                proxied_field
-                            )
+                            if field.ty.base() == "Option" {
+                                l!(
+                                        items,
+                                        "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
+                                        name,
+                                        name,
+                                        proxied_field
+                                    );
+                            } else {
+                                l!(
+                                    items,
+                                    "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
+                                    name,
+                                    proxied_field
+                                );
+                            }
                         }
-                    } else {
-                        if field.ty.is_option {
-                            l!(
-                                items,
-                                "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
-                                name,
-                                name,
-                                proxied_field
-                            );
-                        } else {
-                            l!(
-                                items,
-                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
-                                name,
-                                proxied_field
-                            );
-                        }
+                        field_names.push(name.clone());
                     }
-                    field_names.push(name.clone());
                 }
+                l!(
+                    r,
+                    "Self::{} {{ {} }} => {{
+                                s.out.push('{{');
+                                s.label(\"{}\");
+                                s.out.push(':');
+                                s.st_pre();
+                                {}
+                                s.st_post(d);
+                                s.out.push('}}');
+                            }}",
+                    &field_name,
+                    field_names.join(","),
+                    json_variant_name,
+                    items
+                );
             }
-            l!(
-                r,
-                "Self::{} {{ {} }} => {{
-                        s.out.push('{{');
-                        s.label(\"{}\");
-                        s.out.push(':');
-                        s.st_pre();
-                        {}
-                        s.st_post(d);
-                        s.out.push('}}');
-                    }}",
-                variant.name,
-                field_names.join(","),
-                json_variant_name,
-                items
-            );
-        }
-        // Unnamed
-        else {
-            let mut names = Vec::new();
-            let mut inner = String::new();
-            let last = variant.fields.len() - 1;
-            for (index, _) in &mut variant.fields.iter().enumerate() {
-                let field_name = format!("f{}", index);
-                names.push(field_name.clone());
-                if index != last {
-                    l!(inner, "{}.ser_json(d, s); s.out.push(',');", field_name);
-                } else {
-                    l!(inner, "{}.ser_json(d, s);", field_name);
+            Type {
+                ident: Category::Tuple { contents },
+                ..
+            } => {
+                let mut names = Vec::new();
+                let mut inner = String::new();
+                let last = contents.len() - 1;
+                for (index, _) in contents.iter().enumerate() {
+                    let field_name = format!("f{}", index);
+                    names.push(field_name.clone());
+                    if index != last {
+                        l!(inner, "{}.ser_json(d, s); s.out.push(',');", field_name);
+                    } else {
+                        l!(inner, "{}.ser_json(d, s);", field_name);
+                    }
                 }
+                l!(
+                    r,
+                    "Self::{}  ({}) => {{
+                                s.out.push('{{');
+                                s.label(\"{}\");
+                                s.out.push(':');
+                                s.out.push('[');
+                                {}
+                                s.out.push(']');
+                                s.out.push('}}');
+                            }}",
+                    &field_name,
+                    names.join(","),
+                    json_variant_name,
+                    inner
+                );
             }
-            l!(
-                r,
-                "Self::{}  ({}) => {{
-                        s.out.push('{{');
-                        s.label(\"{}\");
-                        s.out.push(':');
-                        s.out.push('[');
-                        {}
-                        s.out.push(']');
-                        s.out.push('}}');
-                    }}",
-                variant.name,
-                names.join(","),
-                json_variant_name,
-                inner
-            );
-        }
+            v => {
+                unimplemented!("Unexpected type in enum: {:?}", v)
+            }
+        };
     }
 
     format!(
@@ -368,42 +398,58 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeJson");
 
     for variant in &enum_.variants {
+        let field_name = variant.field_name.clone().unwrap();
         let json_variant_name =
-            shared::attrs_rename(&variant.attributes).unwrap_or(variant.name.clone());
+            shared::attrs_rename(&variant.attributes).unwrap_or(field_name.clone());
 
-        // Unit
-        if variant.fields.len() == 0 {
-            l!(
-                r_units,
-                "\"{}\" => Self::{},",
-                json_variant_name,
-                variant.name
-            );
-        }
-        // Named
-        else if variant.named {
-            let body =
-                derive_de_json_named(&format!("Self::{}", variant.name), false, &variant.fields);
-            l!(r_rest, "\"{}\" => {{ {} }}, ", json_variant_name, body);
-        }
-        // Unnamed
-        else if variant.named == false {
-            let mut field_names = String::new();
-
-            for _ in &variant.fields {
+        match &variant.ty {
+            Type {
+                wraps: None,
+                ident: Category::None,
+                ..
+            } => {
+                // unit variant
                 l!(
-                    field_names,
-                    "{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
+                    r_units,
+                    "\"{}\" => Self::{},",
+                    json_variant_name,
+                    &field_name
                 );
             }
-            l!(
-                r_rest,
-                "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
-                json_variant_name,
-                variant.name,
-                field_names
-            );
-        }
+            Type {
+                ident: Category::AnonymousStruct { contents },
+                ..
+            } => {
+                let body = derive_de_json_named(
+                    &format!("Self::{}", &field_name),
+                    false,
+                    &contents.fields,
+                );
+                l!(r_rest, "\"{}\" => {{ {} }}, ", json_variant_name, body);
+            }
+            Type {
+                ident: Category::Tuple { contents },
+                ..
+            } => {
+                let mut field_names = String::new();
+                for _ in contents.iter() {
+                    l!(
+                        field_names,
+                        "{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
+                    );
+                }
+                l!(
+                    r_rest,
+                    "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
+                    json_variant_name,
+                    &field_name,
+                    field_names
+                );
+            }
+            v => {
+                unimplemented!("Unexpected type in enum: {:?}", v)
+            }
+        };
     }
 
     let mut r = format!(
@@ -493,7 +539,13 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
                 {}
             }}
         }}",
-        generic_w_bounds, struct_.name, generic_no_bounds, body
+        generic_w_bounds,
+        struct_
+            .name
+            .as_ref()
+            .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
+        body
     )
     .parse()
     .unwrap()
@@ -539,6 +591,6 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
                 {}
                 core::result::Result::Ok(r)
             }}
-        }}",generic_w_bounds, struct_.name, generic_no_bounds, body
+        }}",generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body
     ).parse().unwrap()
 }
