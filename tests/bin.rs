@@ -57,10 +57,11 @@ fn binary_generics() {
 
     #[derive(DeBin, SerBin, PartialEq)]
     pub enum TestEnum<A, B> {
-        Test(A, B),
+        Test1(A, B),
+        Test2(B, A),
     }
 
-    let test: TestEnum<i32, f32> = TestEnum::Test(3, 15.);
+    let test: TestEnum<i32, f32> = TestEnum::Test1(3, 15.);
 
     let bytes = SerBin::serialize_bin(&test);
 

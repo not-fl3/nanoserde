@@ -204,16 +204,13 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
                 ..
             } => {
                 l!(r, "Self::{} (", ident);
-                for field in contents {
-                    l!(r, "{}, ", field.base())
+                for (n, _) in contents.iter().enumerate() {
+                    l!(r, "f{}, ", n)
                 }
                 l!(r, ") => {");
                 l!(r, "{}.ser_bin(s);", lit);
-                for field in contents {
-                    let Type{ident: Category::Named{path}, ..} = field else {
-                        panic!("Expected a named field, got type {}", field.full());
-                    };
-                    l!(r, "{}.ser_bin(s);", path)
+                for (n, _) in contents.iter().enumerate() {
+                    l!(r, "f{}.ser_bin(s);", n)
                 }
                 l!(r, "}")
             }
