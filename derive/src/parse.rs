@@ -14,7 +14,7 @@ use alloc::{format, vec};
 
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub struct Attribute {
     pub name: String,
     pub tokens: Vec<String>,
@@ -29,12 +29,12 @@ pub enum Visibility {
     Private,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub struct Lifetime {
     pub(crate) ident: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub struct Field {
     pub attributes: Vec<Attribute>,
     pub vis: Visibility,
@@ -42,19 +42,19 @@ pub struct Field {
     pub ty: Type,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub enum ConstValType {
     Value(isize),
     Named(Box<Type>),
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub enum FnType {
     Bare,
     Closure { reusable: bool, fn_mut: bool },
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub enum Category {
     Never,
     None,
@@ -96,7 +96,7 @@ pub enum Category {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub struct Type {
     pub ident: Category,
     pub wraps: Option<Vec<Type>>,
@@ -104,7 +104,7 @@ pub struct Type {
     pub as_other: Option<Box<Type>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub enum Generic {
     ConstGeneric {
         name: String,
@@ -126,7 +126,7 @@ pub enum Generic {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+#[derive(Debug, Clone)]
 pub struct Struct {
     pub name: Option<String>,
     pub named: bool,
@@ -1481,25 +1481,13 @@ fn get_all_bounds<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T
     for gen in ret.iter_mut() {
         match gen {
             Generic::Generic { bounds, .. } => {
-                *bounds = std::mem::take(bounds)
-                    .into_iter()
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect()
+                *bounds = std::mem::take(bounds);
             }
             Generic::Lifetime { bounds, .. } => {
-                *bounds = std::mem::take(bounds)
-                    .into_iter()
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect()
+                *bounds = std::mem::take(bounds);
             }
             Generic::WhereBounded { bounds, .. } => {
-                *bounds = std::mem::take(bounds)
-                    .into_iter()
-                    .collect::<HashSet<_>>()
-                    .into_iter()
-                    .collect()
+                *bounds = std::mem::take(bounds);
             }
             _ => (),
         }
