@@ -1372,10 +1372,6 @@ fn get_all_bounds<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T
     }
 
     // Angle bracket generics + bounds
-    // let mut typename: Option<String> = None;
-    // let mut boundname: Option<String> = None;
-    // let mut generic_bounds = Vec::new();
-    // let mut in_type = true;
     while let Some(gen) = next_generic(source) {
         if already.insert(gen.full()) {
             ret.push(gen);
@@ -1475,21 +1471,6 @@ fn get_all_bounds<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T
             let None = next_exact_punct(source, "{") else {
                 break;
             };
-        }
-    }
-
-    for gen in ret.iter_mut() {
-        match gen {
-            Generic::Generic { bounds, .. } => {
-                *bounds = std::mem::take(bounds);
-            }
-            Generic::Lifetime { bounds, .. } => {
-                *bounds = std::mem::take(bounds);
-            }
-            Generic::WhereBounded { bounds, .. } => {
-                *bounds = std::mem::take(bounds);
-            }
-            _ => (),
         }
     }
 
