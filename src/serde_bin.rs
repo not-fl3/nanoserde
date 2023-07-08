@@ -497,7 +497,7 @@ where
 
 impl<K, V> DeBin for HashMap<K, V>
 where
-    K: DeBin + Eq + Hash,
+    K: DeBin + std::cmp::Eq + std::hash::Hash,
     V: DeBin,
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
