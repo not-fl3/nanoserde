@@ -127,6 +127,7 @@ impl_ser_de_bin_for!(u32);
 impl_ser_de_bin_for!(i32);
 impl_ser_de_bin_for!(u16);
 impl_ser_de_bin_for!(i16);
+impl_ser_de_bin_for!(i8);
 
 impl SerBin for usize {
     fn ser_bin(&self, s: &mut Vec<u8>) {
@@ -380,6 +381,16 @@ where
         for item in self {
             item.ser_bin(s);
         }
+    }
+}
+
+impl<T, const N: usize> SerBin for [T; N]
+where
+    T: SerBin,
+{
+    #[inline(always)]
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        self.as_slice().ser_bin(s)
     }
 }
 

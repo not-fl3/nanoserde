@@ -1011,6 +1011,16 @@ where
     }
 }
 
+impl<T, const N: usize> SerRon for [T; N]
+where
+    T: SerRon,
+{
+    #[inline(always)]
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        self.as_slice().ser_ron(d, s)
+    }
+}
+
 unsafe fn de_ron_array_impl_inner<T>(
     top: *mut T,
     count: usize,
