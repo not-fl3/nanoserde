@@ -974,6 +974,16 @@ where
     }
 }
 
+impl<T, const N: usize> SerJson for [T; N]
+where
+    T: SerJson,
+{
+    #[inline(always)]
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        self.as_slice().ser_json(d, s)
+    }
+}
+
 impl<T, const N: usize> DeJson for [T; N]
 where
     T: DeJson,
