@@ -52,3 +52,17 @@ For more examples take a look at [tests](/tests)
 | container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | no     | no    |
 | container attribute: `#[nserde(transparent)]`  | yes    | no    | no     | no    |
 
+## Crate features:
+
+All features are enabled by default. To enable only specific formats, import nanoserde using 
+```toml
+nanoserde = { version = "*", default-features = false, features = [] }
+```
+in your `Cargo.toml` and add one or more of the following crate features:
+
+| Format    | Feature Name   | 
+| ----------| -------------- |
+| Binary    | `binary`       | 
+| JSON      | `json`         | 
+| RON       | `ron`          |
+| TOML      | `toml`         |

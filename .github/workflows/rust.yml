@@ -56,6 +56,58 @@ jobs:
           command: build
           args: --all-targets --target=${{ matrix.config.target }}
 
+  features:
+    name: Test Individual Features
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        feature: [
+          "binary",
+          "json",
+          "ron",
+          "toml",
+        ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features ${{ matrix.feature }}
+
+  no_std_features:
+    name: Test Individual Features NoStd
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        feature: [
+          "binary",
+          "json",
+          "ron",
+          "toml",
+        ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: x86_64-unknown-linux-gnu
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --no-default-features --features "no_std, ${{ matrix.feature }}"
+
   test:
     name: Test
     runs-on: ${{ matrix.config.os }}

@@ -1,3 +1,5 @@
+#![cfg(feature = "toml")]
+
 #[cfg(feature = "no_std")]
 use hashbrown::HashMap;
 #[cfg(not(feature = "no_std"))]

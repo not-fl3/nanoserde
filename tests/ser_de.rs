@@ -1,4 +1,10 @@
-use nanoserde::{DeBin, DeJson, DeRon, SerBin, SerJson, SerRon};
+#![cfg(any(feature = "binary", feature = "json", feature = "ron"))]
+#[cfg(feature = "binary")]
+use nanoserde::{DeBin, SerBin};
+#[cfg(feature = "json")]
+use nanoserde::{DeJson, SerJson};
+#[cfg(feature = "ron")]
+use nanoserde::{DeRon, SerRon};
 
 #[cfg(feature = "no_std")]
 use hashbrown::HashMap;
@@ -8,7 +14,10 @@ use std::collections::HashMap;
 
 #[test]
 fn ser_de() {
-    #[derive(DeBin, SerBin, DeJson, SerJson, DeRon, SerRon, PartialEq, Debug)]
+    #[derive(PartialEq, Debug)]
+    #[cfg_attr(feature = "binary", derive(DeBin, SerBin))]
+    #[cfg_attr(feature = "json", derive(DeJson, SerJson))]
+    #[cfg_attr(feature = "ron", derive(DeRon, SerRon))]
     pub struct Test {
         pub a: i32,
         pub b: f32,
@@ -32,15 +41,24 @@ fn ser_de() {
         g: (),
     };
 
-    let bytes = SerBin::serialize_bin(&test);
-    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
-    assert_eq!(test, test_deserialized);
+    #[cfg(feature = "binary")]
+    {
+        let bytes = SerBin::serialize_bin(&test);
+        let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+        assert_eq!(test, test_deserialized);
+    }
 
-    let bytes = SerJson::serialize_json(&test);
-    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
-    assert_eq!(test, test_deserialized);
+    #[cfg(feature = "json")]
+    {
+        let bytes = SerJson::serialize_json(&test);
+        let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+        assert_eq!(test, test_deserialized);
+    }
 
-    let bytes = SerRon::serialize_ron(&test);
-    let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
-    assert_eq!(test, test_deserialized);
+    #[cfg(feature = "ron")]
+    {
+        let bytes = SerRon::serialize_ron(&test);
+        let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
+        assert_eq!(test, test_deserialized);
+    }
 }
