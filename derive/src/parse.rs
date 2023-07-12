@@ -195,10 +195,12 @@ impl Generic {
         }
     }
 
+    #[cfg(any(feature = "binary", feature = "json"))]
     pub fn ident_only(&self) -> String {
         format!("{}{}", self.lifetime_prefix(), self.full())
     }
 
+    #[cfg(any(feature = "binary", feature = "json"))]
     pub fn full_with_const(&self, extra_bounds: &[&str], bounds: bool) -> String {
         let bounds = match (bounds, &self) {
             (true, Generic::Lifetime { .. }) => self.get_bounds().join(" + "),
@@ -412,6 +414,7 @@ impl Category {
 }
 
 impl Type {
+    #[cfg(any(feature = "ron", feature = "json"))]
     pub fn base(&self) -> String {
         let mut base = match &self.ref_type {
             Some(inner) => match inner {

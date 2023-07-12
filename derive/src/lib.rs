@@ -6,18 +6,24 @@ extern crate proc_macro;
 #[macro_use]
 mod shared;
 
+#[cfg(feature = "binary")]
 mod serde_bin;
+#[cfg(feature = "binary")]
 use crate::serde_bin::*;
 
+#[cfg(feature = "ron")]
 mod serde_ron;
+#[cfg(feature = "ron")]
 use crate::serde_ron::*;
 
+#[cfg(feature = "json")]
 mod serde_json;
+#[cfg(feature = "json")]
+use crate::serde_json::*;
 
 mod parse;
 
-use crate::serde_json::*;
-
+#[cfg(feature = "binary")]
 #[proc_macro_derive(SerBin, attributes(nserde))]
 pub fn derive_ser_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
@@ -37,6 +43,7 @@ pub fn derive_ser_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     ts
 }
 
+#[cfg(feature = "binary")]
 #[proc_macro_derive(DeBin, attributes(nserde))]
 pub fn derive_de_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
@@ -57,6 +64,7 @@ pub fn derive_de_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     ts
 }
 
+#[cfg(feature = "ron")]
 #[proc_macro_derive(SerRon, attributes(nserde))]
 pub fn derive_ser_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
@@ -76,6 +84,7 @@ pub fn derive_ser_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream
     ts
 }
 
+#[cfg(feature = "ron")]
 #[proc_macro_derive(DeRon, attributes(nserde))]
 pub fn derive_de_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
@@ -95,6 +104,7 @@ pub fn derive_de_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
     ts
 }
 
+#[cfg(feature = "json")]
 #[proc_macro_derive(SerJson, attributes(nserde))]
 pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
@@ -114,6 +124,7 @@ pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     ts
 }
 
+#[cfg(feature = "json")]
 #[proc_macro_derive(DeJson, attributes(nserde))]
 pub fn derive_de_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);

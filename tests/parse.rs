@@ -1,3 +1,4 @@
+#![cfg(all(feature = "binary", feature = "json", feature = "ron"))]
 use nanoserde::{DeBin, DeJson, DeRon, SerBin, SerJson, SerRon};
 
 // https://github.com/not-fl3/nanoserde/issues/83
