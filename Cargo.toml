@@ -22,7 +22,11 @@ edition = "2018"
 repository = "https://github.com/not-fl3/nanoserde"
 
 [features]
-default = []
+default = ["json", "binary", "ron", "toml"]
+json = ["nanoserde-derive/json"]
+binary = ["nanoserde-derive/binary"]
+ron = ["nanoserde-derive/ron"]
+toml = []
 no_std = ["dep:hashbrown"]
 
 [dependencies]

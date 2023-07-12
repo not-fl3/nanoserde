@@ -11,6 +11,10 @@ proc-macro = true
 
 [features]
 default = []
+json = []
+binary = []
+ron = []
+toml = []
 no_std = ["dep:hashbrown"]
 
 [dependencies]

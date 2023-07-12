@@ -1,3 +1,4 @@
+#![cfg(feature = "binary")]
 use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
 
 use nanoserde::{DeBin, SerBin};

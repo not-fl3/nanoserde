@@ -1,3 +1,4 @@
+#![cfg(all(feature = "binary", feature = "json"))]
 use nanoserde::{DeBin, DeJson, SerBin, SerJson};
 
 use std::collections::HashMap;

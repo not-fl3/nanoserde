@@ -7,8 +7,6 @@
 //!
 //! Data serialization library with zero dependencies. No more syn/proc_macro2/quote in the build tree!
 //!
-//! `nanoserde` also almost do not use any generics, so build size is not going to be bloated with monomorphizated code.
-//!
 //! The main difference with "serde" and the reason why "nanoserde" is possible: there is no intermediate data model
 //! For each serialisation datatype there is a special macro.
 //!
@@ -26,14 +24,22 @@ extern crate alloc;
 
 pub use nanoserde_derive::*;
 
+#[cfg(feature = "binary")]
 mod serde_bin;
+#[cfg(feature = "binary")]
 pub use crate::serde_bin::*;
 
+#[cfg(feature = "ron")]
 mod serde_ron;
+#[cfg(feature = "ron")]
 pub use crate::serde_ron::*;
 
+#[cfg(feature = "json")]
 mod serde_json;
+#[cfg(feature = "json")]
 pub use crate::serde_json::*;
 
+#[cfg(feature = "toml")]
 mod toml;
+#[cfg(feature = "toml")]
 pub use crate::toml::*;

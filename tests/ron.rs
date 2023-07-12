@@ -1,3 +1,4 @@
+#![cfg(feature = "ron")]
 use nanoserde::{DeRon, SerRon};
 
 use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
