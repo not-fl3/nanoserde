@@ -473,6 +473,14 @@ impl TomlParser {
                     while self.cur != '\n' && self.cur != '\0' {
                         self.next(i);
                     }
+
+                    while self.cur == '\n'
+                        || self.cur == '\r'
+                        || self.cur == '\t'
+                        || self.cur == ' '
+                    {
+                        self.next(i);
+                    }
                 }
                 '"' => {
                     let mut val = String::new();
