@@ -222,13 +222,8 @@ impl TomlParser {
                     _ => return Err(self.err_token(tok)),
                 }
             }
-            TomlTok::Str(key) => {
-                // a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
-            }
-            TomlTok::Ident(key) => {
-                // also a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
+            TomlTok::Str(key) | TomlTok::Ident(key) => {
+                self.parse_key_value(&local_scope, key, i, out.out())?
             }
             _ => return Err(self.err_token(tok)),
         }
