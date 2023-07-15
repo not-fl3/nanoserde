@@ -20,9 +20,9 @@ use std::collections::HashMap;
 /// ```
 #[derive(Default)]
 pub struct TomlParser {
-    pub cur: char,
-    pub line: usize,
-    pub col: usize,
+    cur: char,
+    line: usize,
+    col: usize,
 }
 
 /// A TOML parsed token.
@@ -235,7 +235,7 @@ impl TomlParser {
         return Ok(true);
     }
 
-    pub fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
+    fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
         match tok {
             TomlTok::BlockOpen => {
                 let mut vals = Vec::new();
@@ -266,7 +266,7 @@ impl TomlParser {
         }
     }
 
-    pub fn parse_key_value(
+    fn parse_key_value(
         &mut self,
         local_scope: &String,
         key: String,
@@ -288,7 +288,7 @@ impl TomlParser {
         Ok(())
     }
 
-    pub fn next(&mut self, i: &mut Chars) {
+    fn next(&mut self, i: &mut Chars) {
         if let Some(c) = i.next() {
             self.cur = c;
             if self.cur == '\n' {
@@ -302,7 +302,7 @@ impl TomlParser {
         }
     }
 
-    pub fn err_token(&self, tok: TomlTok) -> TomlErr {
+    fn err_token(&self, tok: TomlTok) -> TomlErr {
         TomlErr {
             msg: format!("Unexpected token {:?} ", tok),
             line: self.line,
@@ -310,7 +310,7 @@ impl TomlParser {
         }
     }
 
-    pub fn err_parse(&self, what: &str) -> TomlErr {
+    fn err_parse(&self, what: &str) -> TomlErr {
         TomlErr {
             msg: format!("Cannot parse toml {} ", what),
             line: self.line,
@@ -318,7 +318,7 @@ impl TomlParser {
         }
     }
 
-    pub fn next_tok(&mut self, i: &mut Chars) -> Result<TomlTok, TomlErr> {
+    fn next_tok(&mut self, i: &mut Chars) -> Result<TomlTok, TomlErr> {
         while self.cur == '\n' || self.cur == '\r' || self.cur == '\t' || self.cur == ' ' {
             self.next(i);
         }
