@@ -691,3 +691,41 @@ fn control_characters() {
 
     assert_eq!(SerJson::serialize_json(&string), escaped);
 }
+
+#[test]
+fn ser_str() {
+    #[derive(SerJson)]
+    struct AString {
+        s: String,
+    }
+
+    #[derive(SerJson)]
+    struct ABorrowedString<'a> {
+        s: &'a String,
+    }
+
+    #[derive(SerJson)]
+    struct AStr<'a> {
+        s: &'a str,
+    }
+
+    let a_string = AString {
+        s: "abc".to_string(),
+    };
+
+    let a_borrowed_string = ABorrowedString {
+        s: &"abc".to_string(),
+    };
+
+    let a_str = AStr { s: "abc" };
+
+    assert_eq!(
+        SerJson::serialize_json(&a_string),
+        SerJson::serialize_json(&a_borrowed_string)
+    );
+
+    assert_eq!(
+        SerJson::serialize_json(&a_string),
+        SerJson::serialize_json(&a_str)
+    );
+}

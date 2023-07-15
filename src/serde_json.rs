@@ -778,28 +778,35 @@ impl DeJson for bool {
     }
 }
 
-impl SerJson for String {
-    fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-        s.out.push('"');
-        for c in self.chars() {
-            match c {
-                '\x08' => s.out += "\\b",
-                '\x0C' => s.out += "\\f",
-                '\n' => s.out += "\\n",
-                '\r' => s.out += "\\r",
-                '\t' => s.out += "\\t",
-                _ if c.is_ascii_control() => {
-                    use core::fmt::Write as _;
-                    let _ = write!(s.out, "\\u{:04x}", c as u32);
+macro_rules! impl_ser_json_string {
+    ($ty: ident) => {
+        impl SerJson for $ty {
+            fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
+                s.out.push('"');
+                for c in self.chars() {
+                    match c {
+                        '\x08' => s.out += "\\b",
+                        '\x0C' => s.out += "\\f",
+                        '\n' => s.out += "\\n",
+                        '\r' => s.out += "\\r",
+                        '\t' => s.out += "\\t",
+                        _ if c.is_ascii_control() => {
+                            use core::fmt::Write as _;
+                            let _ = write!(s.out, "\\u{:04x}", c as u32);
+                        }
+                        '\\' => s.out += "\\\\",
+                        '"' => s.out += "\\\"",
+                        _ => s.out.push(c),
+                    }
                 }
-                '\\' => s.out += "\\\\",
-                '"' => s.out += "\\\"",
-                _ => s.out.push(c),
+                s.out.push('"');
             }
         }
-        s.out.push('"');
-    }
+    };
 }
+
+impl_ser_json_string!(String);
+impl_ser_json_string!(str);
 
 impl DeJson for String {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<String, DeJsonErr> {
