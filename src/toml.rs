@@ -187,16 +187,7 @@ impl TomlParser {
                 // we should expect an ident or a string
                 let tok = self.next_tok(i)?;
                 match tok {
-                    TomlTok::Str(key) => {
-                        // a key
-                        *local_scope = key;
-                        let tok = self.next_tok(i)?;
-                        if tok != TomlTok::BlockClose {
-                            return Err(self.err_token(tok));
-                        }
-                    }
-                    TomlTok::Ident(key) => {
-                        // also a key
+                    TomlTok::Str(key) | TomlTok::Ident(key) => {
                         *local_scope = key;
                         let tok = self.next_tok(i)?;
                         if tok != TomlTok::BlockClose {
@@ -222,13 +213,8 @@ impl TomlParser {
                     _ => return Err(self.err_token(tok)),
                 }
             }
-            TomlTok::Str(key) => {
-                // a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
-            }
-            TomlTok::Ident(key) => {
-                // also a key
-                self.parse_key_value(&local_scope, key, i, out.out())?;
+            TomlTok::Str(key) | TomlTok::Ident(key) => {
+                self.parse_key_value(&local_scope, key, i, out.out())?
             }
             _ => return Err(self.err_token(tok)),
         }
