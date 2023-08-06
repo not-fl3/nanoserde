@@ -1062,6 +1062,20 @@ where
     t
 }
 
+impl SerRon for () {
+    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+        s.out.push_str("()");
+    }
+}
+
+impl DeRon for () {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<(), DeRonErr> {
+        s.paren_open(i)?;
+        s.paren_close(i)?;
+        Ok(())
+    }
+}
+
 impl<A, B> SerRon for (A, B)
 where
     A: SerRon,

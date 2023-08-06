@@ -12,6 +12,7 @@ fn ser_de() {
         d: Option<String>,
         e: Option<HashMap<String, String>>,
         f: Option<([u32; 4], String)>,
+        g: (),
     }
 
     let mut map = HashMap::new();
@@ -24,6 +25,7 @@ fn ser_de() {
         d: None,
         e: Some(map),
         f: Some(([1, 2, 3, 4], "tuple".to_string())),
+        g: (),
     };
 
     let bytes = SerBin::serialize_bin(&test);
