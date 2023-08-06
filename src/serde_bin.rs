@@ -410,6 +410,20 @@ where
     }
 }
 
+impl SerBin for () {
+    #[inline(always)]
+    fn ser_bin(&self, _s: &mut Vec<u8>) {
+        // do nothing
+    }
+}
+
+impl DeBin for () {
+    #[inline(always)]
+    fn de_bin(_o: &mut usize, _d: &[u8]) -> Result<Self, DeBinErr> {
+        Ok(())
+    }
+}
+
 impl<A, B> SerBin for (A, B)
 where
     A: SerBin,
