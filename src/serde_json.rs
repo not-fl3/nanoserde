@@ -748,15 +748,18 @@ where
 
 impl SerJson for () {
     fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-        s.out.push_str("")
+        s.out.push_str("null")
     }
 }
 
 impl DeJson for () {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<(), DeJsonErr> {
-        // skip ""
-        s.next_tok(i)?;
-        return Ok(());
+        if let DeJsonTok::Null = s.tok {
+            s.next_tok(i)?;
+            return Ok(());
+        } else {
+            return Err(s.err_token("null"));
+        }
     }
 }
 
