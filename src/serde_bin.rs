@@ -93,7 +93,7 @@ macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
         impl SerBin for $ty {
             fn ser_bin(&self, s: &mut Vec<u8>) {
-                let du8 = self.to_ne_bytes();
+                let du8 = self.to_le_bytes();
                 s.extend_from_slice(&du8);
             }
         }
@@ -108,10 +108,13 @@ macro_rules! impl_ser_de_bin_for {
                         s: d.len(),
                     });
                 }
-                let mut m = [0 as $ty];
-                m[0] = <$ty>::from_ne_bytes(d[*o..(*o + l)].try_into().unwrap());
+
+                // We just checked that the correct amount of bytes are available,
+                // and there are no invalid bit patterns for these primitives. This
+                // unwrap should be impossible to hit.
+                let ret: $ty = <$ty>::from_le_bytes(d[*o..(*o + l)].try_into().unwrap());
                 *o += l;
-                Ok(m[0])
+                Ok(ret)
             }
         }
     };
@@ -132,7 +135,7 @@ impl_ser_de_bin_for!(i8);
 impl SerBin for usize {
     fn ser_bin(&self, s: &mut Vec<u8>) {
         let u64usize = *self as u64;
-        let du8 = u64usize.to_ne_bytes();
+        let du8 = u64usize.to_le_bytes();
         s.extend_from_slice(&du8);
     }
 }
@@ -142,7 +145,7 @@ impl DeBin for usize {
         let l = core::mem::size_of::<u64>();
 
         let m = match d.get(*o..*o + l) {
-            Some(data) => u64::from_ne_bytes(data.try_into().unwrap()),
+            Some(data) => u64::from_le_bytes(data.try_into().unwrap()),
             None => {
                 return Err(DeBinErr {
                     o: *o,
