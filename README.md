@@ -29,7 +29,7 @@ pub struct Property {
 }
 ```
 
-For more examples take a look on [tests](/tests)
+For more examples take a look at [tests](/tests)
 
 ## Features support matrix:
 
@@ -50,4 +50,5 @@ For more examples take a look on [tests](/tests)
 | container attribute: `#[nserde(default)]`      | yes    | no    | yes    | no    |
 | container attribute: `#[nserde(rename = "")]`  | yes    | yes   | yes    | no    |
 | container attribute: `#[nserde(proxy = "")]`   | yes    | yes   | no     | no    |
+| container attribute: `#[nserde(transparent)]`  | yes    | no    | no     | no    |
 
