@@ -248,7 +248,7 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Vec<T>, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(len);
         for _ in 0..len {
             out.push(DeBin::de_bin(o, d)?)
         }
@@ -302,7 +302,7 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<HashSet<T>, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut out = HashSet::new();
+        let mut out = HashSet::with_capacity(len);
         for _ in 0..len {
             out.insert(DeBin::de_bin(o, d)?);
         }
@@ -527,7 +527,7 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut h = HashMap::new();
+        let mut h = HashMap::with_capacity(len);
         for _ in 0..len {
             let k = DeBin::de_bin(o, d)?;
             let v = DeBin::de_bin(o, d)?;
