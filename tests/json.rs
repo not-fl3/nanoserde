@@ -627,6 +627,81 @@ fn field_proxy() {
 }
 
 #[test]
+fn field_option_proxy() {
+    #[derive(PartialEq, Clone, Debug)]
+    #[repr(u32)]
+    enum SomeEnum {
+        One,
+        Two,
+        Three,
+    }
+
+    #[derive(PartialEq, Debug, DeJson, SerJson)]
+    #[nserde(transparent)]
+    pub struct U32(u32);
+
+    impl From<&SomeEnum> for U32 {
+        fn from(e: &SomeEnum) -> U32 {
+            U32(e.clone() as u32)
+        }
+    }
+    impl From<&U32> for SomeEnum {
+        fn from(n: &U32) -> SomeEnum {
+            match n.0 {
+                0 => SomeEnum::One,
+                1 => SomeEnum::Two,
+                2 => SomeEnum::Three,
+                _ => panic!(),
+            }
+        }
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Test {
+        #[nserde(proxy = "U32")]
+        foo: Option<SomeEnum>,
+        #[nserde(proxy = "U32")]
+        bar: SomeEnum,
+    }
+
+    let test = Test {
+        foo: Some(SomeEnum::Three),
+        bar: SomeEnum::Two,
+    };
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    assert!(test == test_deserialized);
+    let test = Test {
+        foo: None,
+        bar: SomeEnum::One,
+    };
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    assert!(test == test_deserialized);
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    enum Test2 {
+        //A(#[nserde(proxy = "U32")] Option<SomeEnum>),
+        B {
+            #[nserde(proxy = "U32")]
+            bar: Option<SomeEnum>,
+        },
+    }
+
+    // TODO
+    // let test = Test2::A(Some(SomeEnum::Three));
+    // let bytes = SerJson::serialize_json(&test);
+    // let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    // assert!(test == test_deserialized);
+    let test = Test2::B {
+        bar: Some(SomeEnum::One),
+    };
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+    assert!(test == test_deserialized);
+}
+
+#[test]
 fn tuple_struct() {
     #[derive(DeJson, SerJson, PartialEq)]
     pub struct Test(i32);

@@ -25,6 +25,20 @@ pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     .unwrap()
 }
 
+fn ser_proxy_guard(fieldname: &str, field: &Field) -> String {
+    if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
+        if field.ty.base() == "Option" {
+            format!(
+                "{{{fieldname}.as_ref().map(|f| {{let proxy: {proxy} = Into::into(f);proxy}})}}"
+            )
+        } else {
+            format!("{{let proxy: {proxy} = Into::into(&{fieldname});proxy}}",)
+        }
+    } else {
+        format!("{fieldname}")
+    }
+}
+
 pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
     let mut s = String::new();
     let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerJson");
@@ -40,14 +54,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             if skip {
                 continue;
             }
-            let proxied_field = if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
-                format!(
-                    "{{let proxy: {} = Into::into(&self.{});proxy}}",
-                    proxy, struct_fieldname
-                )
-            } else {
-                format!("self.{}", struct_fieldname)
-            };
+            let proxied_field = ser_proxy_guard(&format!("self.{struct_fieldname}"), field);
 
             if field.ty.base() == "Option" {
                 l!(
@@ -135,7 +142,11 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let skip = crate::shared::attrs_skip(&field.attributes);
 
         let proxified_t = if let Some(proxy) = proxy {
-            format!("From::<&{}>::from(&t)", proxy)
+            if field.ty.base() == "Option" {
+                format!("Some(From::<&{proxy}>::from(&t))")
+            } else {
+                format!("From::<&{proxy}>::from(&t)")
+            }
         } else {
             format!("t")
         };
@@ -276,13 +287,7 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
                 let last = contents.fields.len() - 1;
                 for (index, field) in contents.fields.iter().enumerate() {
                     if let Some(name) = &&field.field_name {
-                        let proxied_field =
-                            if let Some(proxy) = crate::shared::attrs_proxy(&variant.attributes) {
-                                format!("{{let proxy: {} = Into::into(&{});proxy}}", proxy, name)
-                            } else {
-                                format!("{}", name)
-                            };
-
+                        let proxied_field = ser_proxy_guard(name, field);
                         if index == last {
                             if field.ty.base() == "Option" {
                                 l!(
