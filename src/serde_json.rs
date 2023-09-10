@@ -999,31 +999,42 @@ where
     T: DeJson,
 {
     fn de_json(o: &mut DeJsonState, d: &mut Chars) -> Result<Self, DeJsonErr> {
-        unsafe {
-            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = core::mem::transmute(&mut to);
-            de_json_array_impl_inner(top, N, o, d)?;
-            Ok(to.assume_init())
-        }
-    }
-}
+        use core::mem::MaybeUninit;
 
-unsafe fn de_json_array_impl_inner<T>(
-    top: *mut T,
-    count: usize,
-    s: &mut DeJsonState,
-    i: &mut Chars,
-) -> Result<(), DeJsonErr>
-where
-    T: DeJson,
-{
-    s.block_open(i)?;
-    for c in 0..count {
-        top.add(c).write(DeJson::de_json(s, i)?);
-        s.eat_comma_block(i)?;
+        // waiting for uninit_array(or for array::try_from_fn) stabilization
+        // https://github.com/rust-lang/rust/issues/96097
+        // https://github.com/rust-lang/rust/issues/89379
+        let mut to: [MaybeUninit<T>; N] =
+            unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() };
+        o.block_open(d)?;
+
+        for index in 0..N {
+            to[index] = match DeJson::de_json(o, d).and_then(|ret| {
+                o.eat_comma_block(d)?;
+                Ok(ret)
+            }) {
+                Ok(v) => MaybeUninit::new(v),
+                Err(e) => {
+                    // drop all the MaybeUninit values which we've already
+                    // successfully deserialized so we don't leak memory.
+                    // See https://github.com/not-fl3/nanoserde/issues/79
+                    for (_, to_drop) in (0..index).zip(to) {
+                        unsafe { to_drop.assume_init() };
+                    }
+                    return Err(e);
+                }
+            }
+        }
+
+        // waiting for array_assume_init or core::array::map optimizations
+        // https://github.com/rust-lang/rust/issues/61956
+        // initializing before block close so that drop will run automatically if err encountered there
+        let initialized =
+            unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
+        o.block_close(d)?;
+
+        Ok(initialized)
     }
-    s.block_close(i)?;
-    Ok(())
 }
 
 fn de_json_comma_block<T>(s: &mut DeJsonState, i: &mut Chars) -> Result<T, DeJsonErr>

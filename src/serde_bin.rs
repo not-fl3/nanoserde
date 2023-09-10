@@ -402,14 +402,32 @@ where
     T: DeBin,
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
-        unsafe {
-            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = core::mem::transmute(&mut to);
-            for c in 0..N {
-                top.add(c).write(DeBin::de_bin(o, d)?);
+        use core::mem::MaybeUninit;
+
+        // waiting for uninit_array(or for array::try_from_fn) stabilization
+        // https://github.com/rust-lang/rust/issues/96097
+        // https://github.com/rust-lang/rust/issues/89379
+        let mut to: [MaybeUninit<T>; N] =
+            unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() };
+
+        for index in 0..N {
+            to[index] = match DeBin::de_bin(o, d) {
+                Ok(v) => MaybeUninit::new(v),
+                Err(e) => {
+                    // drop all the MaybeUninit values which we've already
+                    // successfully deserialized so we don't leak memory.
+                    // See https://github.com/not-fl3/nanoserde/issues/79
+                    for (_, to_drop) in (0..index).zip(to) {
+                        unsafe { to_drop.assume_init() };
+                    }
+                    return Err(e);
+                }
             }
-            Ok(to.assume_init())
         }
+
+        // waiting for array_assume_init or core::array::map optimizations
+        // https://github.com/rust-lang/rust/issues/61956
+        Ok(unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() })
     }
 }
 

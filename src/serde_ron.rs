@@ -1021,35 +1021,46 @@ where
     }
 }
 
-unsafe fn de_ron_array_impl_inner<T>(
-    top: *mut T,
-    count: usize,
-    s: &mut DeRonState,
-    i: &mut Chars,
-) -> Result<(), DeRonErr>
-where
-    T: DeRon,
-{
-    s.paren_open(i)?;
-    for c in 0..count {
-        top.add(c).write(DeRon::de_ron(s, i)?);
-        s.eat_comma_paren(i)?;
-    }
-    s.paren_close(i)?;
-    Ok(())
-}
-
 impl<T, const N: usize> DeRon for [T; N]
 where
     T: DeRon,
 {
-    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
-        unsafe {
-            let mut to = core::mem::MaybeUninit::<[T; N]>::uninit();
-            let top: *mut T = core::mem::transmute(&mut to);
-            de_ron_array_impl_inner(top, N, s, i)?;
-            Ok(to.assume_init())
+    fn de_ron(o: &mut DeRonState, d: &mut Chars) -> Result<Self, DeRonErr> {
+        use core::mem::MaybeUninit;
+
+        // waiting for uninit_array(or for array::try_from_fn) stabilization
+        // https://github.com/rust-lang/rust/issues/96097
+        // https://github.com/rust-lang/rust/issues/89379
+        let mut to: [MaybeUninit<T>; N] =
+            unsafe { MaybeUninit::<[MaybeUninit<T>; N]>::uninit().assume_init() };
+        o.paren_open(d)?;
+
+        for index in 0..N {
+            to[index] = match DeRon::de_ron(o, d).and_then(|ret| {
+                o.eat_comma_paren(d)?;
+                Ok(ret)
+            }) {
+                Ok(v) => MaybeUninit::new(v),
+                Err(e) => {
+                    // drop all the MaybeUninit values which we've already
+                    // successfully deserialized so we don't leak memory.
+                    // See https://github.com/not-fl3/nanoserde/issues/79
+                    for (_, to_drop) in (0..index).zip(to) {
+                        unsafe { to_drop.assume_init() };
+                    }
+                    return Err(e);
+                }
+            }
         }
+
+        // waiting for array_assume_init or core::array::map optimizations
+        // https://github.com/rust-lang/rust/issues/61956
+        // initializing before block close so that drop will run automatically if err encountered there
+        let initialized =
+            unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
+        o.paren_close(d)?;
+
+        Ok(initialized)
     }
 }
 
