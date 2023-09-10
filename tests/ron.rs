@@ -383,6 +383,7 @@ fn test_various_escapes() {
 
 // there are only 1024*1024 surrogate pairs, so we can do an exhautive test.
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_surrogate_pairs_exhaustively() {
     for lead in 0xd800..0xdc00 {
         for trail in 0xdc00..0xe000 {
