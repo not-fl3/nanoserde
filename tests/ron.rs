@@ -1,6 +1,9 @@
 use nanoserde::{DeRon, SerRon};
 
-use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
+use std::{
+    collections::{BTreeSet, HashMap, HashSet, LinkedList},
+    sync::atomic::AtomicBool,
+};
 
 #[test]
 fn ron_de() {
@@ -419,4 +422,31 @@ fn tuple_struct() {
     let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
 
     assert!(test == test_deserialized);
+}
+
+#[test]
+fn array_leak_test() {
+    static TOGGLED_ON_DROP: AtomicBool = AtomicBool::new(false);
+
+    #[derive(Default, Clone, DeRon, SerRon)]
+    struct IncrementOnDrop {
+        inner: u64,
+    }
+
+    impl Drop for IncrementOnDrop {
+        fn drop(&mut self) {
+            TOGGLED_ON_DROP.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    let items: [_; 2] = core::array::from_fn(|_| IncrementOnDrop::default());
+    let serialized = nanoserde::SerRon::serialize_ron(&items);
+    let corrupted_serialized = &serialized[..serialized.len() - 1];
+
+    if let Ok(_) = <[IncrementOnDrop; 2] as nanoserde::DeRon>::deserialize_ron(corrupted_serialized)
+    {
+        panic!("Unexpected success")
+    }
+
+    assert!(TOGGLED_ON_DROP.load(std::sync::atomic::Ordering::SeqCst))
 }
