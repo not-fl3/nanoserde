@@ -1,4 +1,8 @@
-use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
+use std::{
+    array,
+    collections::{BTreeSet, HashMap, HashSet, LinkedList},
+    sync::atomic::AtomicBool,
+};
 
 use nanoserde::{DeBin, SerBin};
 
@@ -237,4 +241,31 @@ fn collections() {
     let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
 
     assert_eq!(test, test_deserialized);
+}
+
+#[test]
+fn array_leak_test() {
+    static TOGGLED_ON_DROP: AtomicBool = AtomicBool::new(false);
+
+    #[derive(Default, Clone, SerBin, DeBin)]
+    struct IncrementOnDrop {
+        inner: u128,
+    }
+
+    impl Drop for IncrementOnDrop {
+        fn drop(&mut self) {
+            TOGGLED_ON_DROP.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    let items: [_; 2] = array::from_fn(|_| IncrementOnDrop::default());
+    let serialized = nanoserde::SerBin::serialize_bin(&items);
+    let corrupted_serialized = &serialized[..serialized.len() - 1];
+
+    if let Ok(_) = <[IncrementOnDrop; 2] as nanoserde::DeBin>::deserialize_bin(corrupted_serialized)
+    {
+        panic!("Unexpected success")
+    }
+
+    assert!(TOGGLED_ON_DROP.load(std::sync::atomic::Ordering::SeqCst))
 }

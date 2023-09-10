@@ -1,6 +1,9 @@
 use nanoserde::{DeJson, SerJson};
 
-use std::collections::{BTreeSet, HashMap, HashSet, LinkedList};
+use std::{
+    collections::{BTreeSet, HashMap, HashSet, LinkedList},
+    sync::atomic::AtomicBool,
+};
 
 #[test]
 fn de() {
@@ -803,4 +806,32 @@ fn ser_str() {
         SerJson::serialize_json(&a_string),
         SerJson::serialize_json(&a_str)
     );
+}
+
+#[test]
+fn array_leak_test() {
+    static TOGGLED_ON_DROP: AtomicBool = AtomicBool::new(false);
+
+    #[derive(Default, Clone, SerJson, DeJson)]
+    struct IncrementOnDrop {
+        inner: u64,
+    }
+
+    impl Drop for IncrementOnDrop {
+        fn drop(&mut self) {
+            TOGGLED_ON_DROP.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
+    }
+
+    let items: [_; 2] = core::array::from_fn(|_| IncrementOnDrop::default());
+    let serialized = nanoserde::SerJson::serialize_json(&items);
+    let corrupted_serialized = &serialized[..serialized.len() - 1];
+
+    if let Ok(_) =
+        <[IncrementOnDrop; 2] as nanoserde::DeJson>::deserialize_json(corrupted_serialized)
+    {
+        panic!("Unexpected success")
+    }
+
+    assert!(TOGGLED_ON_DROP.load(std::sync::atomic::Ordering::SeqCst))
 }
