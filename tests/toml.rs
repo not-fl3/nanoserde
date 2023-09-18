@@ -1,3 +1,4 @@
+use nanoserde::Toml;
 use nanoserde::TomlParser;
 
 #[test]
@@ -52,4 +53,34 @@ fn key_without_value() {
     "#;
 
     assert!(TomlParser::parse(data).is_err());
+}
+
+#[test]
+fn assert_specific_toml_types() {
+    let data = r#"
+    num = 3.14
+    str = "quoth the raven"
+    simple_arr = [1, 2, 3, 4]
+    boolean = false
+    date = 1979-05-27
+    "#;
+    assert_eq!(TomlParser::parse(data).unwrap()["num"].num(), 3.14);
+    assert_eq!(
+        TomlParser::parse(data).unwrap()["str"].str(),
+        "quoth the raven"
+    );
+    assert_eq!(TomlParser::parse(data).unwrap()["boolean"].boolean(), false);
+    assert_eq!(
+        TomlParser::parse(data).unwrap()["date"].date(),
+        "1979-05-27".to_string()
+    );
+    assert_eq!(
+        TomlParser::parse(data).unwrap()["simple_arr"].simple_arr(),
+        &vec![
+            Toml::Num(1.0),
+            Toml::Num(2.0),
+            Toml::Num(3.0),
+            Toml::Num(4.0)
+        ]
+    );
 }
