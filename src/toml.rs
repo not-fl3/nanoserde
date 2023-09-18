@@ -68,21 +68,59 @@ impl core::ops::Index<usize> for Toml {
 }
 
 impl Toml {
+    /// Get the TOML value as a float
+    ///
+    /// Panics if the TOML value isn't actually a float
     pub fn num(&self) -> f64 {
         match self {
             Toml::Num(num) => *num,
             _ => panic!(),
         }
     }
+    /// Get the TOML value as a string
+    ///
+    /// Panics if the TOML value isn't actually a string
     pub fn str(&self) -> &str {
         match self {
             Toml::Str(string) => string,
             _ => panic!(),
         }
     }
+    /// Get the TOML value as a boolean
+    ///
+    /// Panics if the TOML value isn't actually a boolean
+    pub fn boolean(&self) -> bool {
+        match self {
+            Toml::Bool(boolean) => *boolean,
+            _ => panic!(),
+        }
+    }
+    /// Get the TOML value as a date string
+    ///
+    /// Panics if the TOML value isn't actually a date string.  See
+    /// [the spec](https://toml.io/en/v1.0.0#local-date) for what "date
+    /// string" means.
+    pub fn date(&self) -> String {
+        match self {
+            Toml::Date(date) => date.to_string(),
+            _ => panic!(),
+        }
+    }
+    /// Get the TOML value as a table
+    ///
+    /// Panics if the TOML value isn't actually a table
     pub fn arr(&self) -> &Vec<HashMap<String, Toml>> {
         match self {
             Toml::Array(array) => array,
+            _ => panic!(),
+        }
+    }
+    /// Get the TOML value as an array
+    ///
+    /// Panics if the TOML value isn't actually an array
+    pub fn simple_arr(&self) -> &Vec<Toml> {
+        match self {
+            Toml::SimpleArray(array) => array,
             _ => panic!(),
         }
     }
