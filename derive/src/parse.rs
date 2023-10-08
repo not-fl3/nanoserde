@@ -76,7 +76,6 @@ pub enum Category {
         args: Option<Box<Type>>,
         return_type: Option<Box<Type>>,
     },
-    UnNamed,
     Object {
         is_dyn: bool,
         trait_names: Vec<Box<Type>>,
@@ -331,7 +330,6 @@ impl Category {
                     .join(", ")
             ),
             Category::Named { path } => path.clone(),
-            Category::UnNamed => String::default(),
             Category::Object {
                 is_dyn,
                 trait_names,
@@ -995,7 +993,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         let as_other = as_other_type(source).map(Box::new);
         if ty.is_empty() {
             Some(Type {
-                ident: Category::UnNamed,
+                ident: Category::None,
                 wraps: None,
                 ref_type,
                 as_other,
