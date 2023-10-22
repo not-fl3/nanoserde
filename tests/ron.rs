@@ -1,9 +1,15 @@
 use nanoserde::{DeRon, SerRon};
 
 use std::{
-    collections::{BTreeSet, HashMap, HashSet, LinkedList},
+    collections::{BTreeSet, LinkedList},
     sync::atomic::AtomicBool,
 };
+
+#[cfg(feature = "no_std")]
+use hashbrown::{HashMap, HashSet};
+
+#[cfg(not(feature = "no_std"))]
+use std::collections::{HashMap, HashSet};
 
 #[test]
 fn ron_de() {

@@ -1,8 +1,14 @@
 use std::{
     array,
-    collections::{BTreeSet, HashMap, HashSet, LinkedList},
+    collections::{BTreeSet, LinkedList},
     sync::atomic::AtomicBool,
 };
+
+#[cfg(feature = "no_std")]
+use hashbrown::{HashMap, HashSet};
+
+#[cfg(not(feature = "no_std"))]
+use std::collections::{HashMap, HashSet};
 
 use nanoserde::{DeBin, SerBin};
 
