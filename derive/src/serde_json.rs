@@ -222,6 +222,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
 pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeJson for {} {{
+            #[allow(clippy::ignored_unit_patterns)]
             fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
                 let proxy: {} = DeJson::deserialize_json(i)?;
                 core::result::Result::Ok(Into::into(&proxy))
@@ -247,6 +248,7 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "impl{} DeJson for {}{} {{
+            #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,
             nanoserde::DeJsonErr> {{
                 core::result::Result::Ok({{ {} }})
@@ -459,6 +461,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
 
     let mut r = format!(
         "impl{} DeJson for {}{} {{
+            #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
                 match s.tok {{",
         generic_w_bounds, generic_no_bounds, enum_.name,
@@ -592,6 +595,7 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format! ("
         impl{} DeJson for {}{} {{
+            #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeJsonErr> {{
                 {}
                 core::result::Result::Ok(r)

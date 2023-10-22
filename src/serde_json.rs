@@ -7,10 +7,10 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 use hashbrown::{HashMap, HashSet};
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 use std::collections::{HashMap, HashSet};
 
 /// The internal state of a JSON serialization.
@@ -167,10 +167,10 @@ impl core::fmt::Display for DeJsonErr {
     }
 }
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 impl core::error::Error for DeJsonErr {}
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 impl std::error::Error for DeJsonErr {}
 
 impl DeJsonState {
@@ -756,9 +756,9 @@ impl DeJson for () {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<(), DeJsonErr> {
         if let DeJsonTok::Null = s.tok {
             s.next_tok(i)?;
-            return Ok(());
+            Ok(())
         } else {
-            return Err(s.err_token("null"));
+            Err(s.err_token("null"))
         }
     }
 }
@@ -777,7 +777,7 @@ impl DeJson for bool {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<bool, DeJsonErr> {
         let val = s.as_bool()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -815,7 +815,7 @@ impl DeJson for String {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<String, DeJsonErr> {
         let val = s.as_string()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -825,7 +825,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -862,7 +862,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -899,7 +899,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -936,7 +936,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -1030,7 +1030,7 @@ where
         // https://github.com/rust-lang/rust/issues/61956
         // initializing before block close so that drop will run automatically if err encountered there
         let initialized =
-            unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
+            unsafe { (*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
         o.block_close(d)?;
 
         Ok(initialized)
@@ -1156,8 +1156,7 @@ where
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
         let len = self.len();
-        let mut index = 0;
-        for (k, v) in self {
+        for (index, (k, v)) in self.iter().enumerate() {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
@@ -1165,7 +1164,6 @@ where
             if (index + 1) < len {
                 s.conl();
             }
-            index += 1;
         }
         s.indent(d);
         s.out.push('}');

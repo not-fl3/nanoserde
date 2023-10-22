@@ -1,4 +1,4 @@
-#![cfg_attr(features = "no_std", no_std)]
+#![cfg_attr(feature = "no_std", no_std)]
 
 extern crate alloc;
 extern crate proc_macro;
