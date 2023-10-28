@@ -825,7 +825,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if !self.is_empty() {
+        if self.len() > 0 {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -862,7 +862,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if !self.is_empty() {
+        if self.len() > 0 {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -899,7 +899,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if !self.is_empty() {
+        if self.len() > 0 {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -936,7 +936,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if !self.is_empty() {
+        if self.len() > 0 {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -1156,7 +1156,8 @@ where
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
         let len = self.len();
-        for (index, (k, v)) in self.iter().enumerate() {
+        let mut index = 0;
+        for (k, v) in self {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
@@ -1164,6 +1165,7 @@ where
             if (index + 1) < len {
                 s.conl();
             }
+            index += 1;
         }
         s.indent(d);
         s.out.push('}');
