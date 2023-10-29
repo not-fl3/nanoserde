@@ -6,10 +6,10 @@ use alloc::collections::{BTreeSet, LinkedList};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 use hashbrown::{HashMap, HashSet};
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 use std::collections::{HashMap, HashSet};
 
 /// A trait for objects that can be serialized to binary.
@@ -83,10 +83,10 @@ impl core::fmt::Display for DeBinErr {
     }
 }
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 impl core::error::Error for DeBinErr {}
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 impl std::error::Error for DeBinErr {}
 
 macro_rules! impl_ser_de_bin_for {
@@ -543,7 +543,7 @@ where
 
 impl<K, V> DeBin for HashMap<K, V>
 where
-    K: DeBin + std::cmp::Eq + std::hash::Hash,
+    K: DeBin + core::cmp::Eq + Hash,
     V: DeBin,
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {

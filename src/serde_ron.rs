@@ -7,10 +7,10 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 use hashbrown::{HashMap, HashSet};
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 use std::collections::{HashMap, HashSet};
 
 /// The internal state of a RON serialization.
@@ -164,10 +164,10 @@ impl core::fmt::Display for DeRonErr {
     }
 }
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 impl core::error::Error for DeRonErr {}
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 impl std::error::Error for DeRonErr {}
 
 impl DeRonState {

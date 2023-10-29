@@ -4,10 +4,10 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::{vec, vec::Vec};
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 use hashbrown::HashMap;
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 use std::collections::HashMap;
 
 /// A parser for TOML string values.
@@ -158,7 +158,7 @@ struct Out {
 }
 impl Out {
     fn start_array(&mut self, key: &str) {
-        if self.out.contains_key(key) == false {
+        if !self.out.contains_key(key) {
             self.out.insert(key.to_string(), Toml::Array(vec![]));
         }
 
@@ -186,10 +186,10 @@ impl Out {
     }
 }
 
-#[cfg(features = "no_std")]
+#[cfg(feature = "no_std")]
 impl core::error::Error for TomlErr {}
 
-#[cfg(not(features = "no_std"))]
+#[cfg(not(feature = "no_std"))]
 impl std::error::Error for TomlErr {}
 
 impl TomlParser {
@@ -252,11 +252,11 @@ impl TomlParser {
                 }
             }
             TomlTok::Str(key) | TomlTok::Ident(key) => {
-                self.parse_key_value(&local_scope, key, i, out.out())?
+                self.parse_key_value(local_scope, key, i, out.out())?
             }
             _ => return Err(self.err_token(tok)),
         }
-        return Ok(true);
+        Ok(true)
     }
 
     fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
@@ -277,7 +277,7 @@ impl TomlParser {
             TomlTok::Str(v) => Ok(Toml::Str(v)),
             TomlTok::U64(v) => Ok(Toml::Num(v as f64)),
             TomlTok::I64(v) => Ok(Toml::Num(v as f64)),
-            TomlTok::F64(v) => Ok(Toml::Num(v as f64)),
+            TomlTok::F64(v) => Ok(Toml::Num(v)),
             TomlTok::Bool(v) => Ok(Toml::Bool(v)),
             TomlTok::Nan(v) => Ok(Toml::Num(if v { -core::f64::NAN } else { core::f64::NAN })),
             TomlTok::Inf(v) => Ok(Toml::Num(if v {
@@ -303,7 +303,7 @@ impl TomlParser {
         }
         let tok = self.next_tok(i)?;
         let val = self.to_val(tok, i)?;
-        let key = if local_scope.len() > 0 {
+        let key = if !local_scope.is_empty() {
             format!("{}.{}", local_scope, key)
         } else {
             key
