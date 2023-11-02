@@ -120,6 +120,29 @@ fn field_proxy() {
 }
 
 #[test]
+fn field_ignore_self_bound() {
+    #[derive(SerBin)]
+    pub struct Serializable<'a> where Self: 'a {
+        foo: &'a i32,
+    }
+
+    #[derive(DeBin)]
+    pub struct DeSerializable {
+        foo: i32,
+    }
+
+    let foo_base = 42;
+
+    let test = Serializable {
+        foo: &42
+    };
+
+    let bytes = SerBin::serialize_bin(&test);
+    let deser: DeSerializable = DeBin::deserialize_bin(&bytes).unwrap();
+    assert_eq!(foo_base, deser.foo);
+}
+
+#[test]
 fn struct_proxy() {
     #[derive(PartialEq, Debug)]
     struct NonSerializable<T: PartialEq> {
