@@ -122,7 +122,10 @@ fn field_proxy() {
 #[test]
 fn field_ignore_self_bound() {
     #[derive(SerBin)]
-    pub struct Serializable<'a> where Self: 'a {
+    pub struct Serializable<'a>
+    where
+        Self: 'a,
+    {
         foo: &'a i32,
     }
 
@@ -133,9 +136,7 @@ fn field_ignore_self_bound() {
 
     let foo_base = 42;
 
-    let test = Serializable {
-        foo: &42
-    };
+    let test = Serializable { foo: &42 };
 
     let bytes = SerBin::serialize_bin(&test);
     let deser: DeSerializable = DeBin::deserialize_bin(&bytes).unwrap();
