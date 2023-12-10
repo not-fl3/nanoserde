@@ -9,3 +9,11 @@ fn test_trailing_comma() {
         A
     }
 }
+
+// https://github.com/not-fl3/nanoserde/issues/88
+#[test]
+fn test_empty_brackets() {
+    #[rustfmt::skip]
+    #[derive(SerJson, DeJson, SerBin, DeBin, SerRon, DeRon)]
+    enum Message { Goodbye, Greeting{} }
+}

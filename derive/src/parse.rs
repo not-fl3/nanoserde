@@ -551,8 +551,12 @@ pub fn _debug_current_token(source: &mut Peekable<impl Iterator<Item = TokenTree
 }
 
 pub fn next_lifetime<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>) -> Option<Lifetime> {
-    let Some (TokenTree::Punct(punct)) = source.peek() else { return None; };
-    let '\'' = punct.as_char() else { return None; };
+    let Some(TokenTree::Punct(punct)) = source.peek() else {
+        return None;
+    };
+    let '\'' = punct.as_char() else {
+        return None;
+    };
 
     let _ = source.next();
     Some(Lifetime {
@@ -592,7 +596,15 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
 
         let Some(_) = next_exact_punct(&mut source, ";") else {
             // This is an unbounded array, legal at end for unsized types
-            return Some(Type { ident: Category::Array { content_type: Box::new(next.clone()), len: None }, wraps: Some(vec![next]), ref_type: None, as_other: None })
+            return Some(Type {
+                ident: Category::Array {
+                    content_type: Box::new(next.clone()),
+                    len: None,
+                },
+                wraps: Some(vec![next]),
+                ref_type: None,
+                as_other: None,
+            });
         };
 
         //need to cover both the const generic and literal case
@@ -662,7 +674,10 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
             source: &mut Peekable<T>,
         ) -> Option<Type> {
             let mut tmp = source.clone();
-            let (Some(_), Some(_)) = ( next_exact_punct(&mut tmp, "-"),  next_exact_punct(&mut tmp, ">")) else {
+            let (Some(_), Some(_)) = (
+                next_exact_punct(&mut tmp, "-"),
+                next_exact_punct(&mut tmp, ">"),
+            ) else {
                 return None;
             };
             drop(tmp);
@@ -719,7 +734,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         };
         let true = matches!(ident.to_string().as_str(), "fn" | "FnOnce" | "FnMut" | "Fn") else {
             return None;
-       };
+        };
         let tok_str = source.next().unwrap().to_string();
 
         match tok_str.as_str() {
@@ -770,10 +785,10 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         source: &mut Peekable<T>,
     ) -> Option<Type> {
         let Some(TokenTree::Ident(ident)) = source.peek() else {
-            return None
+            return None;
         };
         let true = matches!(ident.to_string().as_str(), "impl" | "dyn") else {
-             return None;
+            return None;
         };
         match source.next().unwrap().to_string().as_str() {
             "impl" => {
@@ -841,7 +856,14 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
     };
 
     let None = next_exact_punct(source, "\'") else {
-        return Some(Type{ ident: Category::Lifetime { path: next_ident(source).expect("Need lifetime name") }, wraps: None, ref_type: None, as_other: None })
+        return Some(Type {
+            ident: Category::Lifetime {
+                path: next_ident(source).expect("Need lifetime name"),
+            },
+            wraps: None,
+            ref_type: None,
+            as_other: None,
+        });
     };
 
     let ref_type = match next_exact_punct(&mut source, "&") {
@@ -909,7 +931,10 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
     let mut ty = next_ident(&mut source).unwrap_or_default();
     while let Some(TokenTree::Punct(_)) = source.peek() {
         let mut tmp = source.clone();
-        let (Some(_), Some(_)) = ( next_exact_punct(&mut tmp, ":"),  next_exact_punct(&mut tmp, ":")) else {
+        let (Some(_), Some(_)) = (
+            next_exact_punct(&mut tmp, ":"),
+            next_exact_punct(&mut tmp, ":"),
+        ) else {
             break;
         };
         drop(tmp);
@@ -1015,7 +1040,7 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
     // all attributes, even doc-comments, starts with "#"
     let next_attr_punct = next_punct(&mut source);
     let Some("#") = next_attr_punct.as_deref() else {
-        return None
+        return None;
     };
 
     let mut attr_group = next_group(&mut source)
@@ -1213,7 +1238,12 @@ fn next_enum<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         let ty = next_type(&mut body);
         let Some(ty) = ty else {
             variants.push(Field {
-                ty: Type { ident: Category::None, wraps: None, ref_type: None, as_other: None },
+                ty: Type {
+                    ident: Category::None,
+                    wraps: None,
+                    ref_type: None,
+                    as_other: None,
+                },
                 attributes,
                 vis: Visibility::Public,
                 field_name: Some(variant_name),
