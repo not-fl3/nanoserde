@@ -286,7 +286,7 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
             } => {
                 let mut items = String::new();
                 let mut field_names = vec![];
-                let last = contents.fields.len() - 1;
+                let last = contents.fields.len().saturating_sub(1);
                 for (index, field) in contents.fields.iter().enumerate() {
                     if let Some(name) = &&field.field_name {
                         let proxied_field = ser_proxy_guard(name, field);
