@@ -754,9 +754,9 @@ impl_ser_de_ron_unsigned!(u32, core::u32::MAX);
 impl_ser_de_ron_unsigned!(u16, core::u16::MAX);
 impl_ser_de_ron_unsigned!(u8, core::u8::MAX);
 impl_ser_de_ron_signed!(i64, core::i64::MIN, core::i64::MAX);
-impl_ser_de_ron_signed!(i32, core::i64::MIN, core::i64::MAX);
-impl_ser_de_ron_signed!(i16, core::i64::MIN, core::i64::MAX);
-impl_ser_de_ron_signed!(i8, core::i64::MIN, core::i8::MAX);
+impl_ser_de_ron_signed!(i32, core::i32::MIN, core::i32::MAX);
+impl_ser_de_ron_signed!(i16, core::i16::MIN, core::i16::MAX);
+impl_ser_de_ron_signed!(i8, core::i8::MIN, core::i8::MAX);
 impl_ser_de_ron_float!(f64);
 impl_ser_de_ron_float!(f32);
 
