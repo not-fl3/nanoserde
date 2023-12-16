@@ -842,3 +842,30 @@ fn array_leak_test() {
 
     assert!(TOGGLED_ON_DROP.load(std::sync::atomic::Ordering::SeqCst))
 }
+
+// https://github.com/not-fl3/nanoserde/issues/89
+#[test]
+fn test_deser_oversized_value() {
+    use nanoserde::DeJson;
+
+    #[derive(DeJson, Clone, PartialEq, Debug)]
+    pub struct EnumConstant {
+        value: i32,
+    }
+    let max_json = format!(r#"{{"value": {} }}"#, i32::MAX);
+    let wrap_json = format!(r#"{{"value": {} }}"#, i32::MAX as i64 + 1);
+    assert_eq!(
+        <EnumConstant as DeJson>::deserialize_json(&max_json).unwrap(),
+        EnumConstant { value: i32::MAX }
+    );
+    assert_eq!(
+        <EnumConstant as DeJson>::deserialize_json(&wrap_json)
+            .unwrap_err()
+            .msg,
+        format!(
+            "Value out of range {}>{} ",
+            (i32::MAX as i64 + 1).to_string(),
+            i32::MAX.to_string()
+        )
+    );
+}
