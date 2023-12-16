@@ -714,9 +714,9 @@ impl_ser_de_json_unsigned!(u32, core::u32::MAX);
 impl_ser_de_json_unsigned!(u16, core::u16::MAX);
 impl_ser_de_json_unsigned!(u8, core::u8::MAX);
 impl_ser_de_json_signed!(i64, core::i64::MIN, core::i64::MAX);
-impl_ser_de_json_signed!(i32, core::i64::MIN, core::i64::MAX);
-impl_ser_de_json_signed!(i16, core::i64::MIN, core::i64::MAX);
-impl_ser_de_json_signed!(i8, core::i64::MIN, core::i8::MAX);
+impl_ser_de_json_signed!(i32, core::i32::MIN, core::i32::MAX);
+impl_ser_de_json_signed!(i16, core::i16::MIN, core::i16::MAX);
+impl_ser_de_json_signed!(i8, core::i8::MIN, core::i8::MAX);
 impl_ser_de_json_float!(f64);
 impl_ser_de_json_float!(f32);
 
