@@ -1,3 +1,4 @@
+#![cfg(feature = "binary")]
 use std::{
     array,
     collections::{BTreeSet, LinkedList},
@@ -6,7 +7,6 @@ use std::{
 
 #[cfg(feature = "no_std")]
 use hashbrown::{HashMap, HashSet};
-
 #[cfg(not(feature = "no_std"))]
 use std::collections::{HashMap, HashSet};
 

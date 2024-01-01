@@ -1,3 +1,4 @@
+#![cfg(feature = "json")]
 use nanoserde::{DeJson, SerJson};
 
 use std::{

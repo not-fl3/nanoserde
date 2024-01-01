@@ -1,5 +1,6 @@
 use alloc::string::String;
 
+#[cfg(any(feature = "binary", feature = "json"))]
 use crate::parse::{Enum, Struct};
 
 macro_rules! l {
@@ -22,6 +23,7 @@ pub fn attrs_proxy(attributes: &[crate::parse::Attribute]) -> Option<String> {
     })
 }
 
+#[cfg(any(feature = "ron", feature = "json"))]
 pub fn attrs_rename(attributes: &[crate::parse::Attribute]) -> Option<String> {
     attributes.iter().find_map(|attr| {
         if attr.tokens.len() == 2 && attr.tokens[0] == "rename" {
@@ -32,6 +34,7 @@ pub fn attrs_rename(attributes: &[crate::parse::Attribute]) -> Option<String> {
     })
 }
 
+#[cfg(any(feature = "ron", feature = "json"))]
 pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> Option<Option<String>> {
     attributes.iter().find_map(|attr| {
         if attr.tokens.len() == 1 && attr.tokens[0] == "default" {
@@ -44,6 +47,7 @@ pub fn attrs_default(attributes: &[crate::parse::Attribute]) -> Option<Option<St
     })
 }
 
+#[cfg(any(feature = "ron", feature = "json"))]
 pub fn attrs_default_with(attributes: &[crate::parse::Attribute]) -> Option<String> {
     attributes.iter().find_map(|attr| {
         if attr.tokens.len() == 2 && attr.tokens[0] == "default_with" {
@@ -54,18 +58,21 @@ pub fn attrs_default_with(attributes: &[crate::parse::Attribute]) -> Option<Stri
     })
 }
 
+#[cfg(feature = "json")]
 pub fn attrs_transparent(attributes: &[crate::parse::Attribute]) -> bool {
     attributes
         .iter()
         .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "transparent")
 }
 
+#[cfg(feature = "json")]
 pub fn attrs_skip(attributes: &[crate::parse::Attribute]) -> bool {
     attributes
         .iter()
         .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "skip")
 }
 
+#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (String, String) {
     let generics: &Vec<_> = &struct_.generics;
 
@@ -90,6 +97,7 @@ pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (Stri
     return (generic_w_bounds, generic_no_bounds);
 }
 
+#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn enum_bounds_strings(enum_: &Enum, bound_name: &str) -> (String, String) {
     let generics: &Vec<_> = &enum_.generics;
 

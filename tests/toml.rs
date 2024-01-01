@@ -1,3 +1,4 @@
+#![cfg(feature = "toml")]
 use nanoserde::Toml;
 use nanoserde::TomlParser;
 
