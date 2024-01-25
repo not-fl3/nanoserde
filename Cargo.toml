@@ -1,6 +1,6 @@
 [package]
 name = "nanoserde"
-version = "0.1.36"
+version = "0.1.37"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = """
@@ -27,4 +27,4 @@ no_std = ["dep:hashbrown"]
 
 [dependencies]
 hashbrown = { version = "0.12.3", optional = true }
-nanoserde-derive = { path = "derive", version = "=0.1.21" }
+nanoserde-derive = { path = "derive", version = "=0.1.22" }
