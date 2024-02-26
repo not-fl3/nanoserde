@@ -35,6 +35,90 @@ fn de() {
 }
 
 #[test]
+fn de_inline_comment() {
+    #[derive(DeJson)]
+    pub struct Test {
+        pub a: Option<String>,
+    }
+
+    let json = r#"{ //comment
+        // comment
+        "a": "// asd"// comment
+    } // comment"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a.unwrap(), "// asd");
+}
+
+#[test]
+fn de_multiline_comment() {
+    #[derive(DeJson)]
+    pub struct Test {
+        pub a: f32,
+    }
+
+    let json = r#"{ /* multiline
+        comment */
+        "a": 1 /* multiline *
+        comment */
+    } /** multiline **/"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1.);
+}
+
+#[test]
+fn de_illegal_inline_comment() {
+    #[derive(DeJson)]
+    pub struct Test {
+        pub a: f32,
+    }
+
+    let jsons = vec![
+        r#"{
+            "a": // comment,
+        }"#,
+        r#"{
+            / comment
+            "a": 1,
+        }"#,
+    ];
+
+    for json in jsons {
+        let test: Result<Test, _> = DeJson::deserialize_json(json);
+        assert!(test.is_err());
+    }
+}
+
+#[test]
+fn de_illegal_multiline_comment() {
+    #[derive(DeJson)]
+    pub struct Test {
+        pub a: f32,
+    }
+
+    let jsons = vec![
+        r#"{
+            /* /* comment */ */
+            "a": 1
+        }"#,
+        r#"{
+            /* comment
+            "a": 1
+        }"#,
+        r#"{
+            */
+            "a": 1
+        }"#,
+    ];
+
+    for json in jsons {
+        let test: Result<Test, _> = DeJson::deserialize_json(json);
+        assert!(test.is_err());
+    }
+}
+
+#[test]
 fn de_reorder() {
     #[derive(DeJson)]
     pub struct Test {

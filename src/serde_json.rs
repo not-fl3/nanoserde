@@ -432,6 +432,35 @@ impl DeJsonState {
             self.tok = DeJsonTok::Eof;
             return Ok(());
         }
+        if self.cur == '/' {
+            self.next(i);
+            match self.cur {
+                '/' => {
+                    while self.cur != '\n' && self.cur != '\0' {
+                        self.next(i);
+                    }
+                    return self.next_tok(i);
+                }
+                '*' => {
+                    let mut last = self.cur;
+                    loop {
+                        self.next(i);
+                        if self.cur == '\0' {
+                            return Err(self.err_token("MultiLineCommentClose"));
+                        }
+                        if last == '*' && self.cur == '/' {
+                            self.next(i);
+                            break;
+                        }
+                        last = self.cur;
+                    }
+                    return self.next_tok(i);
+                }
+                _ => {
+                    return Err(self.err_token("CommentOpen"));
+                }
+            }
+        }
         match self.cur {
             ':' => {
                 self.next(i);
