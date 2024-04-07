@@ -1,9 +1,10 @@
 use core::convert::TryInto;
 use core::hash::Hash;
 
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeSet, LinkedList};
-use alloc::string::{String, ToString};
+use alloc::string::String;
 use alloc::vec::Vec;
 
 #[cfg(feature = "no_std")]
@@ -224,9 +225,16 @@ impl DeBin for String {
                 s: d.len(),
             });
         }
-        let r = core::str::from_utf8(&d[*o..(*o + len)])
-            .unwrap()
-            .to_string();
+        let r = match core::str::from_utf8(&d[*o..(*o + len)]) {
+            Ok(r) => r.to_owned(),
+            Err(_) => {
+                return Err(DeBinErr {
+                    o: *o,
+                    l: len,
+                    s: d.len(),
+                })
+            }
+        };
         *o += len;
         Ok(r)
     }
