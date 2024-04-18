@@ -202,7 +202,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         // TODO: maybe introduce "exhaustive" attribute?
         // l!(
         //     r,
-        //     "_ => return core::result::Result::Err(s.err_exp(&s.strbuf))"
+        //     "_ => return ::core::result::Result::Err(s.err_exp(&s.strbuf))"
         // );
         l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
         l!(r, "}");
@@ -223,9 +223,9 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeJson for {} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
                 let proxy: {} = DeJson::deserialize_json(i)?;
-                core::result::Result::Ok(Into::into(&proxy))
+                ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
         type_, proxy_type
@@ -249,9 +249,9 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     format!(
         "impl{} DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,
             nanoserde::DeJsonErr> {{
-                core::result::Result::Ok({{ {} }})
+                ::core::result::Result::Ok({{ {} }})
             }}
         }}", generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body)
         .parse().unwrap()
@@ -462,7 +462,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     let mut r = format!(
         "impl{} DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
                 match s.tok {{",
         generic_w_bounds, generic_no_bounds, enum_.name,
     );
@@ -474,9 +474,9 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                         s.curly_open(i)?;
                         let _ = s.string(i)?;
                         s.colon(i)?;
-                        let r = core::result::Result::Ok(match s.strbuf.as_ref() {{
+                        let r = ::core::result::Result::Ok(match s.strbuf.as_ref() {{
                             {}
-                            _ => return core::result::Result::Err(s.err_enum(&s.strbuf))
+                            _ => return ::core::result::Result::Err(s.err_enum(&s.strbuf))
                         }});
                         s.curly_close(i)?;
                         r
@@ -490,9 +490,9 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
             "
                     nanoserde::DeJsonTok::Str => {{
                         let _ = s.string(i)?;
-                        core::result::Result::Ok(match s.strbuf.as_ref() {{
+                        ::core::result::Result::Ok(match s.strbuf.as_ref() {{
                             {}
-                            _ => return core::result::Result::Err(s.err_enum(&s.strbuf))
+                            _ => return ::core::result::Result::Err(s.err_enum(&s.strbuf))
                         }})
                     }},",
             r_units,
@@ -501,7 +501,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
 
     r.push_str(
         r#"
-                    _ => core::result::Result::Err(s.err_token("String or {")),
+                    _ => ::core::result::Result::Err(s.err_token("String or {")),
                 }
             }
         }
@@ -596,9 +596,9 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     format! ("
         impl{} DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> core::result::Result<Self,nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeJsonErr> {{
                 {}
-                core::result::Result::Ok(r)
+                ::core::result::Result::Ok(r)
             }}
         }}",generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body
     ).parse().unwrap()
