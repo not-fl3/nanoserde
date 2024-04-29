@@ -90,16 +90,21 @@ fn assert_specific_toml_types() {
 #[test]
 fn key_start_num() {
     let toml_str = r#"
-    [table]
-    1key = value
-    key = 1value
-    -0key = +nanvalue
-"#;
+        [foo.bar.baz]
+        1key = "myval"
+        -inf = 0
+        2024-04-30 = 100
+        ½ = 0.5
+    "#;
+
     assert_eq!(
-        *TomlParser::parse(toml_str).unwrap()["table"].arr(),
-        vec![HashMap::from([(
-            "1key".to_string(),
-            Toml::Str("value".to_string())
-        ),])]
+        // TODO parse dotted keys correctly (nested table)
+        *TomlParser::parse(toml_str).unwrap()["foo.bar.baz"].arr(),
+        vec![HashMap::from([
+            ("1key".to_string(), Toml::Str("myval".to_string())),
+            ("-inf".to_string(), Toml::Num(0.0)),
+            ("2024-04-30".to_string(), Toml::Num(100.0)),
+            ("½".to_string(), Toml::Num(0.5))
+        ])]
     );
 }
