@@ -604,6 +604,10 @@ impl TomlParser {
             // TODO rework this
         }
 
+        if matches!(self.cur as u32, ident_chars!()) {
+            return self.parse_ident(i, num);
+        }
+
         match negative {
             true => {
                 if let Ok(num) = num.parse() {
