@@ -379,6 +379,8 @@ impl TomlParser {
             if self.cur == '\0' {
                 return Ok(TomlTok::Eof);
             }
+
+            #[allow(unreachable_patterns)]
             match self.cur as u32 {
                 0x2C => {
                     // ,
