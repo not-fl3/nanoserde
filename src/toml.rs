@@ -74,6 +74,39 @@ pub enum TomlTok {
     Eof,
 }
 
+impl Into<String> for TomlTok {
+    fn into(self) -> String {
+        match self {
+            Self::Ident(string) => string,
+            Self::Str(string) => string,
+            Self::U64(number) => number.to_string(),
+            Self::I64(number) => number.to_string(),
+            Self::F64(number) => number.to_string(),
+            Self::Bool(boolean) => boolean.to_string(),
+            Self::Nan(negative) => {
+                if negative {
+                    "-nan".to_string()
+                } else {
+                    "nan".to_string()
+                }
+            }
+            Self::Inf(negative) => {
+                if negative {
+                    "-inf".to_string()
+                } else {
+                    "inf".to_string()
+                }
+            }
+            Self::Date(string) => string,
+            Self::Equals => '='.to_string(),
+            Self::BlockOpen => '['.to_string(),
+            Self::BlockClose => ']'.to_string(),
+            Self::Comma => ','.to_string(),
+            Self::Eof => '\0'.to_string(),
+        }
+    }
+}
+
 /// A TOML value.
 #[derive(Debug, PartialEq)]
 pub enum Toml {
