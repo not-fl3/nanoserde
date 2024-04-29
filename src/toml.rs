@@ -621,6 +621,6 @@ impl TomlParser {
             }
         }
 
-        return self.parse_ident(i, num);
+        return Err(self.err_parse("tokenizer"));
     }
 }
