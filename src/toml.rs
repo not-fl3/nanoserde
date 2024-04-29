@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 /// Pattern matching any valid bare key character as u32.
 /// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55
-macro_rules! bare_key_chars {
+macro_rules! bare_key_ident {
     () => {
         0x41..=0x5A
         | 0x61..=0x7A
@@ -437,10 +437,10 @@ impl TomlParser {
                                 self.next(i);
                                 return Ok(TomlTok::Nan(is_neg));
                             } else {
-                                return self.parse_bare_key(i, num);
+                                return self.parse_ident(i, num);
                             }
                         } else {
-                            return self.parse_bare_key(i, num);
+                            return self.parse_ident(i, num);
                         }
                     }
                     if self.cur == 'i' {
@@ -451,10 +451,10 @@ impl TomlParser {
                                 self.next(i);
                                 return Ok(TomlTok::Inf(is_neg));
                             } else {
-                                return self.parse_bare_key(i, num);
+                                return self.parse_ident(i, num);
                             }
                         } else {
-                            return self.parse_bare_key(i, num);
+                            return self.parse_ident(i, num);
                         }
                     }
                     while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
@@ -495,13 +495,13 @@ impl TomlParser {
                             if let Ok(num) = num.parse() {
                                 return Ok(TomlTok::I64(num));
                             } else {
-                                return self.parse_bare_key(i, num);
+                                return self.parse_ident(i, num);
                             }
                         }
                         if let Ok(num) = num.parse() {
                             return Ok(TomlTok::U64(num));
                         } else {
-                            return self.parse_bare_key(i, num);
+                            return self.parse_ident(i, num);
                         }
                     }
                 }
@@ -544,17 +544,16 @@ impl TomlParser {
                     self.next(i);
                     return Ok(TomlTok::Str(val));
                 }
-                bare_key_chars!() => return self.parse_bare_key(i, String::new()),
+                bare_key_ident!() => return self.parse_ident(i, String::new()),
                 _ => return Err(self.err_parse("tokenizer")),
             }
         }
     }
 
-    /// Parse a bare key from the current character.
-    fn parse_bare_key(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
-        let mut val = String::new();
-        while matches!(self.cur as u32, bare_key_chars!()) {
-            val.push(self.cur);
+    /// Parse an ident or similar, starting with the current character.
+    fn parse_ident(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
+        while matches!(self.cur as u32, bare_key_ident!()) {
+            start.push(self.cur);
             self.next(i);
         }
 
