@@ -560,10 +560,8 @@ impl TomlParser {
                 if self.cur == 'n' {
                     num.push(self.cur);
                     self.next(i);
-                    if matches!(self.cur as u32, ident_chars!()) {
+                    if matches!(self.cur, ident_term_chars!()) {
                         return Ok(TomlTok::Nan(negative));
-                    } else {
-                        return self.parse_ident(i, num);
                     }
                 }
             }
@@ -576,10 +574,8 @@ impl TomlParser {
                 if self.cur == 'f' {
                     num.push(self.cur);
                     self.next(i);
-                    if matches!(self.cur as u32, ident_chars!()) {
+                    if matches!(self.cur, ident_term_chars!()) {
                         return Ok(TomlTok::Inf(negative));
-                    } else {
-                        return self.parse_ident(i, num);
                     }
                 }
             }
