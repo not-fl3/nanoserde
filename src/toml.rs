@@ -63,6 +63,7 @@ pub enum TomlTok {
     I64(i64),
     F64(f64),
     Bool(bool),
+    // TODO add option to enforce + sign for conversion to ident
     Nan(bool),
     Inf(bool),
     Date(String),
@@ -70,7 +71,6 @@ pub enum TomlTok {
     BlockOpen,
     BlockClose,
     Comma,
-    Bof,
     Eof,
 }
 
