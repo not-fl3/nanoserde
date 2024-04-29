@@ -414,6 +414,95 @@ impl TomlParser {
                         self.next(i);
                     }
                 }
+                0x2B | 0x2D | 0x30..=0x39 => {
+                    // + - 0-9
+                    let mut num = String::new();
+                    let is_neg = if self.cur == '-' {
+                        num.push(self.cur);
+                        self.next(i);
+                        true
+                    } else {
+                        if self.cur == '+' {
+                            self.next(i);
+                        }
+                        false
+                    };
+                    if self.cur == 'n' {
+                        self.next(i);
+                        if self.cur == 'a' {
+                            self.next(i);
+                            if self.cur == 'n' {
+                                self.next(i);
+                                return Ok(TomlTok::Nan(is_neg));
+                            } else {
+                                return Err(self.err_parse("nan"));
+                            }
+                        } else {
+                            return Err(self.err_parse("nan"));
+                        }
+                    }
+                    if self.cur == 'i' {
+                        self.next(i);
+                        if self.cur == 'n' {
+                            self.next(i);
+                            if self.cur == 'f' {
+                                self.next(i);
+                                return Ok(TomlTok::Inf(is_neg));
+                            } else {
+                                return Err(self.err_parse("inf"));
+                            }
+                        } else {
+                            return Err(self.err_parse("nan"));
+                        }
+                    }
+                    while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
+                        if self.cur != '_' {
+                            num.push(self.cur);
+                        }
+                        self.next(i);
+                    }
+                    if self.cur == '.' {
+                        num.push(self.cur);
+                        self.next(i);
+                        while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
+                            if self.cur != '_' {
+                                num.push(self.cur);
+                            }
+                            self.next(i);
+                        }
+                        if let Ok(num) = num.parse() {
+                            return Ok(TomlTok::F64(num));
+                        } else {
+                            return Err(self.err_parse("number"));
+                        }
+                    } else if self.cur == '-' {
+                        // lets assume its a date. whatever. i don't feel like more parsing today
+                        num.push(self.cur);
+                        self.next(i);
+                        while self.cur >= '0' && self.cur <= '9'
+                            || self.cur == ':'
+                            || self.cur == '-'
+                            || self.cur == 'T'
+                        {
+                            num.push(self.cur);
+                            self.next(i);
+                        }
+                        return Ok(TomlTok::Date(num));
+                    } else {
+                        if is_neg {
+                            if let Ok(num) = num.parse() {
+                                return Ok(TomlTok::I64(num));
+                            } else {
+                                return Err(self.err_parse("number"));
+                            }
+                        }
+                        if let Ok(num) = num.parse() {
+                            return Ok(TomlTok::U64(num));
+                        } else {
+                            return Err(self.err_parse("number"));
+                        }
+                    }
+                }
                 0x22 => {
                     // "
                     let mut val = String::new();
