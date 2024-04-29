@@ -529,13 +529,17 @@ impl TomlParser {
             return self.parse_ident(i, start); // recursion here could be a problem
         }
 
-        Ok(match start.as_ref() {
-            "true" => TomlTok::Bool(true),
-            "false" => TomlTok::Bool(false),
-            "inf" => TomlTok::Inf(false),
-            "nan" => TomlTok::Nan(false),
-            _ => TomlTok::Ident(start),
-        })
+        if matches!(self.cur, ident_term_chars!()) {
+            return Ok(match start.as_ref() {
+                "true" => TomlTok::Bool(true),
+                "false" => TomlTok::Bool(false),
+                "inf" => TomlTok::Inf(false),
+                "nan" => TomlTok::Nan(false),
+                _ => TomlTok::Ident(start),
+            });
+        }
+
+        Err(self.err_parse("tokenizer"))
     }
 
     /// Parses a number (or an ident that starts with numbers), starting with the current character.
