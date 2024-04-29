@@ -557,44 +557,18 @@ impl TomlParser {
             self.next(i);
         }
 
-        todo!("Return paths for parsing bare key")
-    }
-
-    fn next_ident(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
-        while self.cur >= 'a' && self.cur <= 'z'
-            || self.cur >= 'A' && self.cur <= 'Z'
-            || self.cur == '_'
-            || self.cur == '-'
-        {
+        if self.cur == '.' {
             start.push(self.cur);
             self.next(i);
+            return self.parse_ident(i, start); // recursion here could be a problem
         }
-        if self.cur == '.' {
-            while self.cur == '.' {
-                self.next(i);
-                while self.cur >= 'a' && self.cur <= 'z'
-                    || self.cur >= 'A' && self.cur <= 'Z'
-                    || self.cur == '_'
-                    || self.cur == '-'
-                {
-                    start.push(self.cur);
-                    self.next(i);
-                }
-            }
-            return Ok(TomlTok::Ident(start));
-        }
-        if start == "true" {
-            return Ok(TomlTok::Bool(true));
-        }
-        if start == "false" {
-            return Ok(TomlTok::Bool(false));
-        }
-        if start == "inf" {
-            return Ok(TomlTok::Inf(false));
-        }
-        if start == "nan" {
-            return Ok(TomlTok::Nan(false));
-        }
-        return Ok(TomlTok::Ident(start));
+
+        Ok(match start.as_ref() {
+            "true" => TomlTok::Bool(true),
+            "false" => TomlTok::Bool(false),
+            "inf" => TomlTok::Inf(false),
+            "nan" => TomlTok::Nan(false),
+            _ => TomlTok::Ident(start),
+        })
     }
 }
