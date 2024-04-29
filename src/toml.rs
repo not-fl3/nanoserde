@@ -379,150 +379,29 @@ impl TomlParser {
             if self.cur == '\0' {
                 return Ok(TomlTok::Eof);
             }
-            match self.cur {
-                ',' => {
+            match self.cur as u32 {
+                0x2C => {
+                    // ,
                     self.next(i);
                     return Ok(TomlTok::Comma);
                 }
-                '[' => {
+                0x5B => {
+                    // [
                     self.next(i);
                     return Ok(TomlTok::BlockOpen);
                 }
-                ']' => {
+                0x5D => {
+                    // ]
                     self.next(i);
                     return Ok(TomlTok::BlockClose);
                 }
-                '=' => {
+                0x3D => {
+                    // =
                     self.next(i);
                     return Ok(TomlTok::Equals);
                 }
-                '+' | '-' | '0'..='9' => {
-                    let mut num = String::new();
-                    let is_neg = if self.cur == '-' {
-                        num.push(self.cur);
-                        self.next(i);
-                        true
-                    } else {
-                        if self.cur == '+' {
-                            self.next(i);
-                        }
-                        false
-                    };
-                    if self.cur == 'n' {
-                        self.next(i);
-                        if self.cur == 'a' {
-                            self.next(i);
-                            if self.cur == 'n' {
-                                self.next(i);
-                                return Ok(TomlTok::Nan(is_neg));
-                            } else {
-                                return Err(self.err_parse("nan"));
-                            }
-                        } else {
-                            return Err(self.err_parse("nan"));
-                        }
-                    }
-                    if self.cur == 'i' {
-                        self.next(i);
-                        if self.cur == 'n' {
-                            self.next(i);
-                            if self.cur == 'f' {
-                                self.next(i);
-                                return Ok(TomlTok::Inf(is_neg));
-                            } else {
-                                return Err(self.err_parse("inf"));
-                            }
-                        } else {
-                            return Err(self.err_parse("nan"));
-                        }
-                    }
-                    while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
-                        if self.cur != '_' {
-                            num.push(self.cur);
-                        }
-                        self.next(i);
-                    }
-                    if self.cur == '.' {
-                        num.push(self.cur);
-                        self.next(i);
-                        while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
-                            if self.cur != '_' {
-                                num.push(self.cur);
-                            }
-                            self.next(i);
-                        }
-                        if let Ok(num) = num.parse() {
-                            return Ok(TomlTok::F64(num));
-                        } else {
-                            return Err(self.err_parse("number"));
-                        }
-                    } else if self.cur == '-' {
-                        // lets assume its a date. whatever. i don't feel like more parsing today
-                        num.push(self.cur);
-                        self.next(i);
-                        while self.cur >= '0' && self.cur <= '9'
-                            || self.cur == ':'
-                            || self.cur == '-'
-                            || self.cur == 'T'
-                        {
-                            num.push(self.cur);
-                            self.next(i);
-                        }
-                        return Ok(TomlTok::Date(num));
-                    } else {
-                        if is_neg {
-                            if let Ok(num) = num.parse() {
-                                return Ok(TomlTok::I64(num));
-                            } else {
-                                return Err(self.err_parse("number"));
-                            }
-                        }
-                        if let Ok(num) = num.parse() {
-                            return Ok(TomlTok::U64(num));
-                        } else {
-                            return Err(self.err_parse("number"));
-                        }
-                    }
-                }
-                'a'..='z' | 'A'..='Z' | '_' => {
-                    let mut ident = String::new();
-                    while self.cur >= 'a' && self.cur <= 'z'
-                        || self.cur >= 'A' && self.cur <= 'Z'
-                        || self.cur == '_'
-                        || self.cur == '-'
-                    {
-                        ident.push(self.cur);
-                        self.next(i);
-                    }
-                    if self.cur == '.' {
-                        while self.cur == '.' {
-                            self.next(i);
-                            while self.cur >= 'a' && self.cur <= 'z'
-                                || self.cur >= 'A' && self.cur <= 'Z'
-                                || self.cur == '_'
-                                || self.cur == '-'
-                            {
-                                ident.push(self.cur);
-                                self.next(i);
-                            }
-                        }
-                        return Ok(TomlTok::Ident(ident));
-                    }
-                    if ident == "true" {
-                        return Ok(TomlTok::Bool(true));
-                    }
-                    if ident == "false" {
-                        return Ok(TomlTok::Bool(false));
-                    }
-                    if ident == "inf" {
-                        return Ok(TomlTok::Inf(false));
-                    }
-                    if ident == "nan" {
-                        return Ok(TomlTok::Nan(false));
-                    }
-                    return Ok(TomlTok::Ident(ident));
-                }
-                '#' => {
+                0x23 => {
+                    // #
                     while self.cur != '\n' && self.cur != '\0' {
                         self.next(i);
                     }
@@ -535,7 +414,8 @@ impl TomlParser {
                         self.next(i);
                     }
                 }
-                '"' => {
+                0x22 => {
+                    // "
                     let mut val = String::new();
                     self.next(i);
                     let mut braces = 1;
@@ -573,10 +453,47 @@ impl TomlParser {
                     self.next(i);
                     return Ok(TomlTok::Str(val));
                 }
-                _ => {
-                    return Err(self.err_parse("tokenizer"));
-                }
+                bare_key_chars!() => todo!("parse unquoted key"),
+                _ => return Err(self.err_parse("tokenizer")),
             }
         }
+    }
+
+    fn next_ident(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
+        while self.cur >= 'a' && self.cur <= 'z'
+            || self.cur >= 'A' && self.cur <= 'Z'
+            || self.cur == '_'
+            || self.cur == '-'
+        {
+            start.push(self.cur);
+            self.next(i);
+        }
+        if self.cur == '.' {
+            while self.cur == '.' {
+                self.next(i);
+                while self.cur >= 'a' && self.cur <= 'z'
+                    || self.cur >= 'A' && self.cur <= 'Z'
+                    || self.cur == '_'
+                    || self.cur == '-'
+                {
+                    start.push(self.cur);
+                    self.next(i);
+                }
+            }
+            return Ok(TomlTok::Ident(start));
+        }
+        if start == "true" {
+            return Ok(TomlTok::Bool(true));
+        }
+        if start == "false" {
+            return Ok(TomlTok::Bool(false));
+        }
+        if start == "inf" {
+            return Ok(TomlTok::Inf(false));
+        }
+        if start == "nan" {
+            return Ok(TomlTok::Nan(false));
+        }
+        return Ok(TomlTok::Ident(start));
     }
 }
