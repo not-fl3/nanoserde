@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nanoserde::Toml;
 use nanoserde::TomlParser;
 
@@ -82,5 +84,22 @@ fn assert_specific_toml_types() {
             Toml::Num(3.0),
             Toml::Num(4.0)
         ]
+    );
+}
+
+#[test]
+fn key_start_num() {
+    let toml_str = r#"
+    [table]
+    1key = value
+    key = 1value
+    -0key = +nanvalue
+"#;
+    assert_eq!(
+        *TomlParser::parse(toml_str).unwrap()["table"].arr(),
+        vec![HashMap::from([(
+            "1key".to_string(),
+            Toml::Str("value".to_string())
+        ),])]
     );
 }
