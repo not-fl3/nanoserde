@@ -10,6 +10,35 @@ use hashbrown::HashMap;
 #[cfg(not(feature = "no_std"))]
 use std::collections::HashMap;
 
+/// Pattern matching any valid bare key character as u32.
+/// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55
+macro_rules! bare_key_chars {
+    () => {
+        0x41..=0x5A
+        | 0x61..=0x7A
+        | 0x30..=0x39
+        | 0x2D
+        | 0x5F
+        | 0xB2
+        | 0xB3
+        | 0xB9
+        | 0xBC..=0xBE
+        | 0xC0..=0xD6
+        | 0xD8..=0xF6
+        | 0xF8..=0x37D
+        | 0x37F..=0x1FFF
+        | 0x200C..=0x200D
+        | 0x203F..=0x2040
+        | 0x2070..=0x218F
+        | 0x2460..=0x24FF
+        | 0x2C00..=0x2FEF
+        | 0x3001..=0xD7FF
+        | 0xF900..=0xFDCF
+        | 0xFDF0..=0xFFFD
+        | 0x10000..=0xEFFFF
+    }
+}
+
 /// A parser for TOML string values.
 ///
 /// ```rust
