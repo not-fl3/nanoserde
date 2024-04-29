@@ -546,15 +546,19 @@ impl TomlParser {
         if self.cur == '+' {
             self.next(i)
         } else if self.cur == '-' {
+            num.push(self.cur);
             negative = true;
             self.next(i);
         }
 
         if self.cur == 'n' {
+            num.push(self.cur);
             self.next(i);
             if self.cur == 'a' {
+                num.push(self.cur);
                 self.next(i);
                 if self.cur == 'n' {
+                    num.push(self.cur);
                     self.next(i);
                     if matches!(self.cur as u32, ident_chars!()) {
                         return Ok(TomlTok::Nan(negative));
@@ -564,10 +568,13 @@ impl TomlParser {
                 }
             }
         } else if self.cur == 'i' {
+            num.push(self.cur);
             self.next(i);
             if self.cur == 'n' {
+                num.push(self.cur);
                 self.next(i);
                 if self.cur == 'f' {
+                    num.push(self.cur);
                     self.next(i);
                     if matches!(self.cur as u32, ident_chars!()) {
                         return Ok(TomlTok::Inf(negative));
