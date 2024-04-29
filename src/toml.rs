@@ -527,15 +527,11 @@ impl TomlParser {
                         if is_neg {
                             if let Ok(num) = num.parse() {
                                 return Ok(TomlTok::I64(num));
-                            } else {
-                                return self.parse_ident(i, num);
                             }
-                        }
-                        if let Ok(num) = num.parse() {
+                        } else if let Ok(num) = num.parse() {
                             return Ok(TomlTok::U64(num));
-                        } else {
-                            return self.parse_ident(i, num);
                         }
+                        return self.parse_ident(i, num);
                     }
                 }
                 0x22 => {
