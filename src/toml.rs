@@ -81,35 +81,35 @@ pub enum TomlTok {
     Eof,
 }
 
-impl Into<String> for TomlTok {
-    fn into(self) -> String {
-        match self {
-            Self::Ident(string) => string,
-            Self::Str(string) => string,
-            Self::U64(number) => number.to_string(),
-            Self::I64(number) => number.to_string(),
-            Self::F64(number) => number.to_string(),
-            Self::Bool(boolean) => boolean.to_string(),
-            Self::Nan(negative) => {
+impl From<TomlTok> for String {
+    fn from(value: TomlTok) -> Self {
+        match value {
+            TomlTok::Ident(string) => string,
+            TomlTok::Str(string) => string,
+            TomlTok::U64(number) => number.to_string(),
+            TomlTok::I64(number) => number.to_string(),
+            TomlTok::F64(number) => number.to_string(),
+            TomlTok::Bool(boolean) => boolean.to_string(),
+            TomlTok::Nan(negative) => {
                 if negative {
                     "-nan".to_string()
                 } else {
                     "nan".to_string()
                 }
             }
-            Self::Inf(negative) => {
+            TomlTok::Inf(negative) => {
                 if negative {
                     "-inf".to_string()
                 } else {
                     "inf".to_string()
                 }
             }
-            Self::Date(string) => string,
-            Self::Equals => '='.to_string(),
-            Self::BlockOpen => '['.to_string(),
-            Self::BlockClose => ']'.to_string(),
-            Self::Comma => ','.to_string(),
-            Self::Eof => '\0'.to_string(),
+            TomlTok::Date(string) => string,
+            TomlTok::Equals => '='.to_string(),
+            TomlTok::BlockOpen => '['.to_string(),
+            TomlTok::BlockClose => ']'.to_string(),
+            TomlTok::Comma => ','.to_string(),
+            TomlTok::Eof => '\0'.to_string(),
         }
     }
 }
