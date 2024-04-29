@@ -298,6 +298,13 @@ impl TomlParser {
                         let tok = self.next_tok(i)?;
                         let key = match tok {
                             TomlTok::Ident(key) => key,
+                            TomlTok::U64(_)
+                            | TomlTok::I64(_)
+                            | TomlTok::F64(_)
+                            | TomlTok::Bool(_)
+                            | TomlTok::Nan(_)
+                            | TomlTok::Inf(_)
+                            | TomlTok::Date(_) => tok.into(),
                             _ => return Err(self.err_token(tok)),
                         };
                         let tok = self.next_tok(i)?;
@@ -313,9 +320,15 @@ impl TomlParser {
                     _ => return Err(self.err_token(tok)),
                 }
             }
-            TomlTok::Str(key) | TomlTok::Ident(key) => {
-                self.parse_key_value(local_scope, key, i, out.out())?
-            }
+            TomlTok::Str(_)
+            | TomlTok::Ident(_)
+            | TomlTok::U64(_)
+            | TomlTok::I64(_)
+            | TomlTok::F64(_)
+            | TomlTok::Bool(_)
+            | TomlTok::Nan(_)
+            | TomlTok::Inf(_)
+            | TomlTok::Date(_) => self.parse_key_value(local_scope, tok.into(), i, out.out())?,
             _ => return Err(self.err_token(tok)),
         }
         Ok(true)
@@ -490,7 +503,7 @@ impl TomlParser {
                             return self.parse_ident(i, num);
                         }
                     }
-                    while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
+                    while matches!(self.cur, '0'..='9' | '_') {
                         if self.cur != '_' {
                             num.push(self.cur);
                         }
@@ -499,7 +512,7 @@ impl TomlParser {
                     if self.cur == '.' {
                         num.push(self.cur);
                         self.next(i);
-                        while self.cur >= '0' && self.cur <= '9' || self.cur == '_' {
+                        while matches!(self.cur, '0'..='9' | '_') {
                             if self.cur != '_' {
                                 num.push(self.cur);
                             }
@@ -514,11 +527,7 @@ impl TomlParser {
                         // lets assume its a date. whatever. i don't feel like more parsing today
                         num.push(self.cur);
                         self.next(i);
-                        while self.cur >= '0' && self.cur <= '9'
-                            || self.cur == ':'
-                            || self.cur == '-'
-                            || self.cur == 'T'
-                        {
+                        while matches!(self.cur, '0'..='9' | ':' | '-' | 'T') {
                             num.push(self.cur);
                             self.next(i);
                         }
