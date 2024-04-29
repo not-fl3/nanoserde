@@ -10,9 +10,9 @@ use hashbrown::HashMap;
 #[cfg(not(feature = "no_std"))]
 use std::collections::HashMap;
 
-/// Pattern matching any valid bare key character as u32.
+/// Pattern matching any valid unquoted key character as u32.
 /// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55
-macro_rules! bare_key_ident {
+macro_rules! ident_chars {
     () => {
         0x41..=0x5A
         | 0x61..=0x7A
@@ -428,28 +428,28 @@ impl TomlParser {
 
             #[allow(unreachable_patterns)]
             match self.cur as u32 {
+                // ,
                 0x2C => {
-                    // ,
                     self.next(i);
                     return Ok(TomlTok::Comma);
                 }
+                // [
                 0x5B => {
-                    // [
                     self.next(i);
                     return Ok(TomlTok::BlockOpen);
                 }
+                // ]
                 0x5D => {
-                    // ]
                     self.next(i);
                     return Ok(TomlTok::BlockClose);
                 }
+                // =
                 0x3D => {
-                    // =
                     self.next(i);
                     return Ok(TomlTok::Equals);
                 }
+                // #
                 0x23 => {
-                    // #
                     while self.cur != '\n' && self.cur != '\0' {
                         self.next(i);
                     }
@@ -543,8 +543,8 @@ impl TomlParser {
                         return self.parse_ident(i, num);
                     }
                 }
+                // "
                 0x22 => {
-                    // "
                     let mut val = String::new();
                     self.next(i);
                     let mut braces = 1;
@@ -582,7 +582,7 @@ impl TomlParser {
                     self.next(i);
                     return Ok(TomlTok::Str(val));
                 }
-                bare_key_ident!() => return self.parse_ident(i, String::new()),
+                ident_chars!() => return self.parse_ident(i, String::new()),
                 _ => return Err(self.err_parse("tokenizer")),
             }
         }
@@ -590,7 +590,7 @@ impl TomlParser {
 
     /// Parse an ident or similar, starting with the current character.
     fn parse_ident(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
-        while matches!(self.cur as u32, bare_key_ident!()) {
+        while matches!(self.cur as u32, ident_chars!()) {
             start.push(self.cur);
             self.next(i);
         }
