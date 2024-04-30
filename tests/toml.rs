@@ -1,3 +1,6 @@
+#[cfg(feature = "no_std")]
+use hashbrown::HashMap;
+#[cfg(not(feature = "no_std"))]
 use std::collections::HashMap;
 
 use nanoserde::Toml;
