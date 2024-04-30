@@ -1,3 +1,8 @@
+#[cfg(feature = "no_std")]
+use hashbrown::HashMap;
+#[cfg(not(feature = "no_std"))]
+use std::collections::HashMap;
+
 use nanoserde::Toml;
 use nanoserde::TomlParser;
 
@@ -82,5 +87,29 @@ fn assert_specific_toml_types() {
             Toml::Num(3.0),
             Toml::Num(4.0)
         ]
+    );
+}
+
+#[test]
+fn toml_key_chars() {
+    let toml_str = r#"
+        [foo.bar.baz]
+        123abc456def = "myval"
+        -inf = 0
+        2024-04-30 = 100
+        ½ = 0.5
+    "#;
+
+    assert_eq!(
+        TomlParser::parse(toml_str).unwrap(),
+        HashMap::from([
+            (
+                "foo.bar.baz.123abc456def".to_string(),
+                Toml::Str("myval".to_string())
+            ),
+            ("foo.bar.baz.-inf".to_string(), Toml::Num(0.0)),
+            ("foo.bar.baz.2024-04-30".to_string(), Toml::Num(100.0)),
+            ("foo.bar.baz.½".to_string(), Toml::Num(0.5))
+        ])
     );
 }
