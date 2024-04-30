@@ -14,28 +14,28 @@ use std::collections::HashMap;
 /// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55
 macro_rules! ident_chars {
     () => {
-        0x41..=0x5A
-        | 0x61..=0x7A
-        | 0x30..=0x39
-        | 0x2D
-        | 0x5F
-        | 0xB2
-        | 0xB3
-        | 0xB9
-        | 0xBC..=0xBE
-        | 0xC0..=0xD6
-        | 0xD8..=0xF6
-        | 0xF8..=0x37D
-        | 0x37F..=0x1FFF
-        | 0x200C..=0x200D
-        | 0x203F..=0x2040
-        | 0x2070..=0x218F
-        | 0x2460..=0x24FF
-        | 0x2C00..=0x2FEF
-        | 0x3001..=0xD7FF
-        | 0xF900..=0xFDCF
-        | 0xFDF0..=0xFFFD
-        | 0x10000..=0xEFFFF
+        '\u{41}'..='\u{5A}'
+        | '\u{61}'..='\u{7A}'
+        | '\u{30}'..='\u{39}'
+        | '\u{2D}'
+        | '\u{5F}'
+        | '\u{B2}'
+        | '\u{B3}'
+        | '\u{B9}'
+        | '\u{BC}'..='\u{BE}'
+        | '\u{C0}'..='\u{D6}'
+        | '\u{D8}'..='\u{F6}'
+        | '\u{F8}'..='\u{37D}'
+        | '\u{37F}'..='\u{1FFF}'
+        | '\u{200C}'..='\u{200D}'
+        | '\u{203F}'..='\u{2040}'
+        | '\u{2070}'..='\u{218F}'
+        | '\u{2460}'..='\u{24FF}'
+        | '\u{2C00}'..='\u{2FEF}'
+        | '\u{3001}'..='\u{D7FF}'
+        | '\u{F900}'..='\u{FDCF}'
+        | '\u{FDF0}'..='\u{FFFD}'
+        | '\u{10000}'..='\u{EFFFF}'
     }
 }
 
@@ -434,29 +434,24 @@ impl TomlParser {
             }
 
             #[allow(unreachable_patterns)]
-            match self.cur as u32 {
-                // ,
-                0x2C => {
+            match self.cur {
+                ',' => {
                     self.next(i);
                     return Ok(TomlTok::Comma);
                 }
-                // [
-                0x5B => {
+                '[' => {
                     self.next(i);
                     return Ok(TomlTok::BlockOpen);
                 }
-                // ]
-                0x5D => {
+                ']' => {
                     self.next(i);
                     return Ok(TomlTok::BlockClose);
                 }
-                // =
-                0x3D => {
+                '=' => {
                     self.next(i);
                     return Ok(TomlTok::Equals);
                 }
-                // #
-                0x23 => {
+                '#' => {
                     while self.cur != '\n' && self.cur != '\0' {
                         self.next(i);
                     }
@@ -469,10 +464,8 @@ impl TomlParser {
                         self.next(i);
                     }
                 }
-                // + - 0-9
-                0x2B | 0x2D | 0x30..=0x39 => return self.parse_num(i),
-                // "
-                0x22 => {
+                '+' | '-' | '0'..='9' => return self.parse_num(i),
+                '"' => {
                     let mut val = String::new();
                     self.next(i);
                     let mut braces = 1;
@@ -518,7 +511,7 @@ impl TomlParser {
 
     /// Parse an ident or similar, starting with the current character.
     fn parse_ident(&mut self, i: &mut Chars, mut start: String) -> Result<TomlTok, TomlErr> {
-        while matches!(self.cur as u32, ident_chars!()) {
+        while matches!(self.cur, ident_chars!()) {
             start.push(self.cur);
             self.next(i);
         }
@@ -618,7 +611,7 @@ impl TomlParser {
             // TODO rework this
         }
 
-        if matches!(self.cur as u32, ident_chars!()) {
+        if matches!(self.cur, ident_chars!()) {
             return self.parse_ident(i, num);
         }
 
