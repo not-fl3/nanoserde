@@ -381,6 +381,70 @@ fn de_enum() {
 }
 
 #[test]
+fn de_ser_enum() {
+    #[derive(SerRon, DeRon, PartialEq, Debug)]
+    pub enum Fud {
+        A = 0,
+        B = 1,
+        C = 2,
+    }
+
+    #[derive(SerRon, DeRon, PartialEq, Debug)]
+    pub struct Bar {
+        foo1: Fud,
+        foo2: Fud,
+        foo3: Fud,
+    }
+
+    let ron = "(\n    foo1:A,\n    foo2:B,\n    foo3:C,\n)";
+
+    let data = Bar {
+        foo1: Fud::A,
+        foo2: Fud::B,
+        foo3: Fud::C,
+    };
+    let serialized = SerRon::serialize_ron(&data);
+
+    assert_eq!(serialized, ron);
+
+    let deserialized: Bar = DeRon::deserialize_ron(&serialized).unwrap();
+    assert_eq!(deserialized, data);
+}
+
+#[test]
+fn ser_enum_complex() {
+    #[derive(SerRon, DeRon, PartialEq, Debug)]
+    pub enum Foo {
+        A,
+        B(i32, String),
+        C { a: i32, b: String },
+    }
+
+    #[derive(SerRon, DeRon, PartialEq, Debug)]
+    pub struct Bar {
+        foo1: Foo,
+        foo2: Foo,
+        foo3: Foo,
+    }
+
+    let ron = "(\n    foo1:A,\n    foo2:B(1, \"asd\"),\n    foo3:C(\n        a:2,\n        b:\"qwe\",\n    ),\n)";
+
+    let data = Bar {
+        foo1: Foo::A,
+        foo2: Foo::B(1, String::from("asd")),
+        foo3: Foo::C {
+            a: 2,
+            b: String::from("qwe"),
+        },
+    };
+    let serialized = SerRon::serialize_ron(&data);
+    assert_eq!(serialized, ron);
+
+    let deserialized: Bar = DeRon::deserialize_ron(&serialized).unwrap();
+    assert_eq!(deserialized, data);
+}
+
+#[test]
 fn test_various_escapes() {
     let ron = r#""\n\t\u0020\f\b\\\"\/\ud83d\uDE0B\r""#;
     let unescaped: String = DeRon::deserialize_ron(ron).unwrap();

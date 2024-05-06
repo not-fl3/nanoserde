@@ -632,6 +632,37 @@ fn de_enum() {
 #[test]
 fn de_ser_enum() {
     #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Fud {
+        A = 0,
+        B = 1,
+        C = 2,
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Bar {
+        foo1: Fud,
+        foo2: Fud,
+        foo3: Fud,
+    }
+
+    let json = "{\"foo1\":\"A\",\"foo2\":\"B\",\"foo3\":\"C\"}";
+
+    let data = Bar {
+        foo1: Fud::A,
+        foo2: Fud::B,
+        foo3: Fud::C,
+    };
+
+    let serialized = SerJson::serialize_json(&data);
+    assert_eq!(serialized, json);
+
+    let deserialized: Bar = DeJson::deserialize_json(&serialized).unwrap();
+    assert_eq!(deserialized, data);
+}
+
+#[test]
+fn de_ser_enum_complex() {
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
     pub enum Foo {
         A,
         B { x: i32 },

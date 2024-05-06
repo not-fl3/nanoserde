@@ -1232,6 +1232,12 @@ fn next_enum<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
             break;
         }
 
+        if next_exact_punct(&mut body, "=").is_some() {
+            body.next();
+            let _maybe_coma = next_exact_punct(&mut body, ",");
+            continue;
+        }
+
         let attributes = next_attributes_list(&mut body);
 
         let variant_name = next_ident(&mut body).expect("Unnamed variants are not supported");
@@ -1260,6 +1266,7 @@ fn next_enum<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                 vis: Visibility::Public,
             });
         }
+
         let _maybe_semicolon = next_exact_punct(&mut body, ";");
         let _maybe_coma = next_exact_punct(&mut body, ",");
     }
