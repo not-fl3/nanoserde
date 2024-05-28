@@ -1,14 +1,10 @@
 #![cfg(feature = "binary")]
-use std::{
-    array,
-    collections::{BTreeSet, LinkedList},
-    sync::atomic::AtomicBool,
-};
 
-#[cfg(feature = "no_std")]
-use hashbrown::{HashMap, HashSet};
-#[cfg(not(feature = "no_std"))]
-use std::collections::{HashMap, HashSet};
+extern crate alloc;
+
+use std::{array, sync::atomic::AtomicBool};
+
+use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 
 use nanoserde::{DeBin, SerBin};
 
@@ -39,16 +35,16 @@ fn binary() {
 #[test]
 fn binary_generics() {
     #[derive(DeBin, SerBin, PartialEq)]
-    struct TestGenericsWSkip<A, B, C, DD: Eq + std::hash::Hash, EE>
+    struct TestGenericsWSkip<A, B, C, DD: Eq + Ord, EE>
     where
-        EE: Eq + std::hash::Hash,
+        EE: Eq + Ord,
     {
         test1: A,
         test2: B,
         test3: C,
         #[nserde(skip)]
-        test4: HashMap<DD, A>,
-        test5: HashMap<EE, A>,
+        test4: BTreeMap<DD, A>,
+        test5: BTreeMap<EE, A>,
     }
 
     let test: TestGenericsWSkip<i32, usize, String, Option<bool>, u128> = TestGenericsWSkip {
@@ -255,14 +251,14 @@ fn collections() {
     pub struct Test {
         pub a: Vec<i32>,
         pub b: LinkedList<f32>,
-        pub c: HashSet<i32>,
+        pub c: BTreeMap<i32, i32>,
         pub d: BTreeSet<i32>,
     }
 
     let test: Test = Test {
         a: vec![1, 2, 3],
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
-        c: vec![1, 2, 3, 4, 5].into_iter().collect(),
+        c: vec![(1, 2), (3, 4)].into_iter().collect(),
         d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
     };
 

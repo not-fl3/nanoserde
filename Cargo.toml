@@ -27,8 +27,7 @@ json = ["dep:nanoserde-derive", "nanoserde-derive/json"]
 binary = ["dep:nanoserde-derive", "nanoserde-derive/binary"]
 ron = ["dep:nanoserde-derive", "nanoserde-derive/ron"]
 toml = []
-no_std = ["dep:hashbrown"]
+no_std = []
 
 [dependencies]
-hashbrown = { version = "0.14", optional = true, default-features = false, features = ["ahash"] }
 nanoserde-derive = { path = "derive", version = "=0.2.0", optional = true }

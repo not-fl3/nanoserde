@@ -14,7 +14,4 @@ default = []
 json = []
 binary = []
 ron = []
-no_std = ["dep:hashbrown"]
-
-[dependencies]
-hashbrown = { version = "0.14", optional = true, default-features = false, features = ["ahash"] }
+no_std = []

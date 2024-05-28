@@ -1,10 +1,8 @@
 #![cfg(feature = "toml")]
 
-#[cfg(feature = "no_std")]
-use hashbrown::HashMap;
-#[cfg(not(feature = "no_std"))]
-use std::collections::HashMap;
+extern crate alloc;
 
+use alloc::collections::BTreeMap;
 use nanoserde::Toml;
 use nanoserde::TomlParser;
 
@@ -104,7 +102,7 @@ fn toml_key_chars() {
 
     assert_eq!(
         TomlParser::parse(toml_str).unwrap(),
-        HashMap::from([
+        BTreeMap::from([
             (
                 "foo.bar.baz.123abc456def".to_string(),
                 Toml::Str("myval".to_string())

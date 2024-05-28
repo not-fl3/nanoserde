@@ -1,17 +1,10 @@
-use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
-use alloc::collections::{BTreeSet, LinkedList};
+use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-
-#[cfg(feature = "no_std")]
-use hashbrown::{HashMap, HashSet};
-
-#[cfg(not(feature = "no_std"))]
-use std::collections::{HashMap, HashSet};
 
 /// The internal state of a RON serialization.
 pub struct SerRonState {
@@ -883,7 +876,8 @@ where
     }
 }
 
-impl<T> SerRon for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> SerRon for std::collections::HashSet<T>
 where
     T: SerRon,
 {
@@ -903,12 +897,13 @@ where
     }
 }
 
-impl<T> DeRon for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> DeRon for std::collections::HashSet<T>
 where
-    T: DeRon + Hash + Eq,
+    T: DeRon + core::hash::Hash + Eq,
 {
-    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<HashSet<T>, DeRonErr> {
-        let mut out = HashSet::new();
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
+        let mut out = std::collections::HashSet::new();
         s.block_open(i)?;
 
         while s.tok != DeRonTok::BlockClose {
@@ -1189,7 +1184,8 @@ where
     }
 }
 
-impl<K, V> SerRon for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> SerRon for std::collections::HashMap<K, V>
 where
     K: SerRon,
     V: SerRon,
@@ -1208,13 +1204,53 @@ where
     }
 }
 
-impl<K, V> DeRon for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> DeRon for std::collections::HashMap<K, V>
 where
-    K: DeRon + Eq + Hash,
+    K: DeRon + Eq + core::hash::Hash,
     V: DeRon,
 {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
-        let mut h = HashMap::new();
+        let mut h = std::collections::HashMap::new();
+        s.curly_open(i)?;
+        while s.tok != DeRonTok::CurlyClose {
+            let k = DeRon::de_ron(s, i)?;
+            s.colon(i)?;
+            let v = DeRon::de_ron(s, i)?;
+            s.eat_comma_curly(i)?;
+            h.insert(k, v);
+        }
+        s.curly_close(i)?;
+        Ok(h)
+    }
+}
+
+impl<K, V> SerRon for BTreeMap<K, V>
+where
+    K: SerRon,
+    V: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        s.out.push_str("{\n");
+        for (k, v) in self {
+            s.indent(d + 1);
+            k.ser_ron(d + 1, s);
+            s.out.push_str(":");
+            v.ser_ron(d + 1, s);
+            s.conl();
+        }
+        s.indent(d);
+        s.out.push('}');
+    }
+}
+
+impl<K, V> DeRon for BTreeMap<K, V>
+where
+    K: DeRon + Eq + Ord,
+    V: DeRon,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
+        let mut h = BTreeMap::new();
         s.curly_open(i)?;
         while s.tok != DeRonTok::CurlyClose {
             let k = DeRon::de_ron(s, i)?;

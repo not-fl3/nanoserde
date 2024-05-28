@@ -1,17 +1,10 @@
 use core::convert::TryInto;
-use core::hash::Hash;
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
-use alloc::collections::{BTreeSet, LinkedList};
+use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 use alloc::string::String;
 use alloc::vec::Vec;
-
-#[cfg(feature = "no_std")]
-use hashbrown::{HashMap, HashSet};
-
-#[cfg(not(feature = "no_std"))]
-use std::collections::{HashMap, HashSet};
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -294,7 +287,8 @@ where
     }
 }
 
-impl<T> SerBin for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> SerBin for std::collections::HashSet<T>
 where
     T: SerBin,
 {
@@ -307,13 +301,14 @@ where
     }
 }
 
-impl<T> DeBin for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> DeBin for std::collections::HashSet<T>
 where
-    T: DeBin + Hash + Eq,
+    T: DeBin + core::hash::Hash + Eq,
 {
-    fn de_bin(o: &mut usize, d: &[u8]) -> Result<HashSet<T>, DeBinErr> {
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut out = HashSet::with_capacity(len);
+        let mut out = std::collections::HashSet::with_capacity(len);
         for _ in 0..len {
             out.insert(DeBin::de_bin(o, d)?);
         }
@@ -534,7 +529,8 @@ where
     }
 }
 
-impl<K, V> SerBin for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> SerBin for std::collections::HashMap<K, V>
 where
     K: SerBin,
     V: SerBin,
@@ -549,14 +545,47 @@ where
     }
 }
 
-impl<K, V> DeBin for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> DeBin for std::collections::HashMap<K, V>
 where
-    K: DeBin + core::cmp::Eq + Hash,
+    K: DeBin + core::cmp::Eq + core::hash::Hash,
     V: DeBin,
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut h = HashMap::with_capacity(len);
+        let mut h = std::collections::HashMap::with_capacity(len);
+        for _ in 0..len {
+            let k = DeBin::de_bin(o, d)?;
+            let v = DeBin::de_bin(o, d)?;
+            h.insert(k, v);
+        }
+        Ok(h)
+    }
+}
+
+impl<K, V> SerBin for BTreeMap<K, V>
+where
+    K: SerBin,
+    V: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let len = self.len();
+        len.ser_bin(s);
+        for (k, v) in self {
+            k.ser_bin(s);
+            v.ser_bin(s);
+        }
+    }
+}
+
+impl<K, V> DeBin for BTreeMap<K, V>
+where
+    K: DeBin + core::cmp::Eq + Ord,
+    V: DeBin,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
+        let len: usize = DeBin::de_bin(o, d)?;
+        let mut h = BTreeMap::new();
         for _ in 0..len {
             let k = DeBin::de_bin(o, d)?;
             let v = DeBin::de_bin(o, d)?;

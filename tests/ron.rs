@@ -2,15 +2,12 @@
 use nanoserde::{DeRon, SerRon};
 
 use std::{
-    collections::{BTreeSet, LinkedList},
+    collections::{BTreeMap, BTreeSet, LinkedList},
     sync::atomic::AtomicBool,
 };
 
-#[cfg(feature = "no_std")]
-use hashbrown::{HashMap, HashSet};
-
 #[cfg(not(feature = "no_std"))]
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[test]
 fn ron_de() {
@@ -175,11 +172,11 @@ fn one_field() {
 fn one_field_map() {
     #[derive(DeRon, SerRon, PartialEq)]
     pub struct OneField {
-        field: HashMap<String, f32>,
+        field: BTreeMap<String, f32>,
     }
 
     let test = OneField {
-        field: HashMap::new(),
+        field: BTreeMap::new(),
     };
     let bytes = SerRon::serialize_ron(&test);
     let test_deserialized = DeRon::deserialize_ron(&bytes).unwrap();
@@ -223,14 +220,14 @@ fn collections() {
     pub struct Test {
         pub a: Vec<i32>,
         pub b: LinkedList<f32>,
-        pub c: HashSet<i32>,
+        pub c: BTreeMap<i32, i32>,
         pub d: BTreeSet<i32>,
     }
 
     let test: Test = Test {
         a: vec![1, 2, 3],
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
-        c: vec![1, 2, 3, 4, 5].into_iter().collect(),
+        c: vec![(1, 2), (3, 4)].into_iter().collect(),
         d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
     };
 
@@ -266,6 +263,7 @@ fn path_type() {
     assert_eq!(bar.d, Some(vec![vec![1, 2], vec![3, 4]]));
 }
 
+#[cfg(not(feature = "no_std"))]
 #[test]
 fn hashmaps() {
     #[derive(DeRon)]

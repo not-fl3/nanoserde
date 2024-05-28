@@ -2,13 +2,7 @@ use core::str::Chars;
 
 use alloc::format;
 use alloc::string::{String, ToString};
-use alloc::{vec, vec::Vec};
-
-#[cfg(feature = "no_std")]
-use hashbrown::HashMap;
-
-#[cfg(not(feature = "no_std"))]
-use std::collections::HashMap;
+use alloc::{collections::BTreeMap, vec, vec::Vec};
 
 /// Pattern matching any valid unquoted key character as u32.
 /// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55
@@ -121,12 +115,12 @@ pub enum Toml {
     Bool(bool),
     Num(f64),
     Date(String),
-    Array(Vec<HashMap<String, Toml>>),
+    Array(Vec<BTreeMap<String, Toml>>),
     SimpleArray(Vec<Toml>),
 }
 
 impl core::ops::Index<usize> for Toml {
-    type Output = HashMap<String, Toml>;
+    type Output = BTreeMap<String, Toml>;
 
     fn index(&self, index: usize) -> &Self::Output {
         match self {
@@ -178,7 +172,7 @@ impl Toml {
     /// Get the TOML value as a table
     ///
     /// Panics if the TOML value isn't actually a table
-    pub fn arr(&self) -> &Vec<HashMap<String, Toml>> {
+    pub fn arr(&self) -> &Vec<BTreeMap<String, Toml>> {
         match self {
             Toml::Array(array) => array,
             _ => panic!(),
@@ -222,7 +216,7 @@ impl core::fmt::Display for TomlErr {
 }
 
 struct Out {
-    out: HashMap<String, Toml>,
+    out: BTreeMap<String, Toml>,
     active_array_element: Option<(String, usize)>,
 }
 impl Out {
@@ -234,7 +228,7 @@ impl Out {
         let n = match self.out.get_mut(key).unwrap() {
             Toml::Array(array) => {
                 let n = array.len();
-                array.push(HashMap::new());
+                array.push(BTreeMap::new());
                 n
             }
             _ => unreachable!(),
@@ -243,7 +237,7 @@ impl Out {
         self.active_array_element = Some((key.to_string(), n));
     }
 
-    fn out(&mut self) -> &mut HashMap<String, Toml> {
+    fn out(&mut self) -> &mut BTreeMap<String, Toml> {
         if let Some((table, n)) = self.active_array_element.clone() {
             match self.out.get_mut(&table).unwrap() {
                 Toml::Array(array) => &mut array[n],
@@ -263,12 +257,12 @@ impl std::error::Error for TomlErr {}
 
 impl TomlParser {
     /// Parse a TOML string.
-    pub fn parse(data: &str) -> Result<HashMap<String, Toml>, TomlErr> {
+    pub fn parse(data: &str) -> Result<BTreeMap<String, Toml>, TomlErr> {
         let i = &mut data.chars();
         let mut t = TomlParser::default();
         t.next(i);
         let mut out = Out {
-            out: HashMap::new(),
+            out: BTreeMap::new(),
             active_array_element: None,
         };
         let mut local_scope = String::new();
@@ -377,7 +371,7 @@ impl TomlParser {
         local_scope: &String,
         key: String,
         i: &mut Chars,
-        out: &mut HashMap<String, Toml>,
+        out: &mut BTreeMap<String, Toml>,
     ) -> Result<(), TomlErr> {
         let tok = self.next_tok(i)?;
         if tok != TomlTok::Equals {
