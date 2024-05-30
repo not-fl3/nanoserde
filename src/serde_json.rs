@@ -1,17 +1,10 @@
-use core::hash::Hash;
 use core::str::Chars;
 
 use alloc::boxed::Box;
-use alloc::collections::{BTreeSet, LinkedList};
+use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
-
-#[cfg(feature = "no_std")]
-use hashbrown::{HashMap, HashSet};
-
-#[cfg(not(feature = "no_std"))]
-use std::collections::{HashMap, HashSet};
 
 /// The internal state of a JSON serialization.
 pub struct SerJsonState {
@@ -885,7 +878,8 @@ where
     }
 }
 
-impl<T> SerJson for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> SerJson for std::collections::HashSet<T>
 where
     T: SerJson,
 {
@@ -905,12 +899,13 @@ where
     }
 }
 
-impl<T> DeJson for HashSet<T>
+#[cfg(not(feature = "no_std"))]
+impl<T> DeJson for std::collections::HashSet<T>
 where
-    T: DeJson + Hash + Eq,
+    T: DeJson + core::hash::Hash + Eq,
 {
-    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<HashSet<T>, DeJsonErr> {
-        let mut out = HashSet::new();
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
+        let mut out = std::collections::HashSet::new();
         s.block_open(i)?;
 
         while s.tok != DeJsonTok::BlockClose {
@@ -1177,7 +1172,8 @@ where
     }
 }
 
-impl<K, V> SerJson for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> SerJson for std::collections::HashMap<K, V>
 where
     K: SerJson,
     V: SerJson,
@@ -1201,13 +1197,58 @@ where
     }
 }
 
-impl<K, V> DeJson for HashMap<K, V>
+#[cfg(not(feature = "no_std"))]
+impl<K, V> DeJson for std::collections::HashMap<K, V>
 where
-    K: DeJson + Eq + Hash,
+    K: DeJson + Eq + core::hash::Hash,
     V: DeJson,
 {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
-        let mut h = HashMap::new();
+        let mut h = std::collections::HashMap::new();
+        s.curly_open(i)?;
+        while s.tok != DeJsonTok::CurlyClose {
+            let k = DeJson::de_json(s, i)?;
+            s.colon(i)?;
+            let v = DeJson::de_json(s, i)?;
+            s.eat_comma_curly(i)?;
+            h.insert(k, v);
+        }
+        s.curly_close(i)?;
+        Ok(h)
+    }
+}
+
+impl<K, V> SerJson for BTreeMap<K, V>
+where
+    K: SerJson,
+    V: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.out.push('{');
+        let len = self.len();
+        let mut index = 0;
+        for (k, v) in self {
+            s.indent(d + 1);
+            k.ser_json(d + 1, s);
+            s.out.push(':');
+            v.ser_json(d + 1, s);
+            if (index + 1) < len {
+                s.conl();
+            }
+            index += 1;
+        }
+        s.indent(d);
+        s.out.push('}');
+    }
+}
+
+impl<K, V> DeJson for BTreeMap<K, V>
+where
+    K: DeJson + Eq + Ord,
+    V: DeJson,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
+        let mut h = BTreeMap::new();
         s.curly_open(i)?;
         while s.tok != DeJsonTok::CurlyClose {
             let k = DeJson::de_json(s, i)?;

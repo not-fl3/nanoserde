@@ -1,4 +1,7 @@
 #![cfg(any(feature = "binary", feature = "json", feature = "ron"))]
+
+extern crate alloc;
+
 #[cfg(feature = "binary")]
 use nanoserde::{DeBin, SerBin};
 #[cfg(feature = "json")]
@@ -6,11 +9,7 @@ use nanoserde::{DeJson, SerJson};
 #[cfg(feature = "ron")]
 use nanoserde::{DeRon, SerRon};
 
-#[cfg(feature = "no_std")]
-use hashbrown::HashMap;
-
-#[cfg(not(feature = "no_std"))]
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
 
 #[test]
 fn ser_de() {
@@ -23,12 +22,12 @@ fn ser_de() {
         pub b: f32,
         c: Option<String>,
         d: Option<String>,
-        e: Option<HashMap<String, String>>,
+        e: Option<BTreeMap<String, String>>,
         f: Option<([u32; 4], String)>,
         g: (),
     }
 
-    let mut map = HashMap::new();
+    let mut map = BTreeMap::new();
     map.insert("a".to_string(), "b".to_string());
 
     let test: Test = Test {
