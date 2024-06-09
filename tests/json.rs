@@ -6,7 +6,7 @@ use std::{
     sync::atomic::AtomicBool,
 };
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 use std::collections::HashMap;
 
 #[test]
@@ -69,6 +69,7 @@ fn de_multiline_comment() {
 fn de_illegal_inline_comment() {
     #[derive(DeJson)]
     pub struct Test {
+        #[allow(unused)]
         pub a: f32,
     }
 
@@ -92,6 +93,7 @@ fn de_illegal_inline_comment() {
 fn de_illegal_multiline_comment() {
     #[derive(DeJson)]
     pub struct Test {
+        #[allow(unused)]
         pub a: f32,
     }
 
@@ -467,7 +469,7 @@ fn path_type() {
     assert_eq!(bar.d, Some(vec![vec![1, 2], vec![3, 4]]));
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 #[test]
 fn hashmaps() {
     #[derive(DeJson)]

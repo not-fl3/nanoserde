@@ -160,11 +160,7 @@ impl core::fmt::Display for DeJsonErr {
     }
 }
 
-#[cfg(feature = "no_std")]
 impl core::error::Error for DeJsonErr {}
-
-#[cfg(not(feature = "no_std"))]
-impl std::error::Error for DeJsonErr {}
 
 impl DeJsonState {
     pub fn next(&mut self, i: &mut Chars) {
@@ -878,7 +874,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> SerJson for std::collections::HashSet<T>
 where
     T: SerJson,
@@ -899,7 +895,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> DeJson for std::collections::HashSet<T>
 where
     T: DeJson + core::hash::Hash + Eq,
@@ -1172,7 +1168,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> SerJson for std::collections::HashMap<K, V>
 where
     K: SerJson,
@@ -1197,7 +1193,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> DeJson for std::collections::HashMap<K, V>
 where
     K: DeJson + Eq + core::hash::Hash,

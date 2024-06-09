@@ -4,10 +4,12 @@
 //! https://docs.rs/syn/0.15.44/syn/enum.Type.html
 //! https://ziglang.org/documentation/0.5.0/#toc-typeInfo
 
+use alloc::collections::BTreeSet;
 use core::iter::Peekable;
-use std::collections::HashSet;
-use std::num::IntErrorKind;
+use core::num::IntErrorKind;
 
+use alloc::borrow::ToOwned;
+use alloc::boxed::Box;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 use alloc::{format, vec};
@@ -16,6 +18,7 @@ use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
 #[derive(Debug, Clone)]
 pub struct Attribute {
+    #[allow(unused)]
     pub name: String,
     pub tokens: Vec<String>,
 }
@@ -37,6 +40,7 @@ pub struct Lifetime {
 #[derive(Debug, Clone)]
 pub struct Field {
     pub attributes: Vec<Attribute>,
+    #[allow(unused)]
     pub vis: Visibility,
     pub field_name: Option<String>,
     pub ty: Type,
@@ -1079,14 +1083,14 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
             (true, _) => {
                 attrs.push(Attribute {
                     name: name.clone(),
-                    tokens: std::mem::take(&mut attr_tokens),
+                    tokens: core::mem::take(&mut attr_tokens),
                 });
                 break;
             }
             (false, Some(",")) => {
                 attrs.push(Attribute {
                     name: name.clone(),
-                    tokens: std::mem::take(&mut attr_tokens),
+                    tokens: core::mem::take(&mut attr_tokens),
                 });
                 continue;
             }
@@ -1105,14 +1109,14 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
             (true, _) => {
                 attrs.push(Attribute {
                     name: name.clone(),
-                    tokens: std::mem::take(&mut attr_tokens),
+                    tokens: core::mem::take(&mut attr_tokens),
                 });
                 break;
             }
             (false, true) => {
                 attrs.push(Attribute {
                     name: name.clone(),
-                    tokens: std::mem::take(&mut attr_tokens),
+                    tokens: core::mem::take(&mut attr_tokens),
                 });
             }
             _ => {}
@@ -1402,7 +1406,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
 
 fn get_all_bounds<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) -> Vec<Generic> {
     let mut ret = Vec::new();
-    let mut already = HashSet::new();
+    let mut already = BTreeSet::new();
     if source.peek().map_or(false, |x| x.to_string() == "<") {
         source.next();
     } else {
