@@ -157,11 +157,7 @@ impl core::fmt::Display for DeRonErr {
     }
 }
 
-#[cfg(feature = "no_std")]
 impl core::error::Error for DeRonErr {}
-
-#[cfg(not(feature = "no_std"))]
-impl std::error::Error for DeRonErr {}
 
 impl DeRonState {
     pub fn next(&mut self, i: &mut Chars) {
@@ -876,7 +872,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> SerRon for std::collections::HashSet<T>
 where
     T: SerRon,
@@ -897,7 +893,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> DeRon for std::collections::HashSet<T>
 where
     T: DeRon + core::hash::Hash + Eq,
@@ -1184,7 +1180,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> SerRon for std::collections::HashMap<K, V>
 where
     K: SerRon,
@@ -1204,7 +1200,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> DeRon for std::collections::HashMap<K, V>
 where
     K: DeRon + Eq + core::hash::Hash,
