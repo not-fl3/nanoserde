@@ -726,7 +726,7 @@ macro_rules! impl_ser_de_ron_float {
     ( $ ty: ident) => {
         impl SerRon for $ty {
             fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
-                s.out.push_str(&self.to_string());
+                s.out.push_str(&format!("{self:?}"));
             }
         }
 
