@@ -25,6 +25,7 @@ fn ser_de() {
         e: Option<BTreeMap<String, String>>,
         f: Option<([u32; 4], String)>,
         g: (),
+        h: f64,
     }
 
     let mut map = BTreeMap::new();
@@ -32,12 +33,13 @@ fn ser_de() {
 
     let test: Test = Test {
         a: 1,
-        b: 2.,
+        b: 2.718281828459045,
         c: Some("asd".to_string()),
         d: None,
         e: Some(map),
         f: Some(([1, 2, 3, 4], "tuple".to_string())),
         g: (),
+        h: 1e30,
     };
 
     #[cfg(feature = "binary")]

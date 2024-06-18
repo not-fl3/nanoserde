@@ -715,7 +715,7 @@ macro_rules! impl_ser_de_json_float {
     ( $ ty: ident) => {
         impl SerJson for $ty {
             fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-                s.out.push_str(&self.to_string());
+                s.out.push_str(&format!("{self:?}"));
             }
         }
 
