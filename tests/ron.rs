@@ -450,6 +450,41 @@ fn test_various_escapes() {
     assert_eq!(unescaped, "\n\t\u{20}\x0c\x08\\\"/😋\r");
 }
 
+#[test]
+fn test_various_floats() {
+    #[derive(Debug, SerRon, DeRon, PartialEq)]
+    struct FloatWrapper {
+        f32: f32,
+        f64: f64,
+    }
+
+    impl From<&(f32, f64)> for FloatWrapper {
+        fn from(value: &(f32, f64)) -> Self {
+            Self {
+                f32: value.0,
+                f64: value.1,
+            }
+        }
+    }
+
+    let cases: &[(f32, f64)] = &[
+        (0.0, 0.0),
+        (f32::MAX, f64::MAX),
+        (f32::MIN, f64::MIN),
+        (f32::MIN_POSITIVE, f64::MIN_POSITIVE),
+    ];
+
+    for case in cases {
+        assert_eq!(
+            FloatWrapper::from(case),
+            <FloatWrapper as DeRon>::deserialize_ron(&dbg!(
+                FloatWrapper::from(case).serialize_ron()
+            ))
+            .unwrap()
+        )
+    }
+}
+
 // there are only 1024*1024 surrogate pairs, so we can do an exhautive test.
 #[test]
 #[cfg_attr(miri, ignore)]

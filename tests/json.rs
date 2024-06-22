@@ -3,6 +3,7 @@ use nanoserde::{DeJson, SerJson};
 
 use std::{
     collections::{BTreeMap, BTreeSet, LinkedList},
+    fmt::Debug,
     sync::atomic::AtomicBool,
 };
 
@@ -700,6 +701,41 @@ fn test_various_escapes() {
     let json = r#""\n\t\u0020\f\b\\\"\/\ud83d\uDE0B\r""#;
     let unescaped: String = DeJson::deserialize_json(json).unwrap();
     assert_eq!(unescaped, "\n\t\u{20}\x0c\x08\\\"/😋\r");
+}
+
+#[test]
+fn test_various_floats() {
+    #[derive(Debug, SerJson, DeJson, PartialEq)]
+    struct FloatWrapper {
+        f32: f32,
+        f64: f64,
+    }
+
+    impl From<&(f32, f64)> for FloatWrapper {
+        fn from(value: &(f32, f64)) -> Self {
+            Self {
+                f32: value.0,
+                f64: value.1,
+            }
+        }
+    }
+
+    let cases: &[(f32, f64)] = &[
+        (0.0, 0.0),
+        (f32::MAX, f64::MAX),
+        (f32::MIN, f64::MIN),
+        (f32::MIN_POSITIVE, f64::MIN_POSITIVE),
+    ];
+
+    for case in cases {
+        assert_eq!(
+            FloatWrapper::from(case),
+            <FloatWrapper as DeJson>::deserialize_json(&dbg!(
+                FloatWrapper::from(case).serialize_json()
+            ))
+            .unwrap()
+        )
+    }
 }
 
 // there are only 1024*1024 surrogate pairs, so we can do an exhautive test.
