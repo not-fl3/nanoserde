@@ -249,11 +249,7 @@ impl Out {
     }
 }
 
-#[cfg(feature = "no_std")]
 impl core::error::Error for TomlErr {}
-
-#[cfg(not(feature = "no_std"))]
-impl std::error::Error for TomlErr {}
 
 impl TomlParser {
     /// Parse a TOML string.

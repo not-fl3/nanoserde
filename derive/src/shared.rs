@@ -1,4 +1,8 @@
-use alloc::string::String;
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 #[cfg(any(feature = "binary", feature = "json"))]
 use crate::parse::{Enum, Struct};

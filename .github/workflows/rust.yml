@@ -80,7 +80,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-default-features --features ${{ matrix.feature }}
+          args: --no-default-features --features "std, ${{ matrix.feature }}"
 
   no_std_features:
     name: Test Individual Features NoStd
@@ -106,7 +106,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --no-default-features --features "no_std, ${{ matrix.feature }}"
+          args: --no-default-features --features "${{ matrix.feature }}"
 
   test:
     name: Test
@@ -153,4 +153,4 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test 
-          args: --features "no_std"
+          args: --no-default-features --features "binary, json, ron, toml"

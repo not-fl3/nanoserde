@@ -77,11 +77,7 @@ impl core::fmt::Display for DeBinErr {
     }
 }
 
-#[cfg(feature = "no_std")]
 impl core::error::Error for DeBinErr {}
-
-#[cfg(not(feature = "no_std"))]
-impl std::error::Error for DeBinErr {}
 
 macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
@@ -287,7 +283,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> SerBin for std::collections::HashSet<T>
 where
     T: SerBin,
@@ -301,7 +297,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<T> DeBin for std::collections::HashSet<T>
 where
     T: DeBin + core::hash::Hash + Eq,
@@ -529,7 +525,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> SerBin for std::collections::HashMap<K, V>
 where
     K: SerBin,
@@ -545,7 +541,7 @@ where
     }
 }
 
-#[cfg(not(feature = "no_std"))]
+#[cfg(feature = "std")]
 impl<K, V> DeBin for std::collections::HashMap<K, V>
 where
     K: DeBin + core::cmp::Eq + core::hash::Hash,
