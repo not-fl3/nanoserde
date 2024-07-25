@@ -1,5 +1,11 @@
 use core::str::Chars;
 
+// remove this after 1.81 is live
+#[cfg(not(feature = "std"))]
+use core::error::Error;
+#[cfg(feature = "std")]
+use std::error::Error;
+
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 use alloc::format;
@@ -157,7 +163,7 @@ impl core::fmt::Display for DeRonErr {
     }
 }
 
-impl core::error::Error for DeRonErr {}
+impl Error for DeRonErr {}
 
 impl DeRonState {
     pub fn next(&mut self, i: &mut Chars) {

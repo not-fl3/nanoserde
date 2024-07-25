@@ -1,5 +1,11 @@
 use core::str::Chars;
 
+// remove this after 1.81 is live
+#[cfg(not(feature = "std"))]
+use core::error::Error;
+#[cfg(feature = "std")]
+use std::error::Error;
+
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::{collections::BTreeMap, vec, vec::Vec};
@@ -249,7 +255,7 @@ impl Out {
     }
 }
 
-impl core::error::Error for TomlErr {}
+impl Error for TomlErr {}
 
 impl TomlParser {
     /// Parse a TOML string.
