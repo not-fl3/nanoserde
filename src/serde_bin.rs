@@ -1,5 +1,11 @@
 use core::convert::TryInto;
 
+// remove this after 1.81 is live
+#[cfg(not(feature = "std"))]
+use core::error::Error;
+#[cfg(feature = "std")]
+use std::error::Error;
+
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -77,7 +83,7 @@ impl core::fmt::Display for DeBinErr {
     }
 }
 
-impl core::error::Error for DeBinErr {}
+impl Error for DeBinErr {}
 
 macro_rules! impl_ser_de_bin_for {
     ($ty:ident) => {
