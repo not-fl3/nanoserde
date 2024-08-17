@@ -175,7 +175,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
             matches.push((json_fieldname.clone(), localvar.clone()));
             local_vars.push(localvar);
         } else {
-            unwraps.push(format!("None"));
+            unwraps.push(default_val.unwrap_or_else(|| String::from("Default::default()")));
         }
 
         struct_field_names.push(struct_fieldname);
