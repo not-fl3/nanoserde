@@ -91,6 +91,9 @@ fn de_field_default() {
             Foo { x: 23 }
         }
     }
+    fn foo3_default() -> Foo {
+        Foo { x: 15 }
+    }
 
     #[derive(DeRon)]
     pub struct Test {
@@ -98,6 +101,8 @@ fn de_field_default() {
         #[nserde(default)]
         foo: Foo,
         foo2: Foo,
+        #[nserde(default_with = "foo3_default")]
+        foo3: Foo,
         b: f32,
     }
 
@@ -112,6 +117,56 @@ fn de_field_default() {
     assert_eq!(test.b, 2.);
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
+    assert_eq!(test.foo3.x, 15);
+}
+
+#[test]
+fn de_ser_field_skip() {
+    #[derive(DeRon, SerRon, PartialEq, Debug)]
+    struct Foo {
+        x: i32,
+    }
+    impl Default for Foo {
+        fn default() -> Foo {
+            Foo { x: 23 }
+        }
+    }
+    fn foo3_default() -> Foo {
+        Foo { x: 15 }
+    }
+
+    #[derive(DeRon, SerRon, PartialEq, Debug)]
+    pub struct Test {
+        a: i32,
+        #[nserde(skip)]
+        foo: Foo,
+        foo2: Foo,
+        #[nserde(skip, default_with = "foo3_default")]
+        foo3: Foo,
+        b: f32,
+        #[nserde(skip)]
+        c: Option<i32>,
+    }
+
+    let ron = r#"(
+        a: 1,
+        b: 2.,
+        foo2: (x: 3)
+    )"#;
+
+    let mut test: Test = DeRon::deserialize_ron(ron).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 2.);
+    assert_eq!(test.foo.x, 23);
+    assert_eq!(test.foo2.x, 3);
+    assert_eq!(test.foo3.x, 15);
+
+    test.c = Some(2);
+    let serialized = SerRon::serialize_ron(&test);
+
+    let test: Test = DeRon::deserialize_ron(ron).unwrap();
+    let deserialized: Test = DeRon::deserialize_ron(&serialized).unwrap();
+    assert_eq!(deserialized, test);
 }
 
 #[test]
