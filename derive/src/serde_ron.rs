@@ -43,6 +43,10 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
         let struct_fieldname = field.field_name.clone().unwrap();
         let ron_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+        let skip = shared::attrs_skip(&field.attributes);
+        if skip {
+            continue;
+        }
         if field.ty.base() == "Option" {
             l!(
                 s,
@@ -156,42 +160,47 @@ pub fn derive_de_ron_named(
         };
         let ron_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
+        let skip = crate::shared::attrs_skip(&field.attributes);
 
-        if field.ty.base() == "Option" {
-            unwraps.push(format!(
-                "{{
-                    if let Some(t) = {} {{
-                        t
-                    }} else {{
-                        {}
-                    }}
-                }}",
-                localvar,
-                default_val.unwrap_or_else(|| String::from("None"))
-            ));
-        } else if container_attr_default || default_val.is_some() {
-            unwraps.push(format!(
-                "{{
-                    if let Some(t) = {} {{
-                        t
-                    }} else {{
-                        {}
-                    }}
-                }}",
-                localvar,
-                default_val.unwrap_or_else(|| String::from("Default::default()"))
-            ));
+        if skip == false {
+            if field.ty.base() == "Option" {
+                unwraps.push(format!(
+                    "{{
+                        if let Some(t) = {} {{
+                            t
+                        }} else {{
+                            {}
+                        }}
+                    }}",
+                    localvar,
+                    default_val.unwrap_or_else(|| String::from("None"))
+                ));
+            } else if container_attr_default || default_val.is_some() {
+                unwraps.push(format!(
+                    "{{
+                        if let Some(t) = {} {{
+                            t
+                        }} else {{
+                            {}
+                        }}
+                    }}",
+                    localvar,
+                    default_val.unwrap_or_else(|| String::from("Default::default()"))
+                ));
+            } else {
+                unwraps.push(format!(
+                    "{{
+                        if let Some(t) = {} {{
+                            t
+                        }} else {{
+                            return Err(s.err_nf(\"{}\"))
+                        }}
+                    }}",
+                    localvar, struct_fieldname
+                ));
+            }
         } else {
-            unwraps.push(format!(
-                "{{
-                    if let Some(t) = {} {{
-                        t
-                    }} else {{
-                        return Err(s.err_nf(\"{}\"))
-                    }}
-                }}",
-                localvar, struct_fieldname
-            ));
+            unwraps.push(default_val.unwrap_or_else(|| String::from("Default::default()")));
         }
 
         struct_field_names.push(struct_fieldname);

@@ -327,6 +327,71 @@ fn de_field_default() {
 }
 
 #[test]
+fn de_ser_field_skip() {
+    #[derive(DeJson, SerJson)]
+    struct Foo {
+        x: i32,
+    }
+    impl Default for Foo {
+        fn default() -> Foo {
+            Foo { x: 23 }
+        }
+    }
+
+    fn h_default() -> Option<String> {
+        Some("h not empty".into())
+    }
+
+    #[derive(DeJson, SerJson)]
+    pub struct Test {
+        a: i32,
+        #[nserde(skip)]
+        foo: Foo,
+        foo2: Foo,
+        #[nserde(skip, default = "4.0")]
+        b: f32,
+        #[nserde(skip, default)]
+        c: f32,
+        #[nserde(skip)]
+        d: i32,
+        #[nserde(skip)]
+        e: String,
+        #[nserde(skip)]
+        f: Foo,
+        #[nserde(skip)]
+        g: Option<i32>,
+        #[nserde(skip, default_with = "h_default")]
+        h: Option<String>,
+    }
+
+    let json = r#"{
+        "a": 1,
+        "c": 3.0,
+        "h": "h not empty",
+        "foo2": { "x": 3 }
+    }"#;
+
+    let mut test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 4.0);
+    assert_eq!(test.c, 0.0);
+    assert_eq!(test.d, 0);
+    assert_eq!(test.e, "");
+    assert_eq!(test.f.x, 23);
+    assert_eq!(test.g, None);
+    assert_eq!(test.h, Some("h not empty".into()));
+    assert_eq!(test.foo.x, 23);
+    assert_eq!(test.foo2.x, 3);
+
+    test.e = "e not empty".into();
+    test.g = Some(2);
+
+    let ser_json = r#"{"a":1,"foo2":{"x":3}}"#;
+    let serialized = SerJson::serialize_json(&test);
+    assert_eq!(serialized, ser_json);
+}
+
+#[test]
 fn doctests() {
     /// This is test
     /// second doc comment
