@@ -57,16 +57,40 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
             let proxied_field = ser_proxy_guard(&format!("self.{struct_fieldname}"), field);
 
             if field.ty.base() == "Option" {
+                let proxy_attr = crate::shared::attrs_proxy(&field.attributes);
+                let null_on_none = proxy_attr.is_none();
+                let field_header = &format!("if first_field_was_serialized {{
+                                                 s.conl();
+                                             }};
+                                             first_field_was_serialized = true;
+                                             s.field(d+1, \"{}\");", json_fieldname);
                 l!(
                     s,
-                    "if let Some(t) = &{} {{ if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1, \"{}\");t.ser_json(d+1, s);}};",
+                    "{}
+                    if let Some(t) = &{} {{
+                        {}
+                        t.ser_json(d+1, s);
+                    }} {}",
+                    if null_on_none { field_header } else { "" },
                     proxied_field,
-                    json_fieldname
+                    if null_on_none { "" } else { field_header },
+                    if null_on_none {
+                        "else {{
+                            Option::<i32>::ser_json(&None, d+1, s);
+                        }}"
+                    } else {
+                        ""
+                    }
                 );
             } else {
                 l!(
                     s,
-                    "if first_field_was_serialized {{ s.conl(); }};first_field_was_serialized = true;s.field(d+1,\"{}\"); {}.ser_json(d+1, s);",
+                    "if first_field_was_serialized {{
+                        s.conl();
+                    }};
+                    first_field_was_serialized = true;
+                    s.field(d+1,\"{}\");
+                    {}.ser_json(d+1, s);",
                     json_fieldname,
                     proxied_field
                 );

@@ -271,8 +271,8 @@ fn rename() {
 }
 
 #[test]
-fn de_field_default() {
-    #[derive(DeJson)]
+fn de_ser_field_default() {
+    #[derive(DeJson, SerJson)]
     struct Foo {
         x: i32,
     }
@@ -282,7 +282,7 @@ fn de_field_default() {
         }
     }
 
-    #[derive(DeJson)]
+    #[derive(DeJson, SerJson)]
     pub struct Test {
         a: i32,
         #[nserde(default)]
@@ -302,6 +302,8 @@ fn de_field_default() {
         g: Option<i32>,
         #[nserde(default = "world")]
         h: Option<String>,
+        #[nserde(default = 5.2)]
+        i: Option<f32>,
     }
 
     fn some_value() -> f32 {
@@ -310,7 +312,8 @@ fn de_field_default() {
 
     let json = r#"{
         "a": 1,
-        "foo2": { "x": 3 }
+        "foo2": { "x": 3 },
+        "i": null
     }"#;
 
     let test: Test = DeJson::deserialize_json(json).unwrap();
@@ -324,6 +327,11 @@ fn de_field_default() {
     assert_eq!(test.h, Some(String::from("world")));
     assert_eq!(test.foo.x, 23);
     assert_eq!(test.foo2.x, 3);
+    assert_eq!(test.i, None);
+
+    let ser_json = r#"{"a":1,"foo":{"x":23},"foo2":{"x":3},"b":4.0,"c":3.0,"d":1,"e":"hello","f":{"x":3},"g":5,"h":"world","i":null}"#;
+    let serialized = SerJson::serialize_json(&test);
+    assert_eq!(serialized, ser_json);
 }
 
 #[test]
