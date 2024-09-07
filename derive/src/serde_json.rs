@@ -58,7 +58,8 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
             if field.ty.base() == "Option" {
                 let proxy_attr = crate::shared::attrs_proxy(&field.attributes);
-                let null_on_none = proxy_attr.is_none();
+                let serialize_none_as_null_attr = shared::attrs_serialize_none_as_null(&struct_.attributes);
+                let null_on_none = serialize_none_as_null_attr && proxy_attr.is_none();
                 let field_header = &format!("if first_field_was_serialized {{
                                                  s.conl();
                                              }};
