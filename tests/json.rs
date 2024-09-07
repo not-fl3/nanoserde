@@ -345,6 +345,17 @@ fn ser_none_as_null() {
     let b = Foo2 { x: None };
 
     assert_eq!(SerJson::serialize_json(&b), r#"{"x":null}"#);
+
+    #[derive(SerJson)]
+    struct Foo3 {
+        x: Option<i32>,
+        #[nserde(serialize_none_as_null)]
+        y: Option<i32>,
+    }
+
+    let b = Foo3 { x: None, y: None };
+
+    assert_eq!(SerJson::serialize_json(&b), r#"{"y":null}"#);
 }
 
 #[test]
