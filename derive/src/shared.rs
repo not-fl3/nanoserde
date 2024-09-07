@@ -76,6 +76,13 @@ pub fn attrs_skip(attributes: &[crate::parse::Attribute]) -> bool {
         .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "skip")
 }
 
+#[cfg(feature = "json")]
+pub fn attrs_serialize_none_as_null(attributes: &[crate::parse::Attribute]) -> bool {
+    attributes
+        .iter()
+        .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "serialize_none_as_null")
+}
+
 #[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (String, String) {
     let generics: &Vec<_> = &struct_.generics;
