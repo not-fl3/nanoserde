@@ -33,27 +33,29 @@ For more examples take a look at [tests](/tests)
 
 ## Features support matrix:
 
-| Feature                                             | json   | bin   | ron    | toml  |
-| --------------------------------------------------- | ------ | ----- | ------ | ----- |
-| serialization                                       | yes    | yes   | yes    | no    |
-| deserialization                                     | yes    | yes   | yes    | no    |
-| container: Struct                                   | yes    | yes   | yes    | no    |
-| container: Tuple Struct                             | no     | yes   | yes    | no    |
-| container: Enum                                     | yes    | yes   | yes    | no    |
-| field: `std::collections::HashMap`                  | yes    | yes   | yes    | no    |
-| field: `std::vec::Vec`                              | yes    | yes   | yes    | no    |
-| field: `Option`                                     | yes    | yes   | yes    | no    |
-| field: `i*`/`f*`/`String`/`T: De*/Ser*`             | yes    | yes   | yes    | no    |
-| field attribute: `#[nserde(default)]`               | yes    | no    | yes    | no    |
-| field attribute: `#[nserde(rename = "")]`           | yes    | yes   | yes    | no    |
-| field attribute: `#[nserde(proxy = "")]`            | no     | yes   | no     | no    |
-| container attribute: `#[nserde(default)]`           | yes    | no    | yes    | no    |
-| container attribute: `#[nserde(default = "")]`      | yes    | no    | yes    | no    |
-| container attribute: `#[nserde(default_with = "")]` | yes    | no    | yes    | no    |
-| container attribute: `#[nserde(skip)]`              | yes    | no    | yes    | no    |
-| container attribute: `#[nserde(rename = "")]`       | yes    | yes   | yes    | no    |
-| container attribute: `#[nserde(proxy = "")]`        | yes    | yes   | no     | no    |
-| container attribute: `#[nserde(transparent)]`       | yes    | no    | no     | no    |
+| Feature                                                   | json   | bin   | ron    | toml  |
+| ---------------------------------------------------       | ------ | ----- | ------ | ----- |
+| serialization                                             | yes    | yes   | yes    | no    |
+| deserialization                                           | yes    | yes   | yes    | no    |
+| container: Struct                                         | yes    | yes   | yes    | no    |
+| container: Tuple Struct                                   | no     | yes   | yes    | no    |
+| container: Enum                                           | yes    | yes   | yes    | no    |
+| field: `std::collections::HashMap`                        | yes    | yes   | yes    | no    |
+| field: `std::vec::Vec`                                    | yes    | yes   | yes    | no    |
+| field: `Option`                                           | yes    | yes   | yes    | no    |
+| field: `i*`/`f*`/`String`/`T: De*/Ser*`                   | yes    | yes   | yes    | no    |
+| field attribute: `#[nserde(default)]`                     | yes    | no    | yes    | no    |
+| field attribute: `#[nserde(rename = "")]`                 | yes    | yes   | yes    | no    |
+| field attribute: `#[nserde(proxy = "")]`                  | no     | yes   | no     | no    |
+| field attribute: `#[nserde(serialize_none_as_null)]`      | yes    | no    | no     | no    |
+| container attribute: `#[nserde(default)]`                 | yes    | no    | yes    | no    |
+| container attribute: `#[nserde(default = "")]`            | yes    | no    | yes    | no    |
+| container attribute: `#[nserde(default_with = "")]`       | yes    | no    | yes    | no    |
+| container attribute: `#[nserde(skip)]` (implies `default`)| yes    | no    | yes    | no    |
+| container attribute: `#[nserde(serialize_none_as_null)]`  | yes    | no    | no     | no    |
+| container attribute: `#[nserde(rename = "")]`             | yes    | yes   | yes    | no    |
+| container attribute: `#[nserde(proxy = "")]`              | yes    | yes   | no     | no    |
+| container attribute: `#[nserde(transparent)]`             | yes    | no    | no     | no    |
 
 ## Crate features:
 
