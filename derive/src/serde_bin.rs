@@ -42,7 +42,7 @@ pub fn derive_ser_bin_struct(struct_: &Struct) -> TokenStream {
 
     for field in &struct_.fields {
         let field_name: &String = field.field_name.as_ref().unwrap();
-        let field_serializer = shared::attrs_serialize_bin_with(&field.attributes);
+        let field_serializer = crate::shared::attrs_serialize_bin_with(&field.attributes);
 
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(
@@ -91,7 +91,7 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct) -> TokenStream {
     let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerBin");
 
     for (n, field) in struct_.fields.iter().enumerate() {
-        let field_serializer = shared::attrs_serialize_bin_with(&field.attributes);
+        let field_serializer = crate::shared::attrs_serialize_bin_with(&field.attributes);
 
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "let proxy: {} = Into::into(&self.{});", proxy, n);

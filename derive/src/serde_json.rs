@@ -47,6 +47,8 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     if struct_.fields.len() >= 1 {
         for (_index, field) in struct_.fields.iter().enumerate() {
+            let serialize_json_with = shared::attrs_serialize_json_with(&field.attributes);
+
             let struct_fieldname = field.field_name.clone().unwrap();
             let json_fieldname =
                 shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
@@ -60,12 +62,16 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                 let proxy_attr = crate::shared::attrs_proxy(&field.attributes);
                 let struct_null_on_none = shared::attrs_serialize_none_as_null(&struct_.attributes);
                 let field_null_on_none = shared::attrs_serialize_none_as_null(&field.attributes);
-                let null_on_none = (field_null_on_none || struct_null_on_none) && proxy_attr.is_none();
-                let field_header = &format!("if first_field_was_serialized {{
+                let null_on_none =
+                    (field_null_on_none || struct_null_on_none) && proxy_attr.is_none();
+                let field_header = &format!(
+                    "if first_field_was_serialized {{
                                                  s.conl();
                                              }};
                                              first_field_was_serialized = true;
-                                             s.field(d+1, \"{}\");", json_fieldname);
+                                             s.field(d+1, \"{}\");",
+                    json_fieldname
+                );
                 l!(
                     s,
                     "{}
@@ -92,9 +98,13 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                     }};
                     first_field_was_serialized = true;
                     s.field(d+1,\"{}\");
-                    {}.ser_json(d+1, s);",
+                    {}",
                     json_fieldname,
-                    proxied_field
+                    if let Some(custom_serializer) = serialize_json_with {
+                        format!("{}(&{}, d+1, s);", custom_serializer, proxied_field)
+                    } else {
+                        format!("{}.ser_json(d+1, s);", proxied_field)
+                    }
                 );
             }
         }
@@ -126,6 +136,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut json_field_names = Vec::new();
+    // Vec of (json_field_name, local_var_name, custom_initializer)
     let mut matches = Vec::new();
     let mut unwraps = Vec::new();
 
@@ -136,6 +147,8 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         let localvar = format!("_{}", struct_fieldname);
         let field_attr_default = shared::attrs_default(&field.attributes);
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
+        let deserialize_json_with = shared::attrs_deserialize_json_with(&field.attributes);
+
         let default_val = if let Some(v) = field_attr_default {
             if let Some(mut val) = v {
                 if field.ty.base() == "String"
@@ -198,7 +211,11 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
                     localvar, proxified_t, struct_fieldname
                 ));
             }
-            matches.push((json_fieldname.clone(), localvar.clone()));
+            matches.push((
+                json_fieldname.clone(),
+                localvar.clone(),
+                deserialize_json_with,
+            ));
             local_vars.push(localvar);
         } else {
             unwraps.push(default_val.unwrap_or_else(|| String::from("Default::default()")));
@@ -217,12 +234,16 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
 
     if json_field_names.len() != 0 {
         l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
-        for (json_field_name, local_var) in matches.iter() {
+        for (json_field_name, local_var, deserialize_with) in matches.iter() {
             l!(
                 r,
-                "\"{}\" => {{s.next_colon(i) ?;{} = Some(DeJson::de_json(s, i) ?)}},",
+                "\"{}\" => {{s.next_colon(i) ?;{} = Some({} ?)}},",
                 json_field_name,
-                local_var
+                local_var,
+                deserialize_with
+                    .as_ref()
+                    .map(|deserializer_name| format!("{}(s, i)", deserializer_name))
+                    .unwrap_or_else(|| "DeJson::de_json(s, i)".to_string())
             );
         }
         // TODO: maybe introduce "exhaustive" attribute?
@@ -591,8 +612,14 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
-    for _ in &struct_.fields {
-        l!(body, "{ let r = DeJson::de_json(s, i)?;");
+    for field in &struct_.fields {
+        let deserialize_json_with = shared::attrs_deserialize_json_with(&field.attributes);
+        if let Some(deserialize_json_with) = deserialize_json_with {
+            l!(body, "{{ let r = {}(s, i)?;", deserialize_json_with);
+        } else {
+            l!(body, "{ let r = DeJson::de_json(s, i)?;");
+        }
+
         if struct_.fields.len() != 1 {
             l!(body, "  s.eat_comma_block(i)?;");
         }
