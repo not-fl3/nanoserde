@@ -200,23 +200,34 @@ pub fn derive_de_ron_named(
                 ));
             }
         } else {
-            unwraps.push(default_val.unwrap_or_else(|| String::from("Default::default()")));
+            unwraps.push(format!(
+                "{{ {} }}",
+                default_val
+                    .as_ref()
+                    .map(|x| x.as_str())
+                    .unwrap_or_else(|| "Default::default()")
+            ));
         }
 
         struct_field_names.push(struct_fieldname);
         ron_field_names.push(ron_fieldname);
-        local_vars.push(localvar);
+        local_vars.push((localvar, field.ty.full()));
     }
 
     let mut local_lets = String::new();
 
-    for local in &local_vars {
-        l!(local_lets, "let mut {} = None;", local)
+    for (local, local_type) in &local_vars {
+        l!(
+            local_lets,
+            "let mut {}: Option<{}> = None;",
+            local,
+            local_type
+        )
     }
 
     let match_names = if ron_field_names.len() != 0 {
         let mut inner = String::new();
-        for (ron_field_name, local_var) in ron_field_names.iter().zip(local_vars.iter()) {
+        for (ron_field_name, (local_var, _)) in ron_field_names.iter().zip(local_vars.iter()) {
             l!(
                 inner,
                 "\"{}\" => {{
