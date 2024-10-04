@@ -62,6 +62,50 @@ pub fn attrs_default_with(attributes: &[crate::parse::Attribute]) -> Option<Stri
     })
 }
 
+#[cfg(any(feature = "json"))]
+pub fn attrs_deserialize_json_with(attributes: &[crate::parse::Attribute]) -> Option<String> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "deserialize_json_with" {
+            Some(attr.tokens[1].clone())
+        } else {
+            None
+        }
+    })
+}
+
+#[cfg(any(feature = "json"))]
+pub fn attrs_serialize_json_with(attributes: &[crate::parse::Attribute]) -> Option<String> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "serialize_json_with" {
+            Some(attr.tokens[1].clone())
+        } else {
+            None
+        }
+    })
+}
+
+#[cfg(any(feature = "binary"))]
+pub fn attrs_deserialize_bin_with(attributes: &[crate::parse::Attribute]) -> Option<String> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "deserialize_bin_with" {
+            Some(attr.tokens[1].clone())
+        } else {
+            None
+        }
+    })
+}
+
+#[cfg(any(feature = "binary"))]
+pub fn attrs_serialize_bin_with(attributes: &[crate::parse::Attribute]) -> Option<String> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "serialize_bin_with" {
+            Some(attr.tokens[1].clone())
+        } else {
+            None
+        }
+    })
+}
+
 #[cfg(feature = "json")]
 pub fn attrs_transparent(attributes: &[crate::parse::Attribute]) -> bool {
     attributes
