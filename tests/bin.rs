@@ -150,15 +150,18 @@ fn field_custom_serialize() {
     }
 
     fn custom_deserializer(offset: &mut usize, input: &[u8]) -> Result<i32, DeBinErr> {
-        let header = input[*offset..*offset + 4].as_ref();
-        let content = [
-            input[*offset + 4],
-            input[*offset + 5],
-            input[*offset + 6],
-            input[*offset + 7],
-        ];
-        let footer = input[*offset + 8..*offset + 12].as_ref();
+        if input.len() < *offset + 12 {
+            // bounds check
+            return Err(DeBinErr {
+                o: *offset,
+                l: 0,
+                s: 0,
+            });
+        }
 
+        // Check that the custom header and footer are present and match the expected values
+        let header = input[*offset..*offset + 4].as_ref();
+        let footer = input[*offset + 8..*offset + 12].as_ref();
         if header.iter().any(|&x| x != 99) || footer.iter().any(|&x| x != 44) {
             return Err(DeBinErr {
                 o: *offset,
@@ -168,6 +171,12 @@ fn field_custom_serialize() {
         }
 
         *offset += 12;
+        let content = [
+            input[*offset + 4],
+            input[*offset + 5],
+            input[*offset + 6],
+            input[*offset + 7],
+        ];
         Ok(i32::from_le_bytes(content))
     }
 
@@ -188,7 +197,7 @@ fn field_custom_serialize() {
         vec![
             99, 99, 99, 99, // x - custom header
             1, 0, 0, 0, // x - content of field
-            44, 44, 44, 44, // x- custom footer
+            44, 44, 44, 44, // x - custom footer
             2, 0, 0, 0 // y - default serialization
         ]
     );
