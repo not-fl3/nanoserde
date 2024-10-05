@@ -909,6 +909,42 @@ fn field_proxy() {
 }
 
 #[test]
+fn object_proxy() {
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    #[nserde(proxy = "Serializable")]
+    pub struct NonSerializable {
+        foo: i32,
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Serializable {
+        x: i32,
+    }
+
+    impl From<&NonSerializable> for Serializable {
+        fn from(non_serializable: &NonSerializable) -> Serializable {
+            Serializable {
+                x: non_serializable.foo,
+            }
+        }
+    }
+    impl From<&Serializable> for NonSerializable {
+        fn from(serializable: &Serializable) -> NonSerializable {
+            NonSerializable {
+                foo: serializable.x,
+            }
+        }
+    }
+
+    let test = NonSerializable { foo: 6 };
+
+    let bytes = SerJson::serialize_json(&test);
+    let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
+
+#[test]
 fn field_option_proxy() {
     #[derive(PartialEq, Clone, Debug)]
     #[repr(u32)]
