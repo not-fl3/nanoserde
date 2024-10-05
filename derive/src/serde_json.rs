@@ -249,8 +249,8 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
         "impl DeJson for {} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(_s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
-                let proxy: {} = DeJson::deserialize_json(i)?;
+            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
+                let proxy: {} = DeJson::de_json(s, i)?;
                 ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
