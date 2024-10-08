@@ -127,6 +127,7 @@ impl Default for DeRonTok {
 
 /// The internal state of a RON deserialization.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct DeRonState {
     pub cur: char,
     pub tok: DeRonTok,
@@ -139,6 +140,7 @@ pub struct DeRonState {
 
 /// The error message when failing to deserialize a RON string.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct DeRonErr {
     pub msg: String,
     pub line: usize,

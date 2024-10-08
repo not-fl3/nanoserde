@@ -135,6 +135,7 @@ pub struct Struct {
     pub named: bool,
     pub fields: Vec<Field>,
     pub attributes: Vec<Attribute>,
+    #[cfg_attr(feature = "ron", allow(unused))]
     pub generics: Vec<Generic>,
 }
 
@@ -143,6 +144,7 @@ pub struct Enum {
     pub name: String,
     pub variants: Vec<Field>,
     pub attributes: Vec<Attribute>,
+    #[cfg_attr(feature = "ron", allow(unused))]
     pub generics: Vec<Generic>,
 }
 
