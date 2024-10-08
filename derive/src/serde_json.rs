@@ -60,12 +60,16 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
                 let proxy_attr = crate::shared::attrs_proxy(&field.attributes);
                 let struct_null_on_none = shared::attrs_serialize_none_as_null(&struct_.attributes);
                 let field_null_on_none = shared::attrs_serialize_none_as_null(&field.attributes);
-                let null_on_none = (field_null_on_none || struct_null_on_none) && proxy_attr.is_none();
-                let field_header = &format!("if first_field_was_serialized {{
+                let null_on_none =
+                    (field_null_on_none || struct_null_on_none) && proxy_attr.is_none();
+                let field_header = &format!(
+                    "if first_field_was_serialized {{
                                                  s.conl();
                                              }};
                                              first_field_was_serialized = true;
-                                             s.field(d+1, \"{}\");", json_fieldname);
+                                             s.field(d+1, \"{}\");",
+                    json_fieldname
+                );
                 l!(
                     s,
                     "{}

@@ -3,6 +3,7 @@
 extern crate alloc;
 extern crate proc_macro;
 
+#[cfg(any(feature = "json", feature = "ron", feature = "binary"))]
 #[macro_use]
 mod shared;
 
@@ -21,6 +22,7 @@ mod serde_json;
 #[cfg(feature = "json")]
 use crate::serde_json::*;
 
+#[cfg(any(feature = "json", feature = "ron", feature = "binary"))]
 mod parse;
 
 #[cfg(feature = "binary")]

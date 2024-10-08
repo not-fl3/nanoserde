@@ -325,7 +325,7 @@ pub fn derive_de_bin_enum(enum_: &Enum) -> TokenStream {
                 let id: u16 = DeBin::de_bin(o,d)?;
                 Ok(match id {{
                     {}
-                    _ => return ::core::result::Result::Err(nanoserde::DeBinErr{{o:*o, l:0, s:d.len()}})
+                    _ => return ::core::result::Result::Err(nanoserde::DeBinErr::new(*o, 0, d.len()))
                 }})
             }}
         }}", generic_w_bounds,enum_.name,generic_no_bounds, r)

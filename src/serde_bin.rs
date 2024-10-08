@@ -61,10 +61,17 @@ pub trait DeBin: Sized {
 
 /// The error message when failing to deserialize from raw bytes.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct DeBinErr {
     pub o: usize,
     pub l: usize,
     pub s: usize,
+}
+
+impl DeBinErr {
+    pub fn new(o: usize, l: usize, s: usize) -> Self {
+        Self { o, l, s }
+    }
 }
 
 impl core::fmt::Debug for DeBinErr {

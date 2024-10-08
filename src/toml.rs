@@ -55,6 +55,7 @@ macro_rules! ident_term_chars {
 /// assert_eq!(parsed["Section.value"], Toml::Num(1.));
 /// ```
 #[derive(Default)]
+#[non_exhaustive]
 pub struct TomlParser {
     cur: char,
     line: usize,
@@ -63,6 +64,7 @@ pub struct TomlParser {
 
 /// A TOML parsed token.
 #[derive(PartialEq, Debug)]
+#[non_exhaustive]
 pub enum TomlTok {
     Ident(String),
     Str(String),
@@ -197,6 +199,7 @@ impl Toml {
 
 /// The error message when failing to parse a TOML string.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct TomlErr {
     pub msg: String,
     pub line: usize,

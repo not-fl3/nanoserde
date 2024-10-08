@@ -1,6 +1,6 @@
 use core::str::Chars;
 
-// remove this after 1.81 is live
+// remove this after 1.81 is msrv
 #[cfg(not(feature = "std"))]
 use core::error::Error;
 #[cfg(feature = "std")]
@@ -13,11 +13,16 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 /// The internal state of a JSON serialization.
+#[non_exhaustive]
 pub struct SerJsonState {
     pub out: String,
 }
 
 impl SerJsonState {
+    pub fn new(out: String) -> Self {
+        Self { out }
+    }
+
     pub fn indent(&mut self, _d: usize) {
         //for _ in 0..d {
         //    self.out.push_str("    ");
@@ -67,7 +72,7 @@ pub trait SerJson {
     ///
     /// ```rust
     /// # use nanoserde::*;
-    /// let mut s = SerJsonState { out: String::new() };
+    /// let mut s = SerJsonState::new(String::new());
     /// 42u32.ser_json(0, &mut s);
     /// assert_eq!(s.out, "42");
     /// ```
@@ -103,6 +108,7 @@ pub trait DeJson: Sized {
 
 /// A JSON parsed token.
 #[derive(PartialEq, Debug)]
+#[non_exhaustive]
 pub enum DeJsonTok {
     Str,
     Char(char),
@@ -130,6 +136,7 @@ impl Default for DeJsonTok {
 
 /// The internal state of a JSON deserialization.
 #[derive(Default)]
+#[non_exhaustive]
 pub struct DeJsonState {
     pub cur: char,
     pub tok: DeJsonTok,
@@ -142,6 +149,7 @@ pub struct DeJsonState {
 
 /// The error message when failing to deserialize a JSON string.
 #[derive(Clone)]
+#[non_exhaustive]
 pub struct DeJsonErr {
     pub msg: String,
     pub line: usize,
