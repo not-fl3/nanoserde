@@ -3,30 +3,19 @@ name = "nanoserde"
 version = "0.2.0-beta.2"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
-description = """
-Fork of makepad-tinyserde without any external dependencies.
-Supports json, binary and ron.
-
-```rust
-#[derive(Clone, Debug, Default, DeJson, SerJson)]
-pub struct Property {
-    pub name: String,
-    #[nserde(default)]
-    pub value: String,
-    #[nserde(rename = "type")]
-    pub ty: String,
-}
-```
-"""
+description = """Serialization library with zero dependencies.
+Supports Binary, JSON, RON and TOML."""
 edition = "2018"
 repository = "https://github.com/not-fl3/nanoserde"
 
 [features]
-default = ["json", "binary", "ron", "toml", "std"]
-json = ["dep:nanoserde-derive", "nanoserde-derive/json"]
+default = ["binary", "json", "ron", "toml", "std"]
+
 binary = ["dep:nanoserde-derive", "nanoserde-derive/binary"]
+json = ["dep:nanoserde-derive", "nanoserde-derive/json"]
 ron = ["dep:nanoserde-derive", "nanoserde-derive/ron"]
 toml = []
+
 std = []
 
 [dependencies]
