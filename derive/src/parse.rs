@@ -82,6 +82,7 @@ pub enum Category {
     },
     Object {
         is_dyn: bool,
+        #[allow(clippy::vec_box)]
         trait_names: Vec<Box<Type>>,
     },
     Associated {
@@ -108,6 +109,7 @@ pub struct Type {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum Generic {
     ConstGeneric {
         name: String,
@@ -251,7 +253,7 @@ impl Generic {
                     if bounds.is_empty() {
                         bounds = extra_bounds.join(" + ")
                     } else {
-                        bounds = vec![bounds, extra_bounds.join(" + ")].join(" + ")
+                        bounds = [bounds, extra_bounds.join(" + ")].join(" + ")
                     }
                 }
                 bounds
@@ -429,7 +431,7 @@ impl Type {
             },
             None => String::default(),
         };
-        base.push_str(&self.ident.path(&self, false));
+        base.push_str(&self.ident.path(self, false));
         base
     }
 
@@ -441,12 +443,12 @@ impl Type {
             },
             None => String::default(),
         };
-        base.push_str(&self.ident.path(&self, false));
+        base.push_str(&self.ident.path(self, false));
         if let (Some(wrapped), Category::Named { .. }) = (&self.wraps, &self.ident) {
             base.push('<');
             base.push_str(
                 wrapped
-                    .into_iter()
+                    .iter()
                     .map(|x| x.full())
                     .collect::<Vec<_>>()
                     .join(",")
@@ -480,8 +482,7 @@ pub fn next_visibility_modifier(
             return Some("pub".to_string());
         }
     }
-
-    return None;
+    None
 }
 
 pub fn next_punct(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Option<String> {
@@ -490,8 +491,7 @@ pub fn next_punct(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Opt
         source.next();
         return Some(punct);
     }
-
-    return None;
+    None
 }
 
 pub fn next_exact_punct(
@@ -505,8 +505,7 @@ pub fn next_exact_punct(
             return Some(punct);
         }
     }
-
-    return None;
+    None
 }
 
 pub fn next_literal(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Option<String> {
@@ -521,8 +520,7 @@ pub fn next_literal(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> O
         source.next();
         return Some(literal);
     }
-
-    return None;
+    None
 }
 
 pub fn next_eof<T: Iterator>(source: &mut Peekable<T>) -> Option<()> {
@@ -573,7 +571,7 @@ pub fn next_lifetime<T: Iterator<Item = TokenTree>>(source: &mut Peekable<T>) ->
     })
 }
 
-fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>) -> Option<Type> {
+fn next_type<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) -> Option<Type> {
     fn as_associated_definition<T: Iterator<Item = TokenTree> + Clone>(
         source: &mut Peekable<T>,
     ) -> Option<Type> {
@@ -599,11 +597,11 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         None
     }
     pub fn next_array<T: Iterator<Item = TokenTree> + Clone>(
-        mut source: &mut Peekable<T>,
+        source: &mut Peekable<T>,
     ) -> Option<Type> {
-        let next = next_type(&mut source).expect("Must be type after array declaration");
+        let next = next_type(source).expect("Must be type after array declaration");
 
-        let Some(_) = next_exact_punct(&mut source, ";") else {
+        let Some(_) = next_exact_punct(source, ";") else {
             // This is an unbounded array, legal at end for unsized types
             return Some(Type {
                 ident: Category::Array {
@@ -656,7 +654,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         let mut path = "(".to_owned();
         while let Some(next_ty) = next_type(source) {
             wraps.push(next_ty.clone());
-            path.push_str(&format!("{}", next_ty.full()));
+            path.push_str(&next_ty.full().to_string());
             if next_exact_punct(source, ",").is_none() {
                 break;
             }
@@ -673,7 +671,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
             as_other: None,
         };
 
-        return Some(tuple_type);
+        Some(tuple_type)
     }
 
     pub fn next_function_like<T: Iterator<Item = TokenTree> + Clone>(
@@ -713,14 +711,14 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                 let mut base = ret
                     .iter()
                     .filter_map(|x| x.wraps.as_ref())
-                    .cloned()
                     .flatten()
+                    .cloned()
                     .collect::<Vec<Type>>();
                 base.extend(
                     args.iter()
                         .filter_map(|x| x.wraps.as_ref())
-                        .cloned()
-                        .flatten(),
+                        .flatten()
+                        .cloned(),
                 );
                 Some(base)
             } else {
@@ -738,7 +736,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
             }
         }
 
-        let Some(TokenTree::Ident(ident)) = source.peek().clone() else {
+        let Some(TokenTree::Ident(ident)) = source.peek() else {
             return None;
         };
         let true = matches!(ident.to_string().as_str(), "fn" | "FnOnce" | "FnMut" | "Fn") else {
@@ -764,8 +762,8 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                         let mut base = ret
                             .iter()
                             .filter_map(|x| x.wraps.as_ref())
-                            .cloned()
                             .flatten()
+                            .cloned()
                             .collect::<Vec<Type>>();
                         base.extend_from_slice(args.wraps.clone().unwrap_or_default().as_ref());
                         Some(base)
@@ -804,7 +802,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                 let mut ident_types = vec![Box::new(
                     next_type(source).expect("impl must be followed by trait"),
                 )];
-                while let Some(_) = next_exact_punct(source, "+") {
+                while next_exact_punct(source, "+").is_some() {
                     ident_types.push(Box::new(
                         next_type(source).expect("impl must be followed by trait"),
                     ))
@@ -826,7 +824,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                 let mut ident_types = vec![Box::new(
                     next_type(source).expect("impl must be followed by trait"),
                 )];
-                while let Some(_) = next_exact_punct(source, "+") {
+                while next_exact_punct(source, "+").is_some() {
                     ident_types.push(Box::new(
                         next_type(source).expect("impl must be followed by trait"),
                     ))
@@ -851,11 +849,11 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
     //
     //
 
-    if let Some(_) = next_exact_punct(&mut source, ",") {
+    if next_exact_punct(source, ",").is_some() {
         return None;
     };
 
-    if let Some(_) = next_exact_punct(&mut source, "!") {
+    if next_exact_punct(source, "!").is_some() {
         return Some(Type {
             ident: Category::Never,
             wraps: None,
@@ -875,31 +873,20 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         });
     };
 
-    let ref_type = match next_exact_punct(&mut source, "&") {
-        Some(_) => Some(next_lifetime(source)),
-        None => None,
-    };
+    let ref_type = next_exact_punct(source, "&").map(|_| next_lifetime(source));
 
     if let Some(group) = next_group(&mut source.clone()) {
         match group.delimiter() {
             Delimiter::Bracket => {
-                let mut group_stream = next_group(&mut source)
-                    .unwrap()
-                    .stream()
-                    .into_iter()
-                    .peekable();
+                let mut group_stream = next_group(source).unwrap().stream().into_iter().peekable();
                 return next_array(&mut group_stream).map(|x| x.set_ref_type(ref_type));
             }
             Delimiter::Parenthesis => {
-                let mut group_stream = next_group(&mut source)
-                    .unwrap()
-                    .stream()
-                    .into_iter()
-                    .peekable();
+                let mut group_stream = next_group(source).unwrap().stream().into_iter().peekable();
                 return next_tuple(&mut group_stream).map(|x| x.set_ref_type(ref_type));
             }
             Delimiter::Brace => {
-                let anonymous_struct = next_struct(&mut source);
+                let anonymous_struct = next_struct(source);
                 let wraps = Some(
                     anonymous_struct
                         .fields
@@ -937,7 +924,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
     }
 
     // read a path like a::b::c::d
-    let mut ty = next_ident(&mut source).unwrap_or_default();
+    let mut ty = next_ident(source).unwrap_or_default();
     while let Some(TokenTree::Punct(_)) = source.peek() {
         let mut tmp = source.clone();
         let (Some(_), Some(_)) = (
@@ -949,11 +936,11 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         drop(tmp);
         let _ = (source.next(), source.next()); //skip the colons
 
-        let next_ident = next_ident(&mut source).expect("Expecting next path part after ::");
+        let next_ident = next_ident(source).expect("Expecting next path part after ::");
         ty.push_str(&format!("::{}", next_ident));
     }
 
-    let angel_bracket = next_exact_punct(&mut source, "<");
+    let angel_bracket = next_exact_punct(source, "<");
     if angel_bracket.is_some() {
         if ty.is_empty() {
             let ty = next_type(source).expect("Need a base type before 'as'");
@@ -967,10 +954,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
             assert_eq!(Some(">".to_owned()), next_exact_punct(source, ">"));
             assert_eq!(
                 (Some(":".to_owned()), Some(":".to_owned())),
-                (
-                    next_exact_punct(&mut source, ":"),
-                    next_exact_punct(&mut source, ":")
-                )
+                (next_exact_punct(source, ":"), next_exact_punct(source, ":"))
             );
             let associated =
                 next_type(source).expect("Must be an associated type name after the trait");
@@ -987,14 +971,14 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
                     associated: Box::new(associated),
                 },
                 wraps: ty.wraps,
-                ref_type: ref_type,
+                ref_type,
                 as_other: None,
             });
         }
 
         let mut generics =
             vec![next_type(source).expect("Expecting at least one generic argument")];
-        while let Some(_comma) = next_exact_punct(&mut source, ",") {
+        while let Some(_comma) = next_exact_punct(source, ",") {
             generics.push(next_type(source).expect("Expecting generic argument after comma"));
         }
 
@@ -1002,7 +986,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
 
         if let Some(assoc_def) = as_associated_definition(source) {
             let _closing_bracket =
-                next_exact_punct(&mut source, ">").expect("Expecting closing generic bracket");
+                next_exact_punct(source, ">").expect("Expecting closing generic bracket");
             return Some(Type {
                 ident: Category::AssociatedBound {
                     associated: ty,
@@ -1015,7 +999,7 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         }
 
         let _closing_bracket =
-            next_exact_punct(&mut source, ">").expect("Expecting closing generic bracket");
+            next_exact_punct(source, ">").expect("Expecting closing generic bracket");
 
         Some(Type {
             ident: Category::Named { path: ty },
@@ -1044,15 +1028,15 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
 }
 
 fn next_attribute<T: Iterator<Item = TokenTree>>(
-    mut source: &mut Peekable<T>,
+    source: &mut Peekable<T>,
 ) -> Option<Option<Vec<Attribute>>> {
     // all attributes, even doc-comments, starts with "#"
-    let next_attr_punct = next_punct(&mut source);
+    let next_attr_punct = next_punct(source);
     let Some("#") = next_attr_punct.as_deref() else {
         return None;
     };
 
-    let mut attr_group = next_group(&mut source)
+    let mut attr_group = next_group(source)
         .expect("Expecting attribute body")
         .stream()
         .into_iter()
@@ -1125,7 +1109,7 @@ fn next_attribute<T: Iterator<Item = TokenTree>>(
         }
     }
 
-    return Some(Some(attrs));
+    Some(Some(attrs))
 }
 
 fn next_attributes_list(source: &mut Peekable<impl Iterator<Item = TokenTree>>) -> Vec<Attribute> {
@@ -1141,30 +1125,30 @@ fn next_attributes_list(source: &mut Peekable<impl Iterator<Item = TokenTree>>) 
 }
 
 fn next_fields<T: Iterator<Item = TokenTree> + Clone>(
-    mut body: &mut Peekable<T>,
+    body: &mut Peekable<T>,
     named: bool,
 ) -> Vec<Field> {
     let mut fields = vec![];
 
     loop {
-        if next_eof(&mut body).is_some() {
+        if next_eof(body).is_some() {
             break;
         }
 
-        let attributes = next_attributes_list(&mut body);
-        let _visibility = next_visibility_modifier(&mut body);
+        let attributes = next_attributes_list(body);
+        let _visibility = next_visibility_modifier(body);
 
         let field_name = if named {
-            let field_name = next_ident(&mut body).expect("Field name expected");
+            let field_name = next_ident(body).expect("Field name expected");
 
-            let _ = next_exact_punct(&mut body, ":").expect("Delimeter after field name expected");
+            let _ = next_exact_punct(body, ":").expect("Delimeter after field name expected");
             Some(field_name)
         } else {
             None
         };
 
-        let ty = next_type(&mut body).expect("Expected field type");
-        let _punct = next_punct(&mut body);
+        let ty = next_type(body).expect("Expected field type");
+        let _punct = next_punct(body);
 
         fields.push(Field {
             attributes,
@@ -1176,14 +1160,14 @@ fn next_fields<T: Iterator<Item = TokenTree> + Clone>(
     fields
 }
 
-fn next_struct<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>) -> Struct {
-    let struct_name = next_ident(&mut source);
+fn next_struct<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) -> Struct {
+    let struct_name = next_ident(source);
     let generics = get_all_bounds(source);
-    let group = next_group(&mut source);
+    let group = next_group(source);
     // unit struct
     if group.is_none() {
         // skip ; at the end of struct like this: "struct Foo;"
-        let _ = next_punct(&mut source);
+        let _ = next_punct(source);
 
         return Struct {
             name: struct_name,
@@ -1206,8 +1190,8 @@ fn next_struct<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<
     let mut body = group.stream().into_iter().peekable();
     let fields = next_fields(&mut body, named);
 
-    if named == false {
-        next_exact_punct(&mut source, ";").expect("Expected ; on the end of tuple struct");
+    if !named {
+        next_exact_punct(source, ";").expect("Expected ; on the end of tuple struct");
     }
 
     Struct {
@@ -1219,10 +1203,10 @@ fn next_struct<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<
     }
 }
 
-fn next_enum<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>) -> Enum {
-    let enum_name = next_ident(&mut source).expect("Unnamed enums are not supported");
+fn next_enum<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) -> Enum {
+    let enum_name = next_ident(source).expect("Unnamed enums are not supported");
     let generic_types = get_all_bounds(source);
-    let group = next_group(&mut source);
+    let group = next_group(source);
     // unit enum
     if group.is_none() {
         return Enum {
@@ -1270,7 +1254,7 @@ fn next_enum<T: Iterator<Item = TokenTree> + Clone>(mut source: &mut Peekable<T>
         {
             variants.push(Field {
                 field_name: Some(variant_name),
-                ty: ty,
+                ty,
                 attributes,
                 vis: Visibility::Public,
             });
@@ -1301,7 +1285,7 @@ fn next_const_generic<T: Iterator<Item = TokenTree> + Clone>(
         "Colon should follow const generic typename"
     );
     let cg_type = next_type(source).expect("Missing const generic type after 'colon'");
-    if let Some(_) = next_exact_punct(source, "=") {
+    if next_exact_punct(source, "=").is_some() {
         if let Ok(default_value) = source
             .peek()
             .expect("default should follow equal for const generic")
@@ -1323,9 +1307,7 @@ fn next_const_generic<T: Iterator<Item = TokenTree> + Clone>(
 fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
     source: &mut Peekable<T>,
 ) -> Option<Generic> {
-    let Some(tok) = source.peek() else {
-        return None;
-    };
+    let tok = source.peek()?;
     match tok {
         TokenTree::Group(g) => {
             if matches!(g.delimiter(), Delimiter::Brace) {
@@ -1333,7 +1315,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
             }
             let mut bounds = vec![];
             let _type = next_type(source).expect("must be a type in group");
-            if let Some(_) = next_exact_punct(source, ":") {
+            if next_exact_punct(source, ":").is_some() {
                 while let Some(bound) = next_type(source) {
                     bounds.push(bound);
                     if next_exact_punct(source, "+").is_none() {
@@ -1362,7 +1344,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
 
             let mut bounds = vec![];
 
-            if let Some(_) = next_exact_punct(source, ":") {
+            if next_exact_punct(source, ":").is_some() {
                 loop {
                     if let Some(ty) = next_type(source) {
                         bounds.push(ty);
@@ -1373,7 +1355,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
                 }
             }
 
-            if let Some(_) = next_exact_punct(source, "=") {
+            if next_exact_punct(source, "=").is_some() {
                 default = Some(next_type(source).expect("Must be a default after eq sign"));
             }
             Some(Generic::Generic {
@@ -1387,7 +1369,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
             '\'' => {
                 let ty = next_lifetime(source).expect("must be lifetime after \' mark");
                 let mut bounds = vec![];
-                if let Some(_) = next_exact_punct(source, ":") {
+                if next_exact_punct(source, ":").is_some() {
                     while let Some(bound) = next_lifetime(source) {
                         bounds.push(bound);
                         if next_exact_punct(source, "+").is_none() {
