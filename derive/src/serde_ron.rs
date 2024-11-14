@@ -1,6 +1,6 @@
 use alloc::format;
 use alloc::string::{String, ToString};
-use alloc::{vec, vec::Vec};
+use alloc::vec::Vec;
 
 use crate::parse::{Attribute, Category, Enum, Field, Struct, Type};
 
@@ -119,11 +119,7 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     .unwrap()
 }
 
-pub fn derive_de_ron_named(
-    name: &String,
-    fields: &Vec<Field>,
-    attributes: &Vec<Attribute>,
-) -> String {
+pub fn derive_de_ron_named(name: &String, fields: &Vec<Field>, attributes: &[Attribute]) -> String {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut ron_field_names = Vec::new();
@@ -145,12 +141,10 @@ pub fn derive_de_ron_named(
                     val = format!("Some({})", val);
                 }
                 Some(val)
+            } else if field.ty.base() != "Option" {
+                Some(String::from("Default::default()"))
             } else {
-                if field.ty.base() != "Option" {
-                    Some(String::from("Default::default()"))
-                } else {
-                    Some(String::from("None"))
-                }
+                Some(String::from("None"))
             }
         } else if let Some(mut v) = field_attr_default_with {
             v.push_str("()");
@@ -162,7 +156,7 @@ pub fn derive_de_ron_named(
             shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
         let skip = crate::shared::attrs_skip(&field.attributes);
 
-        if skip == false {
+        if !skip {
             if field.ty.base() == "Option" {
                 unwraps.push(format!(
                     "{{
@@ -202,10 +196,7 @@ pub fn derive_de_ron_named(
         } else {
             unwraps.push(format!(
                 "{{ {} }}",
-                default_val
-                    .as_ref()
-                    .map(|x| x.as_str())
-                    .unwrap_or_else(|| "Default::default()")
+                default_val.as_deref().unwrap_or("Default::default()")
             ));
         }
 
@@ -225,7 +216,7 @@ pub fn derive_de_ron_named(
         )
     }
 
-    let match_names = if ron_field_names.len() != 0 {
+    let match_names = if !ron_field_names.is_empty() {
         let mut inner = String::new();
         for (ron_field_name, (local_var, _)) in ron_field_names.iter().zip(local_vars.iter()) {
             l!(
@@ -274,7 +265,7 @@ pub fn derive_de_ron_named(
 
 pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_ron_named(
-        &struct_
+        struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
@@ -337,7 +328,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
             } => {
                 let mut names = Vec::new();
                 let mut inner = String::new();
-                for (_, field) in contents.fields.iter().enumerate() {
+                for field in contents.fields.iter() {
                     let name = field.field_name.as_ref().unwrap();
                     names.push(name.clone());
                     if field.ty.base() == "Option" {
@@ -445,7 +436,7 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                 ..
             } => {
                 let name = format!("{}::{}", enum_.name, ident);
-                let inner = derive_de_ron_named(&name, &contents.fields, &vec![]);
+                let inner = derive_de_ron_named(&name, &contents.fields, &[]);
                 l!(body, "\"{}\" => {}", ident, inner);
             }
             Type {

@@ -35,7 +35,7 @@ fn ser_proxy_guard(fieldname: &str, field: &Field) -> String {
             format!("{{let proxy: {proxy} = Into::into(&{fieldname});proxy}}",)
         }
     } else {
-        format!("{fieldname}")
+        fieldname.to_string()
     }
 }
 
@@ -45,8 +45,8 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     l!(s, "let mut first_field_was_serialized = false;");
 
-    if struct_.fields.len() >= 1 {
-        for (_index, field) in struct_.fields.iter().enumerate() {
+    if !struct_.fields.is_empty() {
+        for field in struct_.fields.iter() {
             let struct_fieldname = field.field_name.clone().unwrap();
             let json_fieldname =
                 shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
@@ -153,12 +153,10 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
                     val = format!("Some({})", val);
                 }
                 Some(val)
+            } else if field.ty.base() != "Option" {
+                Some(String::from("Default::default()"))
             } else {
-                if field.ty.base() != "Option" {
-                    Some(String::from("Default::default()"))
-                } else {
-                    Some(String::from("None"))
-                }
+                Some(String::from("None"))
             }
         } else if let Some(mut v) = field_attr_default_with {
             v.push_str("()");
@@ -178,10 +176,10 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
                 format!("From::<&{proxy}>::from(&t)")
             }
         } else {
-            format!("t")
+            "t".to_string()
         };
 
-        if skip == false {
+        if !skip {
             if field.ty.base() == "Option" {
                 unwraps.push(format!(
                     "{{if let Some(t) = {} {{ {} }} else {{ {} }} }}",
@@ -219,7 +217,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     l!(r, "s.curly_open(i) ?;");
     l!(r, "while let Some(_) = s.next_str() {");
 
-    if json_field_names.len() != 0 {
+    if !json_field_names.is_empty() {
         l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
         for (json_field_name, local_var) in matches.iter() {
             l!(
@@ -266,7 +264,7 @@ pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     let body = derive_de_json_named(
-        &struct_
+        struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
@@ -337,23 +335,21 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
                                     proxied_field
                                 )
                             }
-                        } else {
-                            if field.ty.base() == "Option" {
-                                l!(
-                                        items,
-                                        "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
-                                        name,
-                                        name,
-                                        proxied_field
-                                    );
-                            } else {
-                                l!(
+                        } else if field.ty.base() == "Option" {
+                            l!(
                                     items,
-                                    "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
+                                    "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
+                                    name,
                                     name,
                                     proxied_field
                                 );
-                            }
+                        } else {
+                            l!(
+                                items,
+                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
+                                name,
+                                proxied_field
+                            );
                         }
                         field_names.push(name.clone());
                     }
@@ -548,7 +544,7 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
     // encode empty struct as {}
-    if struct_.fields.len() == 0 {
+    if struct_.fields.is_empty() {
         l!(body, "s.out.push('}');");
         l!(body, "s.out.push('{');");
     }
@@ -605,8 +601,8 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
 
     // no fields - was encoded as {}
-    let body = if struct_.fields.len() == 0 {
-        format!("s.curly_open(i)?;let r = Self;s.curly_close(i)?;")
+    let body = if struct_.fields.is_empty() {
+        "s.curly_open(i)?;let r = Self;s.curly_close(i)?;".to_string()
     }
     // if it was transparent newtype struct - skip "container"
     // and just deserialize content
