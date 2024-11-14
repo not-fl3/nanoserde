@@ -45,6 +45,10 @@ For more examples take a look at [tests](/tests)
 | field: `Option`                                           | yes    | yes   | yes    | no    |
 | field: `i*`/`f*`/`String`/`T: De*/Ser*`                   | yes    | yes   | yes    | no    |
 | field attribute: `#[nserde(default)]`                     | yes    | no    | yes    | no    |
+| field attribute: `#[nserde(deserialize_json_with = "")]`  | yes    | no    | no     | no    |
+| field attribute: `#[nserde(deserialize_json_with = "")]`  | yes    | no    | no     | no    |
+| field attribute: `#[nserde(deserialize_bin_with = "")]`   | no     | yes   | no     | no    |
+| field attribute: `#[nserde(deserialize_bin_with = "")]`   | no     | yes   | no     | no    |
 | field attribute: `#[nserde(rename = "")]`                 | yes    | yes   | yes    | no    |
 | field attribute: `#[nserde(proxy = "")]`                  | no     | yes   | no     | no    |
 | field attribute: `#[nserde(serialize_none_as_null)]`      | yes    | no    | no     | no    |

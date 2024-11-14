@@ -6,7 +6,7 @@ use std::{array, sync::atomic::AtomicBool};
 
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 
-use nanoserde::{DeBin, SerBin};
+use nanoserde::{DeBin, DeBinErr, SerBin};
 
 #[test]
 fn binary() {
@@ -137,6 +137,72 @@ fn field_ignore_self_bound() {
     let bytes = SerBin::serialize_bin(&test);
     let deser: DeSerializable = DeBin::deserialize_bin(&bytes).unwrap();
     assert_eq!(foo_base, deser.foo);
+}
+
+#[test]
+fn field_custom_serialize() {
+    fn custom_serializer(x: &i32, output: &mut Vec<u8>) {
+        let mut as_bytes = Vec::new();
+        as_bytes.append(&mut [99, 99, 99, 99].to_vec());
+        as_bytes.append(&mut x.to_le_bytes().to_vec());
+        as_bytes.append(&mut [44, 44, 44, 44].to_vec());
+        output.append(&mut as_bytes)
+    }
+
+    fn custom_deserializer(offset: &mut usize, input: &[u8]) -> Result<i32, DeBinErr> {
+        if input.len() < *offset + 12 {
+            // bounds check
+            return Err(DeBinErr {
+                o: *offset,
+                l: 0,
+                s: 0,
+            });
+        }
+
+        // Check that the custom header and footer are present and match the expected values
+        let header = input[*offset..*offset + 4].as_ref();
+        let footer = input[*offset + 8..*offset + 12].as_ref();
+        if header.iter().any(|&x| x != 99) || footer.iter().any(|&x| x != 44) {
+            return Err(DeBinErr {
+                o: *offset,
+                l: 0,
+                s: 0,
+            });
+        }
+
+        *offset += 12;
+        let content = [
+            input[*offset + 4],
+            input[*offset + 5],
+            input[*offset + 6],
+            input[*offset + 7],
+        ];
+        Ok(i32::from_le_bytes(content))
+    }
+
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub struct Test {
+        #[nserde(
+            serialize_bin_with = "custom_serializer",
+            deserialize_bin_with = "custom_deserializer"
+        )]
+        x: i32,
+        y: i32,
+    }
+    let test = Test { x: 1, y: 2 };
+
+    let bytes = SerBin::serialize_bin(&test);
+    assert_eq!(
+        bytes,
+        vec![
+            99, 99, 99, 99, // x - custom header
+            1, 0, 0, 0, // x - content of field
+            44, 44, 44, 44, // x - custom footer
+            2, 0, 0, 0 // y - default serialization
+        ]
+    );
+    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+    assert_eq!(test, test_deserialized);
 }
 
 #[test]
