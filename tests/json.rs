@@ -327,6 +327,53 @@ fn de_field_default() {
 }
 
 #[test]
+fn de_field_deserialize_json_with() {
+    use nanoserde::DeJsonState;
+    fn custom_deserializer(
+        s: &mut DeJsonState,
+        i: &mut std::str::Chars,
+    ) -> Result<String, nanoserde::DeJsonErr> {
+        let c: String = DeJson::de_json(s, i)?;
+        Ok(c + "--custom-deserializer")
+    }
+
+    #[derive(DeJson)]
+    pub struct Test {
+        #[nserde(deserialize_json_with = "custom_deserializer")]
+        a: String,
+    }
+
+    let json = r#"{
+        "a": "input",
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, "input--custom-deserializer");
+}
+
+#[test]
+fn de_field_serialize_json_with() {
+    use nanoserde::SerJsonState;
+    fn custom_serializer(value: &i32, _: usize, s: &mut SerJsonState) {
+        s.out.push_str(&format!("\"{}--custom-serializer\"", value));
+    }
+
+    #[derive(SerJson)]
+    struct Test {
+        #[nserde(serialize_json_with = "custom_serializer")]
+        a: i32,
+        b: i32,
+    }
+
+    let value = Test { a: 1, b: 2 };
+
+    assert_eq!(
+        SerJson::serialize_json(&value),
+        r#"{"a":"1--custom-serializer","b":2}"#
+    );
+}
+
+#[test]
 fn ser_none_as_null() {
     #[derive(SerJson)]
     struct Foo {
