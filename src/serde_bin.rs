@@ -107,7 +107,7 @@ macro_rules! impl_ser_de_bin_for {
                 if *o + l > d.len() {
                     return Err(DeBinErr {
                         o: *o,
-                        l: l,
+                        l,
                         s: d.len(),
                     });
                 }

@@ -106,7 +106,7 @@ pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (Stri
         generic_no_bounds += ", ";
     }
     generic_no_bounds += ">";
-    return (generic_w_bounds, generic_no_bounds);
+    (generic_w_bounds, generic_no_bounds)
 }
 
 #[cfg(any(feature = "binary", feature = "json"))]
@@ -131,5 +131,5 @@ pub(crate) fn enum_bounds_strings(enum_: &Enum, bound_name: &str) -> (String, St
         generic_no_bounds += ", ";
     }
     generic_no_bounds += ">";
-    return (generic_w_bounds, generic_no_bounds);
+    (generic_w_bounds, generic_no_bounds)
 }

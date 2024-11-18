@@ -98,7 +98,7 @@ pub trait DeRon: Sized {
 }
 
 /// A RON parsed token.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 pub enum DeRonTok {
     Ident,
     Str,
@@ -115,14 +115,9 @@ pub enum DeRonTok {
     BlockOpen,
     BlockClose,
     Comma,
+    #[default]
     Bof,
     Eof,
-}
-
-impl Default for DeRonTok {
-    fn default() -> Self {
-        DeRonTok::Bof
-    }
 }
 
 /// The internal state of a RON deserialization.
@@ -480,11 +475,7 @@ impl DeRonState {
                                 self.next(i);
                                 break;
                             }
-                            if self.cur == '*' {
-                                last_star = true
-                            } else {
-                                last_star = false
-                            }
+                            last_star = self.cur == '*';
                             self.next(i);
                         }
                     } else {
@@ -745,15 +736,15 @@ macro_rules! impl_ser_de_ron_float {
     };
 }
 
-impl_ser_de_ron_unsigned!(usize, core::u64::MAX);
-impl_ser_de_ron_unsigned!(u64, core::u64::MAX);
-impl_ser_de_ron_unsigned!(u32, core::u32::MAX);
-impl_ser_de_ron_unsigned!(u16, core::u16::MAX);
-impl_ser_de_ron_unsigned!(u8, core::u8::MAX);
-impl_ser_de_ron_signed!(i64, core::i64::MIN, core::i64::MAX);
-impl_ser_de_ron_signed!(i32, core::i32::MIN, core::i32::MAX);
-impl_ser_de_ron_signed!(i16, core::i16::MIN, core::i16::MAX);
-impl_ser_de_ron_signed!(i8, core::i8::MIN, core::i8::MAX);
+impl_ser_de_ron_unsigned!(usize, u64::MAX);
+impl_ser_de_ron_unsigned!(u64, u64::MAX);
+impl_ser_de_ron_unsigned!(u32, u32::MAX);
+impl_ser_de_ron_unsigned!(u16, u16::MAX);
+impl_ser_de_ron_unsigned!(u8, u8::MAX);
+impl_ser_de_ron_signed!(i64, i64::MIN, i64::MAX);
+impl_ser_de_ron_signed!(i32, i32::MIN, i32::MAX);
+impl_ser_de_ron_signed!(i16, i16::MIN, i16::MAX);
+impl_ser_de_ron_signed!(i8, i8::MIN, i8::MAX);
 impl_ser_de_ron_float!(f64);
 impl_ser_de_ron_float!(f32);
 
@@ -799,7 +790,7 @@ impl DeRon for bool {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<bool, DeRonErr> {
         let val = s.as_bool()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -843,7 +834,7 @@ impl DeRon for String {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<String, DeRonErr> {
         let val = s.as_string()?;
         s.next_tok(i)?;
-        return Ok(val);
+        Ok(val)
     }
 }
 
@@ -887,7 +878,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -925,7 +916,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -962,7 +953,7 @@ where
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -1199,7 +1190,7 @@ where
         for (k, v) in self {
             s.indent(d + 1);
             k.ser_ron(d + 1, s);
-            s.out.push_str(":");
+            s.out.push(':');
             v.ser_ron(d + 1, s);
             s.conl();
         }
@@ -1239,7 +1230,7 @@ where
         for (k, v) in self {
             s.indent(d + 1);
             k.ser_ron(d + 1, s);
-            s.out.push_str(":");
+            s.out.push(':');
             v.ser_ron(d + 1, s);
             s.conl();
         }

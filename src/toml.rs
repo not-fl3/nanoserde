@@ -340,6 +340,7 @@ impl TomlParser {
         Ok(true)
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn to_val(&mut self, tok: TomlTok, i: &mut Chars) -> Result<Toml, TomlErr> {
         match tok {
             TomlTok::BlockOpen => {
@@ -360,12 +361,8 @@ impl TomlParser {
             TomlTok::I64(v) => Ok(Toml::Num(v as f64)),
             TomlTok::F64(v) => Ok(Toml::Num(v)),
             TomlTok::Bool(v) => Ok(Toml::Bool(v)),
-            TomlTok::Nan(v) => Ok(Toml::Num(if v { -core::f64::NAN } else { core::f64::NAN })),
-            TomlTok::Inf(v) => Ok(Toml::Num(if v {
-                -core::f64::INFINITY
-            } else {
-                core::f64::INFINITY
-            })),
+            TomlTok::Nan(v) => Ok(Toml::Num(if v { -f64::NAN } else { f64::NAN })),
+            TomlTok::Inf(v) => Ok(Toml::Num(if v { -f64::INFINITY } else { f64::INFINITY })),
             TomlTok::Date(v) => Ok(Toml::Date(v)),
             _ => Err(self.err_token(tok)),
         }
@@ -474,7 +471,7 @@ impl TomlParser {
                     }
                     let escaped_string = braces == 3;
                     loop {
-                        if self.cur == '"' && escaped_string == false {
+                        if self.cur == '"' && !escaped_string {
                             break;
                         }
                         if self.cur == '"' && escaped_string {
