@@ -439,7 +439,7 @@ where
 
         // waiting for array_assume_init or core::array::map optimizations
         // https://github.com/rust-lang/rust/issues/61956
-        Ok(unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() })
+        Ok(unsafe { (*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() })
     }
 }
 
