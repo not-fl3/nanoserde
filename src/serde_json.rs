@@ -107,7 +107,7 @@ pub trait DeJson: Sized {
 }
 
 /// A JSON parsed token.
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Default)]
 #[non_exhaustive]
 pub enum DeJsonTok {
     Str,
@@ -124,14 +124,9 @@ pub enum DeJsonTok {
     BlockOpen,
     BlockClose,
     Comma,
+    #[default]
     Bof,
     Eof,
-}
-
-impl Default for DeJsonTok {
-    fn default() -> Self {
-        DeJsonTok::Bof
-    }
 }
 
 /// The internal state of a JSON deserialization.
@@ -468,32 +463,32 @@ impl DeJsonState {
             ':' => {
                 self.next(i);
                 self.tok = DeJsonTok::Colon;
-                return Ok(());
+                Ok(())
             }
             ',' => {
                 self.next(i);
                 self.tok = DeJsonTok::Comma;
-                return Ok(());
+                Ok(())
             }
             '[' => {
                 self.next(i);
                 self.tok = DeJsonTok::BlockOpen;
-                return Ok(());
+                Ok(())
             }
             ']' => {
                 self.next(i);
                 self.tok = DeJsonTok::BlockClose;
-                return Ok(());
+                Ok(())
             }
             '{' => {
                 self.next(i);
                 self.tok = DeJsonTok::CurlyOpen;
-                return Ok(());
+                Ok(())
             }
             '}' => {
                 self.next(i);
                 self.tok = DeJsonTok::CurlyClose;
-                return Ok(());
+                Ok(())
             }
             '-' | '+' | '0'..='9' => {
                 self.numbuf.truncate(0);
@@ -535,9 +530,9 @@ impl DeJsonState {
                 if is_float {
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::F64(num);
-                        return Ok(());
+                        Ok(())
                     } else {
-                        return Err(self.err_parse("number"));
+                        Err(self.err_parse("number"))
                     }
                 } else {
                     if is_neg {
@@ -550,9 +545,9 @@ impl DeJsonState {
                     }
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::U64(num);
-                        return Ok(());
+                        Ok(())
                     } else {
-                        return Err(self.err_parse("number"));
+                        Err(self.err_parse("number"))
                     }
                 }
             }
@@ -578,10 +573,10 @@ impl DeJsonState {
                     return Ok(());
                 }
                 self.tok = DeJsonTok::BareIdent;
-                return Err(self.err_token(&format!(
+                Err(self.err_token(&format!(
                     "Got ##{}## needed true, false, null",
                     self.identbuf
-                )));
+                )))
             }
             '"' => {
                 self.strbuf.truncate(0);
@@ -620,11 +615,9 @@ impl DeJsonState {
                 }
                 self.next(i);
                 self.tok = DeJsonTok::Str;
-                return Ok(());
+                Ok(())
             }
-            _ => {
-                return Err(self.err_token("tokenizer"));
-            }
+            _ => Err(self.err_token("tokenizer")),
         }
     }
 
@@ -740,15 +733,15 @@ macro_rules! impl_ser_de_json_float {
     };
 }
 
-impl_ser_de_json_unsigned!(usize, core::u64::MAX);
-impl_ser_de_json_unsigned!(u64, core::u64::MAX);
-impl_ser_de_json_unsigned!(u32, core::u32::MAX);
-impl_ser_de_json_unsigned!(u16, core::u16::MAX);
-impl_ser_de_json_unsigned!(u8, core::u8::MAX);
-impl_ser_de_json_signed!(i64, core::i64::MIN, core::i64::MAX);
-impl_ser_de_json_signed!(i32, core::i32::MIN, core::i32::MAX);
-impl_ser_de_json_signed!(i16, core::i16::MIN, core::i16::MAX);
-impl_ser_de_json_signed!(i8, core::i8::MIN, core::i8::MAX);
+impl_ser_de_json_unsigned!(usize, u64::MAX);
+impl_ser_de_json_unsigned!(u64, u64::MAX);
+impl_ser_de_json_unsigned!(u32, u32::MAX);
+impl_ser_de_json_unsigned!(u16, u16::MAX);
+impl_ser_de_json_unsigned!(u8, u8::MAX);
+impl_ser_de_json_signed!(i64, i64::MIN, i64::MAX);
+impl_ser_de_json_signed!(i32, i32::MIN, i32::MAX);
+impl_ser_de_json_signed!(i16, i16::MIN, i16::MAX);
+impl_ser_de_json_signed!(i8, i8::MIN, i8::MAX);
 impl_ser_de_json_float!(f64);
 impl_ser_de_json_float!(f32);
 
@@ -857,7 +850,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -895,7 +888,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -933,7 +926,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -970,7 +963,7 @@ where
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('[');
-        if self.len() > 0 {
+        if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
                 s.indent(d + 1);
@@ -1191,8 +1184,7 @@ where
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
         let len = self.len();
-        let mut index = 0;
-        for (k, v) in self {
+        for (index, (k, v)) in self.iter().enumerate() {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
@@ -1200,7 +1192,6 @@ where
             if (index + 1) < len {
                 s.conl();
             }
-            index += 1;
         }
         s.indent(d);
         s.out.push('}');
@@ -1236,8 +1227,7 @@ where
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
         s.out.push('{');
         let len = self.len();
-        let mut index = 0;
-        for (k, v) in self {
+        for (index, (k, v)) in self.iter().enumerate() {
             s.indent(d + 1);
             k.ser_json(d + 1, s);
             s.out.push(':');
@@ -1245,7 +1235,6 @@ where
             if (index + 1) < len {
                 s.conl();
             }
-            index += 1;
         }
         s.indent(d);
         s.out.push('}');

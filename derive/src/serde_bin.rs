@@ -219,7 +219,7 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
                 ..
             } => {
                 l!(r, "Self::{} {{", ident);
-                for (_, f) in contents.fields.iter().enumerate() {
+                for f in contents.fields.iter() {
                     l!(
                         r,
                         "{}, ",
@@ -229,7 +229,7 @@ pub fn derive_ser_bin_enum(enum_: &Enum) -> TokenStream {
 
                 l!(r, "} => {");
                 l!(r, "{}.ser_bin(s);", lit);
-                for (_, f) in contents.fields.iter().enumerate() {
+                for f in contents.fields.iter() {
                     l!(
                         r,
                         "{}.ser_bin(s);",
