@@ -1056,7 +1056,7 @@ where
         // https://github.com/rust-lang/rust/issues/61956
         // initializing before block close so that drop will run automatically if err encountered there
         let initialized =
-            unsafe { (&*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
+            unsafe { (*(&to as *const _ as *const MaybeUninit<_>)).assume_init_read() };
         o.paren_close(d)?;
 
         Ok(initialized)
