@@ -3,7 +3,7 @@ name = "nanoserde-derive"
 version = "0.2.0-beta.2"
 authors = ["Makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 edition = "2021"
-rust-version = "1.71.1"
+rust-version = "1.78.0"
 description = "Fork of makepad-tinyserde derive without any external dependencies"
 license = "MIT"
 
