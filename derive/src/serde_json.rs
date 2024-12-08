@@ -13,7 +13,7 @@ use proc_macro::TokenStream;
 
 pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl SerJson for {} {{
+        "impl nanoserde::SerJson for {} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_json(d, s);
@@ -106,7 +106,7 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl{} SerJson for {}{} {{
+        impl{} nanoserde::SerJson for {}{} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 s.st_pre();
                 {}
@@ -222,7 +222,7 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         for (json_field_name, local_var) in matches.iter() {
             l!(
                 r,
-                "\"{}\" => {{s.next_colon(i) ?;{} = Some(DeJson::de_json(s, i) ?)}},",
+                "\"{}\" => {{s.next_colon(i) ?;{} = Some(nanoserde::DeJson::de_json(s, i) ?)}},",
                 json_field_name,
                 local_var
             );
@@ -249,10 +249,10 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
 
 pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl DeJson for {} {{
+        "impl nanoserde::DeJson for {} {{
             #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
-                let proxy: {} = DeJson::de_json(s, i)?;
+                let proxy: {} = nanoserde::DeJson::de_json(s, i)?;
                 ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
@@ -275,7 +275,7 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
     let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeJson");
 
     format!(
-        "impl{} DeJson for {}{} {{
+        "impl{} nanoserde::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,
             nanoserde::DeJsonErr> {{
@@ -412,7 +412,7 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
 
     format!(
         "
-        impl SerJson for {} {{
+        impl nanoserde::SerJson for {} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 match self {{
                     {}
@@ -468,7 +468,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                 for _ in contents.iter() {
                     l!(
                         field_names,
-                        "{let r = DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
+                        "{let r = nanoserde::DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
                     );
                 }
                 l!(
@@ -486,7 +486,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     }
 
     let mut r = format!(
-        "impl{} DeJson for {}{} {{
+        "impl{} nanoserde::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
                 match s.tok {{",
@@ -568,7 +568,7 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl{} SerJson for {}{} {{
+        impl{} nanoserde::SerJson for {}{} {{
             fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
                 {}
             }}
@@ -592,7 +592,7 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
     for _ in &struct_.fields {
-        l!(body, "{ let r = DeJson::de_json(s, i)?;");
+        l!(body, "{ let r = nanoserde::DeJson::de_json(s, i)?;");
         if struct_.fields.len() != 1 {
             l!(body, "  s.eat_comma_block(i)?;");
         }
@@ -620,7 +620,7 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     };
 
     format! ("
-        impl{} DeJson for {}{} {{
+        impl{} nanoserde::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
             fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeJsonErr> {{
                 {}
