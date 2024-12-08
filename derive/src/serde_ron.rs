@@ -10,7 +10,7 @@ use crate::shared;
 
 pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl SerRon for {} {{
+        "impl nanoserde::SerRon for {} {{
             fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_ron(d, s);
@@ -24,9 +24,9 @@ pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
 
 pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
     format!(
-        "impl DeRon for {} {{
+        "impl nanoserde::DeRon for {} {{
             fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeRonErr> {{
-                let proxy: {} = DeRon::deserialize_ron(i)?;
+                let proxy: {} = nanoserde::DeRon::deserialize_ron(i)?;
                 ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
@@ -72,7 +72,7 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl SerRon for {} {{
+        impl nanoserde::SerRon for {} {{
             fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
                 s.st_pre();
                 {}
@@ -102,7 +102,7 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
     format!(
         "
-        impl SerRon for {} {{
+        impl nanoserde::SerRon for {} {{
             fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
                 s.out.push('(');
                 {}
@@ -223,7 +223,7 @@ pub fn derive_de_ron_named(name: &String, fields: &Vec<Field>, attributes: &[Att
                 inner,
                 "\"{}\" => {{
                     s.next_colon(i)?;
-                    {} = Some(DeRon::de_ron(s, i)?)
+                    {} = Some(nanoserde::DeRon::de_ron(s, i)?)
                 }},",
                 ron_field_name,
                 local_var
@@ -274,7 +274,7 @@ pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
     );
 
     format!(
-        "impl DeRon for {} {{
+        "impl nanoserde::DeRon for {} {{
             fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
                 ::core::result::Result::Ok({})
             }}
@@ -290,7 +290,7 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
         l!(
             body,
             "{{
-                let r = DeRon::de_ron(s, i)?;
+                let r = nanoserde::DeRon::de_ron(s, i)?;
                 s.eat_comma_paren(i)?;
                 r
             }},"
@@ -298,7 +298,7 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
 
     format! ("
-        impl DeRon for {} {{
+        impl nanoserde::DeRon for {} {{
             fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
                 s.paren_open(i)?;
                 let r = Self({});
@@ -404,7 +404,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
     }
     format!(
         "
-        impl SerRon for {} {{
+        impl nanoserde::SerRon for {} {{
             fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
                 match self {{
                     {}
@@ -448,7 +448,7 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                     l!(
                         inner,
                         "{
-                            let r = DeRon::de_ron(s, i)?;
+                            let r = nanoserde::DeRon::de_ron(s, i)?;
                             s.eat_comma_paren(i)?;
                             r
                         }, "
@@ -475,7 +475,7 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
     }
 
     format! ("
-        impl DeRon for {} {{
+        impl nanoserde::DeRon for {} {{
             fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
                 // we are expecting an identifier
                 s.ident(i)?;
