@@ -1,10 +1,5 @@
 use core::convert::TryInto;
-
-// remove this after 1.81 is live
-#[cfg(not(feature = "std"))]
 use core::error::Error;
-#[cfg(feature = "std")]
-use std::error::Error;
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;

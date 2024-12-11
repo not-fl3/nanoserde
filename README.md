@@ -10,8 +10,8 @@ No more syn, proc_macro2 or quote in the build tree!
 
 ```
 > cargo tree
-nanoserde v0.1.0 (/../nanoserde)
-└── nanoserde-derive v0.1.0 (/../nanoserde/derive)
+nanoserde v0.2.0 (/../nanoserde)
+└── nanoserde-derive v0.2.0 (/../nanoserde/derive)
 ```
 
 ## Example:
