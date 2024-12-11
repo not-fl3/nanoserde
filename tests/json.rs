@@ -1177,3 +1177,28 @@ fn test_deser_oversized_value() {
         )
     );
 }
+
+#[test]
+fn json_crate() {
+    use nanoserde as renamed;
+    #[derive(renamed::DeJson)]
+    #[nserde(crate = "renamed")]
+    pub struct Test {
+        pub a: f32,
+        pub b: f32,
+        c: Option<String>,
+        d: Option<String>,
+    }
+
+    let json = r#"{
+        "a": 1,
+        "b": 2.0,
+        "d": "hello"
+    }"#;
+
+    let test: Test = renamed::DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.a, 1.);
+    assert_eq!(test.b, 2.);
+    assert_eq!(test.d.unwrap(), "hello");
+    assert_eq!(test.c, None);
+}
