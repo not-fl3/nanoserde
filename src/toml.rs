@@ -1,10 +1,5 @@
-use core::str::Chars;
-
-// remove this after 1.81 is live
-#[cfg(not(feature = "std"))]
 use core::error::Error;
-#[cfg(feature = "std")]
-use std::error::Error;
+use core::str::Chars;
 
 use alloc::format;
 use alloc::string::{String, ToString};
