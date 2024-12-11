@@ -84,8 +84,22 @@ pub fn attrs_serialize_none_as_null(attributes: &[crate::parse::Attribute]) -> b
         .any(|attr| attr.tokens.len() == 1 && attr.tokens[0] == "serialize_none_as_null")
 }
 
+pub fn attrs_crate(attributes: &[crate::parse::Attribute]) -> Option<&str> {
+    attributes.iter().find_map(|attr| {
+        if attr.tokens.len() == 2 && attr.tokens[0] == "crate" {
+            Some(attr.tokens[1].as_str())
+        } else {
+            None
+        }
+    })
+}
+
 #[cfg(any(feature = "binary", feature = "json"))]
-pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (String, String) {
+pub(crate) fn struct_bounds_strings(
+    struct_: &Struct,
+    bound_name: &str,
+    crate_name: &str,
+) -> (String, String) {
     let generics: &Vec<_> = &struct_.generics;
 
     if generics.is_empty() {
@@ -94,7 +108,7 @@ pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (Stri
     let mut generic_w_bounds = "<".to_string();
     for generic in generics.iter().filter(|g| g.ident_only() != "Self") {
         generic_w_bounds += generic
-            .full_with_const(&[format!("nanoserde::{}", bound_name).as_str()], true)
+            .full_with_const(&[format!("{}::{}", crate_name, bound_name).as_str()], true)
             .as_str();
         generic_w_bounds += ", ";
     }
@@ -110,7 +124,11 @@ pub(crate) fn struct_bounds_strings(struct_: &Struct, bound_name: &str) -> (Stri
 }
 
 #[cfg(any(feature = "binary", feature = "json"))]
-pub(crate) fn enum_bounds_strings(enum_: &Enum, bound_name: &str) -> (String, String) {
+pub(crate) fn enum_bounds_strings(
+    enum_: &Enum,
+    bound_name: &str,
+    crate_name: &str,
+) -> (String, String) {
     let generics: &Vec<_> = &enum_.generics;
 
     if generics.is_empty() {
@@ -119,7 +137,7 @@ pub(crate) fn enum_bounds_strings(enum_: &Enum, bound_name: &str) -> (String, St
     let mut generic_w_bounds = "<".to_string();
     for generic in generics.iter().filter(|g| g.ident_only() != "Self") {
         generic_w_bounds += generic
-            .full_with_const(&[format!("nanoserde::{}", bound_name).as_str()], true)
+            .full_with_const(&[format!("{}::{}", crate_name, bound_name).as_str()], true)
             .as_str();
         generic_w_bounds += ", ";
     }

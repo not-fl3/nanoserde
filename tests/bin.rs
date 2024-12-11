@@ -295,3 +295,29 @@ fn array_leak_test() {
 
     assert!(TOGGLED_ON_DROP.load(std::sync::atomic::Ordering::SeqCst))
 }
+
+#[test]
+fn binary_crate() {
+    use nanoserde as renamed;
+    #[derive(renamed::DeBin, renamed::SerBin, PartialEq)]
+    #[nserde(crate = "renamed")]
+    pub struct Test {
+        pub a: i32,
+        pub b: f32,
+        c: Option<String>,
+        d: Option<String>,
+    }
+
+    let test: Test = Test {
+        a: 1,
+        b: 2.,
+        c: Some("asd".to_string()),
+        d: None,
+    };
+
+    let bytes = renamed::SerBin::serialize_bin(&test);
+
+    let test_deserialized = renamed::DeBin::deserialize_bin(&bytes).unwrap();
+
+    assert!(test == test_deserialized);
+}
