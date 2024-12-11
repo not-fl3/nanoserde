@@ -638,3 +638,29 @@ fn test_deser_oversized_value() {
         )
     );
 }
+
+#[test]
+fn ron_crate() {
+    use nanoserde as renamed;
+
+    #[derive(renamed::DeRon)]
+    #[nserde(crate = "renamed")]
+    pub struct Test {
+        a: i32,
+        b: f32,
+        c: Option<String>,
+        d: Option<String>,
+    }
+
+    let ron = r#"(
+        a: 1,
+        b: 2.0,
+        d: "hello",
+    )"#;
+
+    let test: Test = renamed::DeRon::deserialize_ron(ron).unwrap();
+    assert_eq!(test.a, 1);
+    assert_eq!(test.b, 2.);
+    assert_eq!(test.c, None);
+    assert_eq!(test.d.unwrap(), "hello");
+}

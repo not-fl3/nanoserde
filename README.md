@@ -56,6 +56,7 @@ For more examples take a look at [tests](/tests)
 | container attribute: `#[nserde(rename = "")]`             | yes    | yes   | yes    | no    |
 | container attribute: `#[nserde(proxy = "")]`              | yes    | yes   | no     | no    |
 | container attribute: `#[nserde(transparent)]`             | yes    | no    | no     | no    |
+| container attribute: `#[nserde(crate = "")]`              | yes    | yes   | yes    | no    |
 
 ## Crate features:
 

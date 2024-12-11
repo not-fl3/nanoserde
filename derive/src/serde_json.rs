@@ -11,15 +11,15 @@ use crate::{
 
 use proc_macro::TokenStream;
 
-pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
-        "impl nanoserde::SerJson for {} {{
-            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+        "impl {}::SerJson for {} {{
+            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_json(d, s);
             }}
         }}",
-        type_, proxy_type
+        crate_name, type_, crate_name, proxy_type
     )
     .parse()
     .unwrap()
@@ -39,9 +39,10 @@ fn ser_proxy_guard(fieldname: &str, field: &Field) -> String {
     }
 }
 
-pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
+pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut s = String::new();
-    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerJson");
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "SerJson", crate_name);
 
     l!(s, "let mut first_field_was_serialized = false;");
 
@@ -106,8 +107,8 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl{} nanoserde::SerJson for {}{} {{
-            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+        impl{} {}::SerJson for {}{} {{
+            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
                 s.st_pre();
                 {}
                 s.st_post(d);
@@ -115,18 +116,25 @@ pub fn derive_ser_json_struct(struct_: &Struct) -> TokenStream {
         }}
     ",
         generic_w_bounds,
+        crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
         generic_no_bounds,
+        crate_name,
         s
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> TokenStream {
+pub fn derive_de_json_named(
+    name: &str,
+    defaults: bool,
+    fields: &[Field],
+    crate_name: &str,
+) -> TokenStream {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut json_field_names = Vec::new();
@@ -222,9 +230,10 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
         for (json_field_name, local_var) in matches.iter() {
             l!(
                 r,
-                "\"{}\" => {{s.next_colon(i) ?;{} = Some(nanoserde::DeJson::de_json(s, i) ?)}},",
+                "\"{}\" => {{s.next_colon(i) ?;{} = Some({}::DeJson::de_json(s, i) ?)}},",
                 json_field_name,
-                local_var
+                local_var,
+                crate_name
             );
         }
         // TODO: maybe introduce "exhaustive" attribute?
@@ -247,22 +256,22 @@ pub fn derive_de_json_named(name: &str, defaults: bool, fields: &[Field]) -> Tok
     r.parse().unwrap()
 }
 
-pub fn derive_de_json_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+pub fn derive_de_json_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
-        "impl nanoserde::DeJson for {} {{
+        "impl {}::DeJson for {} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
-                let proxy: {} = nanoserde::DeJson::de_json(s, i)?;
+            fn de_json(s: &mut {}::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, {}::DeJsonErr> {{
+                let proxy: {} = {}::DeJson::de_json(s, i)?;
                 ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
-        type_, proxy_type
+        crate_name, type_, crate_name, crate_name, proxy_type, crate_name
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
+pub fn derive_de_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let body = derive_de_json_named(
         struct_
             .name
@@ -271,21 +280,23 @@ pub fn derive_de_json_struct(struct_: &Struct) -> TokenStream {
         shared::attrs_default(&struct_.attributes).is_some()
             || shared::attrs_default_with(&struct_.attributes).is_some(),
         &struct_.fields[..],
+        crate_name,
     );
-    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeJson");
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "DeJson", crate_name);
 
     format!(
-        "impl{} nanoserde::DeJson for {}{} {{
+        "impl{} {}::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,
-            nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut {}::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,
+            {}::DeJsonErr> {{
                 ::core::result::Result::Ok({{ {} }})
             }}
-        }}", generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body)
+        }}", generic_w_bounds, crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, crate_name, crate_name, body)
         .parse().unwrap()
 }
 
-pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
+pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut r = String::new();
 
     for variant in enum_.variants.iter() {
@@ -412,23 +423,23 @@ pub fn derive_ser_json_enum(enum_: &Enum) -> TokenStream {
 
     format!(
         "
-        impl nanoserde::SerJson for {} {{
-            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+        impl {}::SerJson for {} {{
+            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
                 match self {{
                     {}
                 }}
             }}
         }}",
-        enum_.name, r
+        crate_name, enum_.name, crate_name, r
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
+pub fn derive_de_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut r_units = String::new();
     let mut r_rest = String::new();
-    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeJson");
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeJson", crate_name);
 
     for variant in &enum_.variants {
         let field_name = variant.field_name.clone().unwrap();
@@ -457,6 +468,7 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                     &format!("Self::{}", &field_name),
                     false,
                     &contents.fields,
+                    crate_name,
                 );
                 l!(r_rest, "\"{}\" => {{ {} }}, ", json_variant_name, body);
             }
@@ -468,7 +480,8 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                 for _ in contents.iter() {
                     l!(
                         field_names,
-                        "{let r = nanoserde::DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r},"
+                        "{{let r = {}::DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r}},",
+                        crate_name
                     );
                 }
                 l!(
@@ -486,17 +499,17 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     }
 
     let mut r = format!(
-        "impl{} nanoserde::DeJson for {}{} {{
+        "impl{} {}::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut {}::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, {}::DeJsonErr> {{
                 match s.tok {{",
-        generic_w_bounds, generic_no_bounds, enum_.name,
+        generic_w_bounds, crate_name, enum_.name, generic_no_bounds, crate_name, crate_name
     );
 
     if !r_rest.is_empty() {
         r.push_str(&format!(
             "
-                    nanoserde::DeJsonTok::CurlyOpen => {{
+                    {}::DeJsonTok::CurlyOpen => {{
                         s.curly_open(i)?;
                         let _ = s.string(i)?;
                         s.colon(i)?;
@@ -507,21 +520,21 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
                         s.curly_close(i)?;
                         r
                     }},",
-            r_rest,
+            crate_name, r_rest,
         ))
     }
 
     if !r_units.is_empty() {
         r.push_str(&format!(
             "
-                    nanoserde::DeJsonTok::Str => {{
+                    {}::DeJsonTok::Str => {{
                         let _ = s.string(i)?;
                         ::core::result::Result::Ok(match s.strbuf.as_ref() {{
                             {}
                             _ => return ::core::result::Result::Err(s.err_enum(&s.strbuf))
                         }})
                     }},",
-            r_units,
+            crate_name, r_units,
         ))
     }
 
@@ -537,9 +550,10 @@ pub fn derive_de_json_enum(enum_: &Enum) -> TokenStream {
     r.parse().unwrap()
 }
 
-pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
+pub fn derive_ser_json_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
-    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "SerJson");
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "SerJson", crate_name);
 
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
@@ -568,31 +582,34 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl{} nanoserde::SerJson for {}{} {{
-            fn ser_json(&self, d: usize, s: &mut nanoserde::SerJsonState) {{
+        impl{} {}::SerJson for {}{} {{
+            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
                 {}
             }}
         }}",
         generic_w_bounds,
+        crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
         generic_no_bounds,
+        crate_name,
         body
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
+pub fn derive_de_json_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
-    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeJson");
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "DeJson", crate_name);
 
     let transparent = shared::attrs_transparent(&struct_.attributes);
 
     for _ in &struct_.fields {
-        l!(body, "{ let r = nanoserde::DeJson::de_json(s, i)?;");
+        l!(body, "{{ let r = {}::DeJson::de_json(s, i)?;", crate_name);
         if struct_.fields.len() != 1 {
             l!(body, "  s.eat_comma_block(i)?;");
         }
@@ -620,12 +637,12 @@ pub fn derive_de_json_struct_unnamed(struct_: &Struct) -> TokenStream {
     };
 
     format! ("
-        impl{} nanoserde::DeJson for {}{} {{
+        impl{} {}::DeJson for {}{} {{
             #[allow(clippy::ignored_unit_patterns)]
-            fn de_json(s: &mut nanoserde::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeJsonErr> {{
+            fn de_json(s: &mut {}::DeJsonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeJsonErr> {{
                 {}
                 ::core::result::Result::Ok(r)
             }}
-        }}",generic_w_bounds, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, body
+        }}",generic_w_bounds, crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), generic_no_bounds, crate_name, crate_name,body
     ).parse().unwrap()
 }

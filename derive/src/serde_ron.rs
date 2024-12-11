@@ -8,35 +8,35 @@ use proc_macro::TokenStream;
 
 use crate::shared;
 
-pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
-        "impl nanoserde::SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        "impl {}::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 let proxy: {} = self.into();
                 proxy.ser_ron(d, s);
             }}
         }}",
-        type_, proxy_type
+        crate_name, type_, crate_name, proxy_type
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str) -> TokenStream {
+pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
-        "impl nanoserde::DeRon for {} {{
-            fn de_ron(_s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, nanoserde::DeRonErr> {{
-                let proxy: {} = nanoserde::DeRon::deserialize_ron(i)?;
+        "impl {}::DeRon for {} {{
+            fn de_ron(_s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self, {}::DeRonErr> {{
+                let proxy: {} = {}::DeRon::deserialize_ron(i)?;
                 ::core::result::Result::Ok(Into::into(&proxy))
             }}
         }}",
-        type_, proxy_type
+        crate_name, type_, crate_name, crate_name, proxy_type, crate_name
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
+pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut s = String::new();
 
     for field in &struct_.fields {
@@ -72,25 +72,27 @@ pub fn derive_ser_ron_struct(struct_: &Struct) -> TokenStream {
 
     format!(
         "
-        impl nanoserde::SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl {}::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 s.st_pre();
                 {}
                 s.st_post(d);
             }}
         }}
     ",
+        crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
+        crate_name,
         s
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
+pub fn derive_ser_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
 
     let last = struct_.fields.len() - 1;
@@ -102,24 +104,31 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
     }
     format!(
         "
-        impl nanoserde::SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl {}::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 s.out.push('(');
                 {}
                 s.out.push(')');
             }}
         }}",
+        crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
+        crate_name,
         body
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_ron_named(name: &String, fields: &Vec<Field>, attributes: &[Attribute]) -> String {
+pub fn derive_de_ron_named(
+    name: &String,
+    fields: &Vec<Field>,
+    attributes: &[Attribute],
+    crate_name: &str,
+) -> String {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
     let mut ron_field_names = Vec::new();
@@ -223,10 +232,11 @@ pub fn derive_de_ron_named(name: &String, fields: &Vec<Field>, attributes: &[Att
                 inner,
                 "\"{}\" => {{
                     s.next_colon(i)?;
-                    {} = Some(nanoserde::DeRon::de_ron(s, i)?)
+                    {} = Some({}::DeRon::de_ron(s, i)?)
                 }},",
                 ron_field_name,
-                local_var
+                local_var,
+                crate_name
             );
         }
         format!(
@@ -263,7 +273,7 @@ pub fn derive_de_ron_named(name: &String, fields: &Vec<Field>, attributes: &[Att
     )
 }
 
-pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
+pub fn derive_de_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let body = derive_de_ron_named(
         struct_
             .name
@@ -271,45 +281,47 @@ pub fn derive_de_ron_struct(struct_: &Struct) -> TokenStream {
             .expect("Cannot implement for anonymous struct"),
         &struct_.fields,
         &struct_.attributes,
+        crate_name,
     );
 
     format!(
-        "impl nanoserde::DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
+        "impl {}::DeRon for {} {{
+            fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 ::core::result::Result::Ok({})
             }}
-        }}", struct_.name.as_ref().expect("Cannot implement for anonymous struct"), body)
+        }}", crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), crate_name, crate_name, body)
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_ron_struct_unnamed(struct_: &Struct) -> TokenStream {
+pub fn derive_de_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
 
     for _ in &struct_.fields {
         l!(
             body,
             "{{
-                let r = nanoserde::DeRon::de_ron(s, i)?;
+                let r = {}::DeRon::de_ron(s, i)?;
                 s.eat_comma_paren(i)?;
                 r
-            }},"
+            }},",
+            crate_name
         );
     }
 
     format! ("
-        impl nanoserde::DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
+        impl {}::DeRon for {} {{
+            fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 s.paren_open(i)?;
                 let r = Self({});
                 s.paren_close(i)?;
                 ::core::result::Result::Ok(r)
             }}
-        }}",struct_.name.as_ref().expect("Cannot implement for anonymous struct"), body
+        }}", crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), crate_name, crate_name, body
     ).parse().unwrap()
 }
 
-pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
+pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut body = String::new();
 
     for variant in &enum_.variants {
@@ -404,20 +416,20 @@ pub fn derive_ser_ron_enum(enum_: &Enum) -> TokenStream {
     }
     format!(
         "
-        impl nanoserde::SerRon for {} {{
-            fn ser_ron(&self, d: usize, s: &mut nanoserde::SerRonState) {{
+        impl {}::SerRon for {} {{
+            fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 match self {{
                     {}
                 }}
             }}
         }}",
-        enum_.name, body
+        crate_name, enum_.name, crate_name, body
     )
     .parse()
     .unwrap()
 }
 
-pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
+pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut body = String::new();
     for variant in &enum_.variants {
         let ident = variant.field_name.clone().unwrap();
@@ -436,7 +448,7 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                 ..
             } => {
                 let name = format!("{}::{}", enum_.name, ident);
-                let inner = derive_de_ron_named(&name, &contents.fields, &[]);
+                let inner = derive_de_ron_named(&name, &contents.fields, &[], crate_name);
                 l!(body, "\"{}\" => {}", ident, inner);
             }
             Type {
@@ -447,11 +459,12 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                 for _ in contents.iter() {
                     l!(
                         inner,
-                        "{
-                            let r = nanoserde::DeRon::de_ron(s, i)?;
+                        "{{
+                            let r = {}::DeRon::de_ron(s, i)?;
                             s.eat_comma_paren(i)?;
                             r
-                        }, "
+                        }}, ",
+                        crate_name
                     )
                 }
 
@@ -475,8 +488,8 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
     }
 
     format! ("
-        impl nanoserde::DeRon for {} {{
-            fn de_ron(s: &mut nanoserde::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,nanoserde::DeRonErr> {{
+        impl {}::DeRon for {} {{
+            fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 // we are expecting an identifier
                 s.ident(i)?;
                 ::core::result::Result::Ok(match s.identbuf.as_ref() {{
@@ -484,5 +497,5 @@ pub fn derive_de_ron_enum(enum_: &Enum) -> TokenStream {
                     _ => return ::core::result::Result::Err(s.err_enum(&s.identbuf))
                 }})
             }}
-        }}", enum_.name, body).parse().unwrap()
+        }}", crate_name, enum_.name, crate_name, crate_name, body).parse().unwrap()
 }
