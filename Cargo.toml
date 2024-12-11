@@ -1,12 +1,12 @@
 [package]
 name = "nanoserde"
-version = "0.2.0-beta.2"
+version = "0.2.0"
 authors = ["makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 license = "MIT OR Apache-2.0"
 description = """Serialization library with zero dependencies.
 Supports Binary, JSON, RON and TOML."""
 edition = "2021"
-rust-version = "1.71.1"
+rust-version = "1.81.0"
 repository = "https://github.com/not-fl3/nanoserde"
 
 [features]
@@ -20,4 +20,4 @@ toml = []
 std = []
 
 [dependencies]
-nanoserde-derive = { path = "derive", version = "=0.2.0-beta.2", optional = true }
+nanoserde-derive = { path = "derive", version = "=0.2.0", optional = true }
