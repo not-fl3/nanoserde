@@ -59,28 +59,44 @@ pub trait DeBin: Sized {
     fn de_bin(offset: &mut usize, bytes: &[u8]) -> Result<Self, DeBinErr>;
 }
 
-/// The error message when failing to deserialize from raw bytes.
 #[derive(Clone)]
 #[non_exhaustive]
+pub enum DeBinErrReason {
+    Length {
+        /// Expected Length
+        l: usize,
+        /// Actual Length
+        s: usize,
+    },
+}
+
+/// The error message when failing to deserialize.
+#[derive(Clone)]
 pub struct DeBinErr {
+    /// Offset
     pub o: usize,
-    pub l: usize,
-    pub s: usize,
+    pub msg: DeBinErrReason,
 }
 
 impl DeBinErr {
+    /// Helper for constructing [`DeBinErr`]
     pub fn new(o: usize, l: usize, s: usize) -> Self {
-        Self { o, l, s }
+        Self {
+            o,
+            msg: DeBinErrReason::Length { l, s },
+        }
     }
 }
 
 impl core::fmt::Debug for DeBinErr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
-            self.o, self.l, self.s
-        )
+        match self.msg {
+            DeBinErrReason::Length { l, s } => write!(
+                f,
+                "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
+                self.o, l, s
+            ),
+        }
     }
 }
 
@@ -107,8 +123,7 @@ macro_rules! impl_ser_de_bin_for {
                 if *o + l > d.len() {
                     return Err(DeBinErr {
                         o: *o,
-                        l,
-                        s: d.len(),
+                        msg: DeBinErrReason::Length { l, s: d.len() },
                     });
                 }
 
@@ -152,8 +167,7 @@ impl DeBin for usize {
             None => {
                 return Err(DeBinErr {
                     o: *o,
-                    l,
-                    s: d.len(),
+                    msg: DeBinErrReason::Length { l, s: d.len() },
                 });
             }
         };
@@ -168,8 +182,7 @@ impl DeBin for u8 {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                l: 1,
-                s: d.len(),
+                msg: DeBinErrReason::Length { l: 1, s: d.len() },
             });
         }
         let m = d[*o];
@@ -195,8 +208,7 @@ impl DeBin for bool {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                l: 1,
-                s: d.len(),
+                msg: DeBinErrReason::Length { l: 1, s: d.len() },
             });
         }
         let m = d[*o];
@@ -223,8 +235,7 @@ impl DeBin for String {
         if *o + len > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                l: 1,
-                s: d.len(),
+                msg: DeBinErrReason::Length { l: 1, s: d.len() },
             });
         }
         let r = match core::str::from_utf8(&d[*o..(*o + len)]) {
@@ -232,8 +243,7 @@ impl DeBin for String {
             Err(_) => {
                 return Err(DeBinErr {
                     o: *o,
-                    l: len,
-                    s: d.len(),
+                    msg: DeBinErrReason::Length { l: len, s: d.len() },
                 })
             }
         };
@@ -374,8 +384,7 @@ where
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                l: 1,
-                s: d.len(),
+                msg: DeBinErrReason::Length { l: 1, s: d.len() },
             });
         }
         let m = d[*o];

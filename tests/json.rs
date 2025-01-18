@@ -1,5 +1,5 @@
 #![cfg(feature = "json")]
-use nanoserde::{DeJson, SerJson};
+use nanoserde::{DeJson, DeJsonErrReason, SerJson};
 
 use std::{
     collections::{BTreeMap, BTreeSet, LinkedList},
@@ -1166,16 +1166,14 @@ fn test_deser_oversized_value() {
         <EnumConstant as DeJson>::deserialize_json(&max_json).unwrap(),
         EnumConstant { value: i32::MAX }
     );
-    assert_eq!(
+
+    assert!(matches!(
         <EnumConstant as DeJson>::deserialize_json(&wrap_json)
             .unwrap_err()
             .msg,
-        format!(
-            "Value out of range {}>{} ",
-            (i32::MAX as i64 + 1).to_string(),
-            i32::MAX.to_string()
-        )
-    );
+        DeJsonErrReason::OutOfRange(v)
+            if v == format!("{}>{}", (i32::MAX as i64 + 1), i32::MAX),
+    ));
 }
 
 #[test]
