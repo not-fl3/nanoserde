@@ -98,7 +98,7 @@ pub trait DeRon: Sized {
 }
 
 /// A RON parsed token.
-#[derive(PartialEq, Debug, Default)]
+#[derive(PartialEq, Debug, Default, Clone)]
 pub enum DeRonTok {
     Ident,
     Str,
@@ -133,23 +133,55 @@ pub struct DeRonState {
     pub col: usize,
 }
 
-/// The error message when failing to deserialize a RON string.
 #[derive(Clone)]
 #[non_exhaustive]
+pub enum DeRonErrReason {
+    UnexpectedKey(String),
+    UnexpectedToken(DeRonTok, String),
+    MissingKey(String),
+    NoSuchEnum(String),
+    OutOfRange(String),
+    WrongType(String),
+    CannotParse(String),
+}
+
+/// The error message when failing to deserialize a Ron string.
+#[derive(Clone)]
 pub struct DeRonErr {
-    pub msg: String,
     pub line: usize,
     pub col: usize,
+    pub msg: DeRonErrReason,
+}
+
+impl core::fmt::Debug for DeRonErrReason {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::UnexpectedKey(name) => write!(f, "Unexpected key {}", name),
+            Self::MissingKey(name) => write!(f, "Key not found {}", name),
+            Self::NoSuchEnum(name) => write!(f, "Enum not defined {}", name),
+            Self::UnexpectedToken(token, name) => {
+                write!(f, "Unexpected token {:?} expected {} ", token, name)
+            }
+            Self::OutOfRange(value) => write!(f, "Value out of range {} ", value),
+            Self::WrongType(found) => write!(f, "Token wrong type {} ", found),
+            Self::CannotParse(unparseable) => write!(f, "Cannot parse {} ", unparseable),
+        }
+    }
 }
 
 impl core::fmt::Debug for DeRonErr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let DeRonErr {
+            line,
+            col: column,
+            msg: reason,
+        } = self;
         write!(
             f,
-            "Ron Deserialize error: {}, line:{} col:{}",
-            self.msg,
-            self.line + 1,
-            self.col + 1
+            "Ron Deserialize error: {:?}, line:{} col:{}",
+            reason,
+            line + 1,
+            column + 1
         )
     }
 }
@@ -179,7 +211,7 @@ impl DeRonState {
 
     pub fn err_exp(&self, name: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Unexpected key {}", name),
+            msg: DeRonErrReason::UnexpectedKey(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -187,7 +219,7 @@ impl DeRonState {
 
     pub fn err_nf(&self, name: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Key not found {}", name),
+            msg: DeRonErrReason::MissingKey(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -195,7 +227,7 @@ impl DeRonState {
 
     pub fn err_enum(&self, name: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Enum not defined {}", name),
+            msg: DeRonErrReason::NoSuchEnum(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -203,7 +235,7 @@ impl DeRonState {
 
     pub fn err_token(&self, what: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Unexpected token {:?} expected {} ", self.tok, what),
+            msg: DeRonErrReason::UnexpectedToken(self.tok.clone(), what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -211,7 +243,7 @@ impl DeRonState {
 
     pub fn err_range(&self, what: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Value out of range {} ", what),
+            msg: DeRonErrReason::OutOfRange(what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -219,7 +251,7 @@ impl DeRonState {
 
     pub fn err_type(&self, what: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Token wrong type {} ", what),
+            msg: DeRonErrReason::WrongType(what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -227,7 +259,7 @@ impl DeRonState {
 
     pub fn err_parse(&self, what: &str) -> DeRonErr {
         DeRonErr {
-            msg: format!("Cannot parse {} ", what),
+            msg: DeRonErrReason::CannotParse(what.to_string()),
             line: self.line,
             col: self.col,
         }

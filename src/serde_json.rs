@@ -107,7 +107,7 @@ pub trait DeJson: Sized {
 }
 
 /// A JSON parsed token.
-#[derive(PartialEq, Debug, Default)]
+#[derive(PartialEq, Debug, Default, Clone)]
 #[non_exhaustive]
 pub enum DeJsonTok {
     Str,
@@ -142,23 +142,55 @@ pub struct DeJsonState {
     pub col: usize,
 }
 
-/// The error message when failing to deserialize a JSON string.
 #[derive(Clone)]
 #[non_exhaustive]
+pub enum DeJsonErrReason {
+    UnexpectedKey(String),
+    UnexpectedToken(DeJsonTok, String),
+    MissingKey(String),
+    NoSuchEnum(String),
+    OutOfRange(String),
+    WrongType(String),
+    CannotParse(String),
+}
+
+/// The error message when failing to deserialize a JSON string.
+#[derive(Clone)]
 pub struct DeJsonErr {
-    pub msg: String,
     pub line: usize,
     pub col: usize,
+    pub msg: DeJsonErrReason,
+}
+
+impl core::fmt::Debug for DeJsonErrReason {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::UnexpectedKey(name) => write!(f, "Unexpected key {}", name),
+            Self::MissingKey(name) => write!(f, "Key not found {}", name),
+            Self::NoSuchEnum(name) => write!(f, "Enum not defined {}", name),
+            Self::UnexpectedToken(token, name) => {
+                write!(f, "Unexpected token {:?} expected {} ", token, name)
+            }
+            Self::OutOfRange(value) => write!(f, "Value out of range {} ", value),
+            Self::WrongType(found) => write!(f, "Token wrong type {} ", found),
+            Self::CannotParse(unparseable) => write!(f, "Cannot parse {} ", unparseable),
+        }
+    }
 }
 
 impl core::fmt::Debug for DeJsonErr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let DeJsonErr {
+            line,
+            col: column,
+            msg: reason,
+        } = self;
         write!(
             f,
-            "Json Deserialize error: {}, line:{} col:{}",
-            self.msg,
-            self.line + 1,
-            self.col + 1
+            "Json Deserialize error: {:?}, line:{} col:{}",
+            reason,
+            line + 1,
+            column + 1
         )
     }
 }
@@ -188,7 +220,7 @@ impl DeJsonState {
 
     pub fn err_exp(&self, name: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Unexpected key {}", name),
+            msg: DeJsonErrReason::UnexpectedKey(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -196,7 +228,7 @@ impl DeJsonState {
 
     pub fn err_nf(&self, name: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Key not found {}", name),
+            msg: DeJsonErrReason::MissingKey(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -204,7 +236,7 @@ impl DeJsonState {
 
     pub fn err_enum(&self, name: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Enum not defined {}", name),
+            msg: DeJsonErrReason::NoSuchEnum(name.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -212,7 +244,7 @@ impl DeJsonState {
 
     pub fn err_token(&self, what: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Unexpected token {:?} expected {} ", self.tok, what),
+            msg: DeJsonErrReason::UnexpectedToken(self.tok.clone(), what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -220,7 +252,7 @@ impl DeJsonState {
 
     pub fn err_range(&self, what: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Value out of range {} ", what),
+            msg: DeJsonErrReason::OutOfRange(what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -228,7 +260,7 @@ impl DeJsonState {
 
     pub fn err_type(&self, what: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Token wrong type {} ", what),
+            msg: DeJsonErrReason::WrongType(what.to_string()),
             line: self.line,
             col: self.col,
         }
@@ -236,7 +268,7 @@ impl DeJsonState {
 
     pub fn err_parse(&self, what: &str) -> DeJsonErr {
         DeJsonErr {
-            msg: format!("Cannot parse {} ", what),
+            msg: DeJsonErrReason::CannotParse(what.to_string()),
             line: self.line,
             col: self.col,
         }
