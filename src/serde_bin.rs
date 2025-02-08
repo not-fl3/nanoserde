@@ -64,9 +64,9 @@ pub trait DeBin: Sized {
 pub enum DeBinErrReason {
     Length {
         /// Expected Length
-        l: usize,
+        expected_length: usize,
         /// Actual Length
-        s: usize,
+        actual_length: usize,
     },
 }
 
@@ -80,10 +80,13 @@ pub struct DeBinErr {
 
 impl DeBinErr {
     /// Helper for constructing [`DeBinErr`]
-    pub fn new(o: usize, l: usize, s: usize) -> Self {
+    pub fn new(offset: usize, expected_length: usize, actual_length: usize) -> Self {
         Self {
-            o,
-            msg: DeBinErrReason::Length { l, s },
+            o: offset,
+            msg: DeBinErrReason::Length {
+                expected_length,
+                actual_length,
+            },
         }
     }
 }
@@ -91,7 +94,10 @@ impl DeBinErr {
 impl core::fmt::Debug for DeBinErr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self.msg {
-            DeBinErrReason::Length { l, s } => write!(
+            DeBinErrReason::Length {
+                expected_length: l,
+                actual_length: s,
+            } => write!(
                 f,
                 "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
                 self.o, l, s
@@ -119,19 +125,23 @@ macro_rules! impl_ser_de_bin_for {
 
         impl DeBin for $ty {
             fn de_bin(o: &mut usize, d: &[u8]) -> Result<$ty, DeBinErr> {
-                let l = core::mem::size_of::<$ty>();
-                if *o + l > d.len() {
+                let expected_length = core::mem::size_of::<$ty>();
+                if *o + expected_length > d.len() {
                     return Err(DeBinErr {
                         o: *o,
-                        msg: DeBinErrReason::Length { l, s: d.len() },
+                        msg: DeBinErrReason::Length {
+                            expected_length,
+                            actual_length: d.len(),
+                        },
                     });
                 }
 
                 // We just checked that the correct amount of bytes are available,
                 // and there are no invalid bit patterns for these primitives. This
                 // unwrap should be impossible to hit.
-                let ret: $ty = <$ty>::from_le_bytes(d[*o..(*o + l)].try_into().unwrap());
-                *o += l;
+                let ret: $ty =
+                    <$ty>::from_le_bytes(d[*o..(*o + expected_length)].try_into().unwrap());
+                *o += expected_length;
                 Ok(ret)
             }
         }
@@ -167,7 +177,10 @@ impl DeBin for usize {
             None => {
                 return Err(DeBinErr {
                     o: *o,
-                    msg: DeBinErrReason::Length { l, s: d.len() },
+                    msg: DeBinErrReason::Length {
+                        expected_length: l,
+                        actual_length: d.len(),
+                    },
                 });
             }
         };
@@ -182,7 +195,10 @@ impl DeBin for u8 {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                msg: DeBinErrReason::Length { l: 1, s: d.len() },
+                msg: DeBinErrReason::Length {
+                    expected_length: 1,
+                    actual_length: d.len(),
+                },
             });
         }
         let m = d[*o];
@@ -208,7 +224,10 @@ impl DeBin for bool {
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                msg: DeBinErrReason::Length { l: 1, s: d.len() },
+                msg: DeBinErrReason::Length {
+                    expected_length: 1,
+                    actual_length: d.len(),
+                },
             });
         }
         let m = d[*o];
@@ -235,7 +254,10 @@ impl DeBin for String {
         if *o + len > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                msg: DeBinErrReason::Length { l: 1, s: d.len() },
+                msg: DeBinErrReason::Length {
+                    expected_length: 1,
+                    actual_length: d.len(),
+                },
             });
         }
         let r = match core::str::from_utf8(&d[*o..(*o + len)]) {
@@ -243,7 +265,10 @@ impl DeBin for String {
             Err(_) => {
                 return Err(DeBinErr {
                     o: *o,
-                    msg: DeBinErrReason::Length { l: len, s: d.len() },
+                    msg: DeBinErrReason::Length {
+                        expected_length: len,
+                        actual_length: d.len(),
+                    },
                 })
             }
         };
@@ -384,7 +409,10 @@ where
         if *o + 1 > d.len() {
             return Err(DeBinErr {
                 o: *o,
-                msg: DeBinErrReason::Length { l: 1, s: d.len() },
+                msg: DeBinErrReason::Length {
+                    expected_length: 1,
+                    actual_length: d.len(),
+                },
             });
         }
         let m = d[*o];
