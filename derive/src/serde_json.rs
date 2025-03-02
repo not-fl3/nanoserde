@@ -151,13 +151,14 @@ pub fn derive_de_json_named(
         let default_val = if let Some(v) = field_attr_default {
             if let Some(mut val) = v {
                 if field.ty.base() == "String"
-                    || field.ty.wraps.as_ref().map_or(false, |wrapped| {
-                        wrapped.iter().any(|ty| ty.base() == "String")
-                    })
+                    || field
+                        .ty
+                        .wraps
+                        .as_ref()
+                        .is_some_and(|wrapped| wrapped.iter().any(|ty| ty.base() == "String"))
                 {
                     val = format!("\"{}\".to_string()", val)
-                }
-                if field.ty.base() == "Option" {
+                } else if field.ty.base() == "Option" {
                     val = format!("Some({})", val);
                 }
                 Some(val)
