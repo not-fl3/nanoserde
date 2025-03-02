@@ -166,39 +166,15 @@ pub fn derive_de_ron_named(
         let skip = crate::shared::attrs_skip(&field.attributes);
 
         if !skip {
-            if field.ty.base() == "Option" {
-                unwraps.push(format!(
-                    "{{
-                        if let Some(t) = {} {{
-                            t
-                        }} else {{
-                            {}
-                        }}
-                    }}",
-                    localvar,
-                    default_val.unwrap_or_else(|| String::from("None"))
-                ));
-            } else if container_attr_default || default_val.is_some() {
-                unwraps.push(format!(
-                    "{{
-                        if let Some(t) = {} {{
-                            t
-                        }} else {{
-                            {}
-                        }}
-                    }}",
-                    localvar,
-                    default_val.unwrap_or_else(|| String::from("Default::default()"))
-                ));
+            if field.ty.base() == "Option" || container_attr_default || default_val.is_some() {
+                if let Some(default_val) = default_val {
+                    unwraps.push(format!("{}.unwrap_or_else(|| {})", localvar, default_val));
+                } else {
+                    unwraps.push(format!("{}.unwrap_or_default()", localvar));
+                }
             } else {
                 unwraps.push(format!(
-                    "{{
-                        if let Some(t) = {} {{
-                            t
-                        }} else {{
-                            return Err(s.err_nf(\"{}\"))
-                        }}
-                    }}",
+                    "{}.ok_or_else(|| s.err_nf(\"{}\"))?",
                     localvar, struct_fieldname
                 ));
             }
@@ -260,7 +236,7 @@ pub fn derive_de_ron_named(
         "{{
             {}
             s.paren_open(i)?;
-            while let Some(_) = s.next_ident() {{
+            while s.next_ident().is_some() {{
                 {}
                 s.eat_comma_paren(i)?;
             }};
