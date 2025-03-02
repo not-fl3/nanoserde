@@ -145,8 +145,7 @@ pub fn derive_de_ron_named(
             if let Some(mut val) = v {
                 if field.ty.base() == "String" {
                     val = format!("\"{}\".to_string()", val)
-                }
-                if field.ty.base() == "Option" {
+                } else if field.ty.base() == "Option" {
                     val = format!("Some({})", val);
                 }
                 Some(val)
