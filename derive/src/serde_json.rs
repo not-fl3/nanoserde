@@ -158,7 +158,8 @@ pub fn derive_de_json_named(
                         .is_some_and(|wrapped| wrapped.iter().any(|ty| ty.base() == "String"))
                 {
                     val = format!("\"{}\".to_string()", val)
-                } else if field.ty.base() == "Option" {
+                }
+                if field.ty.base() == "Option" {
                     val = format!("Some({})", val);
                 }
                 Some(val)
