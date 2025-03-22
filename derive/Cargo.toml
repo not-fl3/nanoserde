@@ -1,6 +1,6 @@
 [package]
 name = "nanoserde-derive"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Makepad <info@makepad.nl>", "Fedor <not.fl3@gmail.com>"]
 edition = "2021"
 rust-version = "1.81.0"
