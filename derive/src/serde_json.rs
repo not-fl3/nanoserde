@@ -151,9 +151,11 @@ pub fn derive_de_json_named(
         let default_val = if let Some(v) = field_attr_default {
             if let Some(mut val) = v {
                 if field.ty.base() == "String"
-                    || field.ty.wraps.as_ref().map_or(false, |wrapped| {
-                        wrapped.iter().any(|ty| ty.base() == "String")
-                    })
+                    || field
+                        .ty
+                        .wraps
+                        .as_ref()
+                        .is_some_and(|wrapped| wrapped.iter().any(|ty| ty.base() == "String"))
                 {
                     val = format!("\"{}\".to_string()", val)
                 }
@@ -188,23 +190,21 @@ pub fn derive_de_json_named(
         };
 
         if !skip {
-            if field.ty.base() == "Option" {
-                unwraps.push(format!(
-                    "{{if let Some(t) = {} {{ {} }} else {{ {} }} }}",
-                    localvar,
-                    proxified_t,
-                    default_val.unwrap_or_else(|| String::from("None"))
-                ));
-            } else if container_attr_default || default_val.is_some() {
-                unwraps.push(format!(
-                    "{{if let Some(t) = {} {{ {} }} else {{ {} }} }}",
-                    localvar,
-                    proxified_t,
-                    default_val.unwrap_or_else(|| String::from("Default::default()"))
-                ));
+            if field.ty.base() == "Option" || container_attr_default || default_val.is_some() {
+                if let Some(default_val) = default_val {
+                    unwraps.push(format!(
+                        "{}.map_or_else(|| {}, |t| {})",
+                        localvar, default_val, proxified_t,
+                    ));
+                } else {
+                    unwraps.push(format!(
+                        "{}.map(|t| {}).unwrap_or_default()",
+                        localvar, proxified_t,
+                    ));
+                }
             } else {
                 unwraps.push(format!(
-                    "{{if let Some(t) = {} {{ {} }} else {{return Err(s.err_nf(\"{}\"))}} }}",
+                    "{}.map(|t| {}).ok_or_else(|| s.err_nf(\"{}\"))?",
                     localvar, proxified_t, struct_fieldname
                 ));
             }
@@ -223,7 +223,7 @@ pub fn derive_de_json_named(
         l!(r, "let mut {} = None;", local_var);
     }
     l!(r, "s.curly_open(i) ?;");
-    l!(r, "while let Some(_) = s.next_str() {");
+    l!(r, "while s.next_str().is_some() {");
 
     if !json_field_names.is_empty() {
         l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
@@ -244,7 +244,7 @@ pub fn derive_de_json_named(
         l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
         l!(r, "}");
     }
-    l!(r, "s.eat_comma_curly(i) ?");
+    l!(r, "s.eat_comma_curly(i) ?;");
     l!(r, "}");
     l!(r, "s.curly_close(i) ?;");
     l!(r, "{} {{", name);

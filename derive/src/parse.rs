@@ -1391,7 +1391,7 @@ fn next_generic<T: Iterator<Item = TokenTree> + Clone>(
 fn get_all_bounds<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) -> Vec<Generic> {
     let mut ret = Vec::new();
     let mut already = BTreeSet::new();
-    if source.peek().map_or(false, |x| x.to_string() == "<") {
+    if source.peek().is_some_and(|x| x.to_string() == "<") {
         source.next();
     } else {
         return ret;
