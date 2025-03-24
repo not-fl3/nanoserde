@@ -391,7 +391,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                     let name = format!("f{}", index);
                     l!(inner, "{}.ser_ron(d, s);", name);
                     if index != last {
-                        l!(inner, "s.out.push_str(\", \");")
+                        l!(inner, "s.out.push_str(\",\");")
                     }
                     names.push(name);
                 }
