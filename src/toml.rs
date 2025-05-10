@@ -37,7 +37,7 @@ macro_rules! ident_chars {
 /// Pattern matching a character that can terminate a valid ident.
 macro_rules! ident_term_chars {
     () => {
-        ' ' | '\t' | '\n' | '\0' | '=' | ']'
+        ' ' | '\t' | '\r' | '\n' | '\0' | '=' | ']'
     };
 }
 
