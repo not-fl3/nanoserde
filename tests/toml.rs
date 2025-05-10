@@ -113,3 +113,12 @@ fn toml_key_chars() {
         ])
     );
 }
+
+#[test]
+fn carriage_return() {
+    let toml_str = "foo = 1\r\nbar = false\r\n";
+    let toml = TomlParser::parse(toml_str).unwrap();
+
+    assert_eq!(toml["foo"].num(), 1.0);
+    assert_eq!(toml["bar"].boolean(), false);
+}
