@@ -31,7 +31,7 @@ fn ser_de() {
         f: Option<([u32; 4], String)>,
         g: (),
         h: f64,
-        #[nserde(skip)]
+        #[nserde(skip, default)]
         i: Test2,
     }
 
@@ -47,7 +47,7 @@ fn ser_de() {
         f: Some(([1, 2, 3, 4], "tuple".to_string())),
         g: (),
         h: 1e30,
-        i: Default::default()
+        i: Default::default(),
     };
 
     #[cfg(feature = "binary")]

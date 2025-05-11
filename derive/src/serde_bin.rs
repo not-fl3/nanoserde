@@ -3,7 +3,7 @@ use alloc::string::String;
 
 use crate::{
     parse::{Category, Enum, Struct, Type},
-    shared::{enum_bounds_strings, struct_bounds_strings},
+    shared::{attrs_skip, enum_bounds_strings, struct_bounds_strings},
 };
 
 use proc_macro::TokenStream;
@@ -41,7 +41,7 @@ pub fn derive_ser_bin_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
     let (generic_w_bounds, generic_no_bounds) =
         struct_bounds_strings(struct_, "SerBin", crate_name);
 
-    for field in &struct_.fields {
+    for field in struct_.fields.iter().filter(|f| !attrs_skip(&f.attributes)) {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(
                 body,
@@ -82,7 +82,12 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct, crate_name: &str) -> Toke
     let (generic_w_bounds, generic_no_bounds) =
         struct_bounds_strings(struct_, "SerBin", crate_name);
 
-    for (n, field) in struct_.fields.iter().enumerate() {
+    for (n, field) in struct_
+        .fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| !attrs_skip(&f.attributes))
+    {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "let proxy: {} = Into::into(&self.{});", proxy, n);
             l!(body, "proxy.ser_bin(s);");
@@ -90,6 +95,7 @@ pub fn derive_ser_bin_struct_unnamed(struct_: &Struct, crate_name: &str) -> Toke
             l!(body, "self.{}.ser_bin(s);", n);
         }
     }
+
     format!(
         "impl{} {}::SerBin for {}{} {{
             fn ser_bin(&self, s: &mut Vec<u8>) {{
@@ -113,7 +119,7 @@ pub fn derive_de_bin_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
     let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeBin", crate_name);
 
-    for field in &struct_.fields {
+    for field in struct_.fields.iter().filter(|f| !attrs_skip(&f.attributes)) {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", field.field_name.as_ref().unwrap());
             l!(
@@ -132,6 +138,14 @@ pub fn derive_de_bin_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
                 crate_name
             );
         }
+    }
+
+    for field in struct_.fields.iter().filter(|f| attrs_skip(&f.attributes)) {
+        l!(
+            body,
+            "{}: Default::default(),",
+            field.field_name.as_ref().unwrap()
+        );
     }
 
     format!(
@@ -160,7 +174,12 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct, crate_name: &str) -> Token
     let mut body = String::new();
     let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeBin", crate_name);
 
-    for (n, field) in struct_.fields.iter().enumerate() {
+    for (n, field) in struct_
+        .fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| !attrs_skip(&f.attributes))
+    {
         if let Some(proxy) = crate::shared::attrs_proxy(&field.attributes) {
             l!(body, "{}: {{", n);
             l!(
@@ -174,6 +193,14 @@ pub fn derive_de_bin_struct_unnamed(struct_: &Struct, crate_name: &str) -> Token
         } else {
             l!(body, "{}: {}::DeBin::de_bin(o, d)?,", n, crate_name);
         }
+    }
+
+    for field in struct_.fields.iter().filter(|f| attrs_skip(&f.attributes)) {
+        l!(
+            body,
+            "{}: Default::default(),",
+            field.field_name.as_ref().unwrap()
+        );
     }
 
     format!(
