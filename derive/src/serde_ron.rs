@@ -6,7 +6,7 @@ use crate::parse::{Attribute, Category, Enum, Field, Struct, Type};
 
 use proc_macro::TokenStream;
 
-use crate::shared;
+use crate::shared::{self, attrs_skip};
 
 pub fn derive_ser_ron_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
@@ -39,7 +39,7 @@ pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> T
 pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut s = String::new();
 
-    for field in &struct_.fields {
+    for field in struct_.fields.iter().filter(|f| !attrs_skip(&f.attributes)) {
         let struct_fieldname = field.field_name.clone().unwrap();
         let ron_fieldname =
             shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
@@ -96,7 +96,12 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> Toke
     let mut body = String::new();
 
     let last = struct_.fields.len() - 1;
-    for (n, _) in struct_.fields.iter().enumerate() {
+    for (n, _field) in struct_
+        .fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| !attrs_skip(&f.attributes))
+    {
         l!(body, "self.{}.ser_ron(d, s);", n);
         if n != last {
             l!(body, "s.out.push_str(\", \");");
@@ -136,9 +141,11 @@ pub fn derive_de_ron_named(
     let container_attr_default = shared::attrs_default(attributes).is_some();
 
     let mut unwraps = Vec::new();
-    for field in fields {
+    for field in fields.iter() {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
         let localvar = format!("_{}", struct_fieldname);
+        let field_is_option = field.ty.base() == "Option";
+        let field_attr_skip = shared::attrs_skip(&field.attributes);
         let field_attr_default = shared::attrs_default(&field.attributes);
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
@@ -149,7 +156,7 @@ pub fn derive_de_ron_named(
                     val = format!("Some({})", val);
                 }
                 Some(val)
-            } else if field.ty.base() != "Option" {
+            } else if !field_is_option {
                 Some(String::from("Default::default()"))
             } else {
                 Some(String::from("None"))
@@ -157,32 +164,20 @@ pub fn derive_de_ron_named(
         } else if let Some(mut v) = field_attr_default_with {
             v.push_str("()");
             Some(v)
+        } else if container_attr_default || field_attr_skip || field_is_option {
+            Some(String::from("Default::default()"))
         } else {
             None
         };
-        let ron_fieldname =
-            shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
-        let skip = crate::shared::attrs_skip(&field.attributes);
+        let ron_fieldname =(!field_attr_skip).then(|| shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone()));
 
-        if !skip {
-            if field.ty.base() == "Option" || container_attr_default || default_val.is_some() {
-                if let Some(default_val) = default_val {
-                    unwraps.push(format!("{}.unwrap_or_else(|| {})", localvar, default_val));
-                } else {
-                    unwraps.push(format!("{}.unwrap_or_default()", localvar));
-                }
-            } else {
-                unwraps.push(format!(
-                    "{}.ok_or_else(|| s.err_nf(\"{}\"))?",
-                    localvar, struct_fieldname
-                ));
-            }
-        } else {
-            unwraps.push(format!(
-                "{{ {} }}",
-                default_val.as_deref().unwrap_or("Default::default()")
-            ));
-        }
+        unwraps.push(match default_val {
+            Some(def) => format!("{}.unwrap_or_else(|| {})", localvar, def),
+            None => format!(
+                "{}.ok_or_else(|| s.err_nf(\"{}\"))?",
+                localvar, struct_fieldname
+            ),
+        });
 
         struct_field_names.push(struct_fieldname);
         ron_field_names.push(ron_fieldname);
@@ -203,6 +198,9 @@ pub fn derive_de_ron_named(
     let match_names = if !ron_field_names.is_empty() {
         let mut inner = String::new();
         for (ron_field_name, (local_var, _)) in ron_field_names.iter().zip(local_vars.iter()) {
+            let Some(ron_field_name) = ron_field_name else {
+                continue;
+            };
             l!(
                 inner,
                 "\"{}\" => {{

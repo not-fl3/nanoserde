@@ -34,7 +34,7 @@ fn binary() {
 
 #[test]
 fn binary_generics() {
-    #[derive(DeBin, SerBin, PartialEq)]
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
     struct TestGenericsWSkip<A, B, C, DD: Eq + Ord, EE>
     where
         EE: Eq + Ord,
@@ -57,9 +57,12 @@ fn binary_generics() {
 
     let bytes = SerBin::serialize_bin(&test);
 
-    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+    let mut test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
 
-    assert!(test == test_deserialized);
+    // show that everything is equal, except for the skipped field
+    assert_ne!(test, test_deserialized);
+    test_deserialized.test4 = test.test4.clone();
+    assert_eq!(test, test_deserialized);
 
     #[derive(DeBin, SerBin, PartialEq)]
     pub enum TestEnum<A, B> {
