@@ -11,6 +11,11 @@ use nanoserde::{DeRon, SerRon};
 
 use alloc::collections::BTreeMap;
 
+#[derive(Default, PartialEq, Debug)]
+struct Test2 {
+    pub a: u32,
+}
+
 #[test]
 fn ser_de() {
     #[derive(PartialEq, Debug)]
@@ -26,6 +31,8 @@ fn ser_de() {
         f: Option<([u32; 4], String)>,
         g: (),
         h: f64,
+        #[nserde(skip)]
+        i: Test2,
     }
 
     let mut map = BTreeMap::new();
@@ -40,6 +47,7 @@ fn ser_de() {
         f: Some(([1, 2, 3, 4], "tuple".to_string())),
         g: (),
         h: 1e30,
+        i: Default::default()
     };
 
     #[cfg(feature = "binary")]
