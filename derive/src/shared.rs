@@ -94,7 +94,6 @@ pub fn attrs_crate(attributes: &[crate::parse::Attribute]) -> Option<&str> {
     })
 }
 
-#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn struct_bounds_strings(
     struct_: &Struct,
     bound_name: &str,
@@ -123,7 +122,6 @@ pub(crate) fn struct_bounds_strings(
     (generic_w_bounds, generic_no_bounds)
 }
 
-#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn enum_bounds_strings(
     enum_: &Enum,
     bound_name: &str,
