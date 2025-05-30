@@ -1,6 +1,5 @@
 use core::str::Chars;
 use core::{error::Error, time::Duration};
-use std::time::SystemTime;
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -1341,18 +1340,18 @@ impl DeRon for Duration {
     }
 }
 
-impl SerRon for SystemTime {
+impl SerRon for std::time::SystemTime {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
-        self.duration_since(SystemTime::UNIX_EPOCH)
+        self.duration_since(std::time::SystemTime::UNIX_EPOCH)
             .ok()
             .ser_ron(d, s);
     }
 }
 
-impl DeRon for SystemTime {
-    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<SystemTime, DeRonErr> {
+impl DeRon for std::time::SystemTime {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<std::time::SystemTime, DeRonErr> {
         if let Some(dur) = Option::<Duration>::de_ron(s, i)? {
-            return Ok(SystemTime::UNIX_EPOCH + dur);
+            return Ok(std::time::SystemTime::UNIX_EPOCH + dur);
         }
         Err(s.err_parse("system time"))
     }

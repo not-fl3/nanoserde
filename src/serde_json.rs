@@ -1,6 +1,5 @@
 use core::str::Chars;
 use core::{error::Error, time::Duration};
-use std::time::SystemTime;
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -1341,18 +1340,20 @@ impl DeJson for Duration {
     }
 }
 
-impl SerJson for SystemTime {
+#[cfg(feature = "std")]
+impl SerJson for std::time::SystemTime {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
-        self.duration_since(SystemTime::UNIX_EPOCH)
+        self.duration_since(std::time::SystemTime::UNIX_EPOCH)
             .ok()
             .ser_json(d, s);
     }
 }
 
-impl DeJson for SystemTime {
-    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<SystemTime, DeJsonErr> {
+#[cfg(feature = "std")]
+impl DeJson for std::time::SystemTime {
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<std::time::SystemTime, DeJsonErr> {
         if let Some(dur) = Option::<Duration>::de_json(s, i)? {
-            return Ok(SystemTime::UNIX_EPOCH + dur);
+            return Ok(std::time::SystemTime::UNIX_EPOCH + dur);
         }
         Err(s.err_parse("system time"))
     }

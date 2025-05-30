@@ -1,6 +1,5 @@
 use core::error::Error;
 use core::{convert::TryInto, time::Duration};
-use std::time::SystemTime;
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
@@ -675,16 +674,18 @@ impl DeBin for Duration {
     }
 }
 
-impl SerBin for SystemTime {
+#[cfg(feature = "std")]
+impl SerBin for std::time::SystemTime {
     fn ser_bin(&self, s: &mut Vec<u8>) {
-        let duration = self.duration_since(SystemTime::UNIX_EPOCH).ok();
+        let duration = self.duration_since(std::time::SystemTime::UNIX_EPOCH).ok();
         duration.ser_bin(s);
     }
 }
 
-impl DeBin for SystemTime {
-    fn de_bin(o: &mut usize, d: &[u8]) -> Result<SystemTime, DeBinErr> {
+#[cfg(feature = "std")]
+impl DeBin for std::time::SystemTime {
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<std::time::SystemTime, DeBinErr> {
         let duration: Duration = DeBin::de_bin(o, d)?;
-        Ok(SystemTime::UNIX_EPOCH + duration)
+        Ok(std::time::SystemTime::UNIX_EPOCH + duration)
     }
 }
