@@ -709,3 +709,40 @@ fn no_whitespace_when_serialized() {
         assert!(no_whitespace);
     }
 }
+
+#[test]
+fn generic_enum() {
+    #[derive(DeRon, PartialEq, Debug)]
+    pub enum Foo<T> {
+        A,
+        B(T, String),
+        C { a: T, b: String },
+    }
+
+    #[derive(DeRon, PartialEq, Debug)]
+    pub struct Bar<T> {
+        foo1: Foo<T>,
+        foo2: Foo<T>,
+        foo3: Foo<T>,
+    }
+
+    let ron = r#"
+       (
+          foo1: A,
+          foo2: B(1, "asd"),
+          foo3: C(a: 2, b: "qwe"),
+       )
+    "#;
+
+    let test: Bar<i32> = DeRon::deserialize_ron(ron).unwrap();
+
+    assert_eq!(test.foo1, Foo::A);
+    assert_eq!(test.foo2, Foo::B(1, "asd".to_string()));
+    assert_eq!(
+        test.foo3,
+        Foo::C {
+            a: 2,
+            b: "qwe".to_string()
+        }
+    );
+}

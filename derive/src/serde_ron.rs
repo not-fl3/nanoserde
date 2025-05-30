@@ -2,7 +2,10 @@ use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
-use crate::parse::{Attribute, Category, Enum, Field, Struct, Type};
+use crate::{
+    parse::{Attribute, Category, Enum, Field, Struct, Type},
+    shared::{enum_bounds_strings, struct_bounds_strings},
+};
 
 use proc_macro::TokenStream;
 
@@ -38,6 +41,8 @@ pub fn derive_de_ron_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> T
 
 pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut s = String::new();
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "SerRon", crate_name);
 
     for field in struct_.fields.iter().filter(|f| !attrs_skip(&f.attributes)) {
         let struct_fieldname = field.field_name.clone().unwrap();
@@ -72,7 +77,7 @@ pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
 
     format!(
         "
-        impl {}::SerRon for {} {{
+        impl{} {}::SerRon for {}{} {{
             fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 s.st_pre();
                 {}
@@ -80,11 +85,13 @@ pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
             }}
         }}
     ",
+        generic_w_bounds,
         crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
         crate_name,
         s
     )
@@ -94,6 +101,8 @@ pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
 
 pub fn derive_ser_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) =
+        struct_bounds_strings(struct_, "SerRon", crate_name);
 
     let last = struct_.fields.len() - 1;
     for (n, _field) in struct_
@@ -109,18 +118,20 @@ pub fn derive_ser_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> Toke
     }
     format!(
         "
-        impl {}::SerRon for {} {{
+        impl{} {}::SerRon for {}{} {{
             fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 s.out.push('(');
                 {}
                 s.out.push(')');
             }}
         }}",
+        generic_w_bounds,
         crate_name,
         struct_
             .name
             .as_ref()
             .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
         crate_name,
         body
     )
@@ -169,7 +180,8 @@ pub fn derive_de_ron_named(
         } else {
             None
         };
-        let ron_fieldname =(!field_attr_skip).then(|| shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone()));
+        let ron_fieldname = (!field_attr_skip)
+            .then(|| shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone()));
 
         unwraps.push(match default_val {
             Some(def) => format!("{}.unwrap_or_else(|| {})", localvar, def),
@@ -256,19 +268,32 @@ pub fn derive_de_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream {
         &struct_.attributes,
         crate_name,
     );
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeRon", crate_name);
 
     format!(
-        "impl {}::DeRon for {} {{
+        "impl{} {}::DeRon for {}{} {{
             fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 ::core::result::Result::Ok({})
             }}
-        }}", crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), crate_name, crate_name, body)
+        }}", 
+        generic_w_bounds,
+        crate_name,
+        struct_
+            .name
+            .as_ref()
+            .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
+        crate_name,
+        crate_name,
+        body
+    )
     .parse()
     .unwrap()
 }
 
 pub fn derive_de_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = struct_bounds_strings(struct_, "DeRon", crate_name);
 
     for _ in &struct_.fields {
         l!(
@@ -283,19 +308,30 @@ pub fn derive_de_ron_struct_unnamed(struct_: &Struct, crate_name: &str) -> Token
     }
 
     format! ("
-        impl {}::DeRon for {} {{
+        impl{} {}::DeRon for {}{} {{
             fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 s.paren_open(i)?;
                 let r = Self({});
                 s.paren_close(i)?;
                 ::core::result::Result::Ok(r)
             }}
-        }}", crate_name, struct_.name.as_ref().expect("Cannot implement for anonymous struct"), crate_name, crate_name, body
+        }}",
+        generic_w_bounds,
+        crate_name,
+        struct_
+            .name
+            .as_ref()
+            .expect("Cannot implement for anonymous struct"),
+        generic_no_bounds,
+        crate_name,
+        crate_name,
+        body
     ).parse().unwrap()
 }
 
 pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "SerRon", crate_name);
 
     for variant in &enum_.variants {
         let ident = &variant.field_name.clone().unwrap();
@@ -389,14 +425,14 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     }
     format!(
         "
-        impl {}::SerRon for {} {{
+        impl{} {}::SerRon for {}{} {{
             fn ser_ron(&self, d: usize, s: &mut {}::SerRonState) {{
                 match self {{
                     {}
                 }}
             }}
         }}",
-        crate_name, enum_.name, crate_name, body
+        generic_w_bounds, crate_name, enum_.name, generic_no_bounds, crate_name, body
     )
     .parse()
     .unwrap()
@@ -404,6 +440,8 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
 pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut body = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "DeRon", crate_name);
+
     for variant in &enum_.variants {
         let ident = variant.field_name.clone().unwrap();
 
@@ -461,7 +499,7 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     }
 
     format! ("
-        impl {}::DeRon for {} {{
+        impl{} {}::DeRon for {}{} {{
             fn de_ron(s: &mut {}::DeRonState, i: &mut core::str::Chars) -> ::core::result::Result<Self,{}::DeRonErr> {{
                 // we are expecting an identifier
                 s.ident(i)?;
@@ -470,5 +508,5 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                     _ => return ::core::result::Result::Err(s.err_enum(&s.identbuf))
                 }})
             }}
-        }}", crate_name, enum_.name, crate_name, crate_name, body).parse().unwrap()
+        }}", generic_w_bounds, crate_name, enum_.name, generic_no_bounds, crate_name, crate_name, body).parse().unwrap()
 }

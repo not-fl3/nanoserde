@@ -298,6 +298,7 @@ pub fn derive_de_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
 
 pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     let mut r = String::new();
+    let (generic_w_bounds, generic_no_bounds) = enum_bounds_strings(enum_, "SerJson", crate_name);
 
     for variant in enum_.variants.iter() {
         let field_name = variant.field_name.clone().unwrap();
@@ -423,14 +424,14 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
     format!(
         "
-        impl {}::SerJson for {} {{
+        impl{} {}::SerJson for {}{} {{
             fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
                 match self {{
                     {}
                 }}
             }}
         }}",
-        crate_name, enum_.name, crate_name, r
+        generic_w_bounds, crate_name, enum_.name, generic_no_bounds, crate_name, r
     )
     .parse()
     .unwrap()
