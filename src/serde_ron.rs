@@ -1340,6 +1340,7 @@ impl DeRon for Duration {
     }
 }
 
+#[cfg(feature = "std")]
 impl SerRon for std::time::SystemTime {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
         self.duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -1348,6 +1349,7 @@ impl SerRon for std::time::SystemTime {
     }
 }
 
+#[cfg(feature = "std")]
 impl DeRon for std::time::SystemTime {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<std::time::SystemTime, DeRonErr> {
         if let Some(dur) = Option::<Duration>::de_ron(s, i)? {

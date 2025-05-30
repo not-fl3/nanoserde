@@ -1201,6 +1201,7 @@ fn json_crate() {
     assert_eq!(test.c, None);
 }
 
+#[cfg(feature = "std")]
 #[test]
 fn std_time() {
     use nanoserde::DeJson;
