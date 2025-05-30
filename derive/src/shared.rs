@@ -1,12 +1,8 @@
 #![cfg(any(feature = "json", feature = "ron", feature = "binary"))]
 
-#[cfg(any(feature = "json", feature = "binary"))]
-use alloc::{format, string::ToString, vec::Vec};
-
-use alloc::string::String;
-
-#[cfg(any(feature = "binary", feature = "json"))]
 use crate::parse::{Enum, Struct};
+use alloc::string::String;
+use alloc::{format, string::ToString, vec::Vec};
 
 macro_rules! l {
     ($target:ident, $line:expr) => {
