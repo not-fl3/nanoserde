@@ -1200,3 +1200,27 @@ fn json_crate() {
     assert_eq!(test.d.unwrap(), "hello");
     assert_eq!(test.c, None);
 }
+
+#[test]
+fn std_time() {
+    use nanoserde::DeJson;
+    use std::time::{Duration, SystemTime};
+
+    #[derive(DeJson, PartialEq, Debug)]
+    pub struct Test {
+        pub duration: Duration,
+        pub system_time: SystemTime,
+    }
+
+    let json = r#"{
+        "duration": "1000.1011011101",
+        "system_time": "1633072800.5000"
+    }"#;
+
+    let test: Test = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.duration, Duration::new(1000, 1011011101));
+    assert_eq!(
+        test.system_time,
+        SystemTime::UNIX_EPOCH + Duration::new(1633072800, 5000)
+    );
+}

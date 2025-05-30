@@ -1,5 +1,6 @@
-use core::error::Error;
 use core::str::Chars;
+use core::{error::Error, time::Duration};
+use std::time::SystemTime;
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -1301,5 +1302,58 @@ where
 {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Box<T>, DeRonErr> {
         Ok(Box::new(DeRon::de_ron(s, i)?))
+    }
+}
+
+impl SerRon for Duration {
+    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+        s.out.push_str(&format!("\"{}", self.as_secs()));
+        if self.subsec_nanos() > 0 {
+            s.out.push_str(&format!(
+                ".{}\"",
+                self.subsec_nanos() as u64 / 1_000_000_000
+            ));
+        } else {
+            s.out.push('"');
+        }
+    }
+}
+
+impl DeRon for Duration {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Duration, DeRonErr> {
+        let (secs, nanos) = if let DeRonTok::Str = s.tok {
+            let val = s.as_string()?;
+            s.next_tok(i)?;
+            if let Some((s_part, n_part)) = val.split_once('.') {
+                (
+                    s_part
+                        .parse()
+                        .map_err(|_| s.err_parse("duration seconds"))?,
+                    n_part.parse().map_err(|_| s.err_parse("duration nanos"))?,
+                )
+            } else {
+                (val.parse().map_err(|_| s.err_parse("duration seconds"))?, 0)
+            }
+        } else {
+            return Err(s.err_token("duration string"));
+        };
+        Ok(Duration::new(secs, nanos))
+    }
+}
+
+impl SerRon for SystemTime {
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        self.duration_since(SystemTime::UNIX_EPOCH)
+            .ok()
+            .ser_ron(d, s);
+    }
+}
+
+impl DeRon for SystemTime {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<SystemTime, DeRonErr> {
+        if let Some(dur) = Option::<Duration>::de_ron(s, i)? {
+            return Ok(SystemTime::UNIX_EPOCH + dur);
+        }
+        Err(s.err_parse("system time"))
     }
 }

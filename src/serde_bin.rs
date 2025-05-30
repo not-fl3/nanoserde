@@ -1,5 +1,5 @@
-use core::convert::TryInto;
 use core::error::Error;
+use core::{convert::TryInto, time::Duration};
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
@@ -651,5 +651,25 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Box<T>, DeBinErr> {
         Ok(Box::new(DeBin::de_bin(o, d)?))
+    }
+}
+
+impl SerBin for Duration {
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let secs = self.as_secs();
+        let nanos = self.subsec_nanos();
+        secs.ser_bin(s);
+        nanos.ser_bin(s);
+    }
+}
+
+impl DeBin for Duration {
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Duration, DeBinErr> {
+        let secs: u64 = DeBin::de_bin(o, d)?;
+        let nanos: u32 = DeBin::de_bin(o, d)?;
+        if nanos >= 1_000_000_000 {
+            return Err(DeBinErr::new(*o, 4, d.len()));
+        }
+        Ok(Duration::new(secs, nanos))
     }
 }
