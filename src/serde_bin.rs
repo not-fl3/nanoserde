@@ -63,6 +63,7 @@ pub enum DeBinErrReason {
         /// Actual Length
         actual_length: usize,
     },
+    Range(String),
 }
 
 /// The error message when failing to deserialize.
@@ -97,6 +98,7 @@ impl core::fmt::Debug for DeBinErr {
                 "Bin deserialize error at:{} wanted:{} bytes but max size is {}",
                 self.o, l, s
             ),
+            DeBinErrReason::Range(ref s) => write!(f, "Bin deserialize error at:{} {}", self.o, s),
         }
     }
 }
@@ -667,8 +669,13 @@ impl DeBin for Duration {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Duration, DeBinErr> {
         let secs: u64 = DeBin::de_bin(o, d)?;
         let nanos: u32 = DeBin::de_bin(o, d)?;
-        if nanos >= 1_000_000_000 {
-            return Err(DeBinErr::new(*o, 4, d.len()));
+        if nanos > 1_000_000_000 {
+            return Err(DeBinErr {
+                o: *o,
+                msg: DeBinErrReason::Range(
+                    "Duration nanos must be at most 1,000,000,000".to_owned(),
+                ),
+            });
         }
         Ok(Duration::new(secs, nanos))
     }
@@ -685,7 +692,9 @@ impl SerBin for std::time::SystemTime {
 #[cfg(feature = "std")]
 impl DeBin for std::time::SystemTime {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<std::time::SystemTime, DeBinErr> {
-        let duration: Duration = DeBin::de_bin(o, d)?;
-        Ok(std::time::SystemTime::UNIX_EPOCH + duration)
+        match DeBin::de_bin(o, d)? {
+            Some(duration) => Ok(std::time::SystemTime::UNIX_EPOCH + duration),
+            None => Ok(std::time::SystemTime::UNIX_EPOCH),
+        }
     }
 }

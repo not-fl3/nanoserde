@@ -1310,8 +1310,7 @@ impl SerJson for Duration {
     fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
         s.out.push_str(&format!("\"{}", self.as_secs()));
         if self.subsec_nanos() > 0 {
-            s.out
-                .push_str(&format!(".{}\"", self.subsec_nanos() as u64 / 1_000_000));
+            s.out.push_str(&format!(".{}\"", self.subsec_nanos()));
         } else {
             s.out.push('"');
         }
@@ -1327,16 +1326,26 @@ impl DeJson for Duration {
                 (
                     s_part
                         .parse()
-                        .map_err(|_| s.err_parse("duration seconds"))?,
-                    n_part.parse().map_err(|_| s.err_parse("duration nanos"))?,
+                        .map_err(|_| s.err_parse("Duration seconds must be a valid u64"))?,
+                    n_part
+                        .parse()
+                        .map_err(|_| s.err_parse("Duration nanos must be a valid u32"))?,
                 )
             } else {
-                (val.parse().map_err(|_| s.err_parse("duration seconds"))?, 0)
+                (
+                    val.parse()
+                        .map_err(|_| s.err_parse("Duration seconds must be a valid u64"))?,
+                    0,
+                )
             }
         } else {
-            return Err(s.err_token("duration string"));
+            return Err(s.err_type("Duration must be represented as a string"));
         };
-        Ok(Duration::new(secs, nanos))
+        if nanos > 1_000_000_000 {
+            Err(s.err_range("Duration nanos must be at most 1,000,000,000"))
+        } else {
+            Ok(Duration::new(secs, nanos))
+        }
     }
 }
 
@@ -1352,9 +1361,9 @@ impl SerJson for std::time::SystemTime {
 #[cfg(feature = "std")]
 impl DeJson for std::time::SystemTime {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<std::time::SystemTime, DeJsonErr> {
-        if let Some(dur) = Option::<Duration>::de_json(s, i)? {
-            return Ok(std::time::SystemTime::UNIX_EPOCH + dur);
+        match DeJson::de_json(s, i)? {
+            Some(dur) => Ok(std::time::SystemTime::UNIX_EPOCH + dur),
+            None => Ok(std::time::SystemTime::UNIX_EPOCH),
         }
-        Err(s.err_parse("system time"))
     }
 }
