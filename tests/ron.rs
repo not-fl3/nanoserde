@@ -729,7 +729,7 @@ fn std_time() {
 
     // Duration error cases
     assert!(Duration::deserialize_ron(r#""invalid""#).is_err());
-    assert!(Duration::deserialize_ron(r#""1000.1000000001""#).is_err()); // Nanos = 1B (invalid)
+    assert!(Duration::deserialize_ron(r#"(secs: 1000, nanos: 1000000001)"#).is_err()); // Nanos = 1B (invalid)
     assert!(Duration::deserialize_ron(r#""""#).is_err()); // Empty string
 
     // SystemTime round trip

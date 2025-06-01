@@ -1306,39 +1306,51 @@ where
 
 impl SerRon for Duration {
     fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
-        s.out.push_str(&format!("\"{}", self.as_secs()));
+        s.out.push('{');
+        s.out.push_str(&format!("\"secs\":{}", self.as_secs()));
         if self.subsec_nanos() > 0 {
-            s.out.push_str(&format!(".{}\"", self.subsec_nanos()));
-        } else {
-            s.out.push('"');
+            s.out
+                .push_str(&format!(",\"nanos\":{}", self.subsec_nanos()));
         }
+        s.out.push('}');
     }
 }
 
 impl DeRon for Duration {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Duration, DeRonErr> {
-        let (secs, nanos) = if let DeRonTok::Str = s.tok {
-            let val = s.as_string()?;
-            s.next_tok(i)?;
-            if let Some((s_part, n_part)) = val.split_once('.') {
-                (
-                    s_part
-                        .parse()
-                        .map_err(|_| s.err_parse("Duration seconds must be a valid u64"))?,
-                    n_part
-                        .parse()
-                        .map_err(|_| s.err_parse("Duration nanos must be a valid u32"))?,
-                )
-            } else {
-                (
-                    val.parse()
-                        .map_err(|_| s.err_parse("Duration seconds must be a valid u64"))?,
-                    0,
-                )
+        let mut sec = None;
+        let mut nanos = None;
+        s.curly_open(i)?;
+        while s.tok != DeRonTok::CurlyClose {
+            let k: String = DeRon::de_ron(s, i)?;
+            match k.as_str() {
+                "secs" => {
+                    if sec.is_some() {
+                        return Err(s.err_parse("Duration can only have one secs field"));
+                    }
+                    s.colon(i)?;
+                    sec = Some(DeRon::de_ron(s, i)?);
+                }
+                "nanos" => {
+                    if nanos.is_some() {
+                        return Err(s.err_parse("Duration can only have one nanos field"));
+                    }
+                    s.colon(i)?;
+                    nanos = Some(DeRon::de_ron(s, i)?);
+                }
+                _ => {
+                    return Err(s.err_parse(&format!(
+                        "Duration can only have secs or nanos fields, got {k}"
+                    )));
+                }
             }
-        } else {
-            return Err(s.err_type("Duration must be represented as a string"));
-        };
+            s.eat_comma_curly(i)?;
+        }
+        s.curly_close(i)?;
+
+        let secs = sec.ok_or_else(|| s.err_parse("Duration must have secs field"))?;
+        let nanos = nanos.unwrap_or(0);
+
         if nanos > 1_000_000_000 {
             Err(s.err_range("Duration nanos must be at most 1,000,000,000"))
         } else {

@@ -330,6 +330,14 @@ fn binary_crate() {
 fn std_time() {
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+    // Deserialize a known value
+    let known_bytes = [
+        42, 0, 0, 0, 0, 0, 0, 0, // seconds
+        123, 0, 0, 0, // nanoseconds
+    ];
+    let deserialized: Duration = DeBin::deserialize_bin(&known_bytes).unwrap();
+    assert_eq!(deserialized, Duration::new(42, 123));
+
     // Duration round trip
     let durations = [
         Duration::new(0, 0),

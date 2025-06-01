@@ -1206,6 +1206,11 @@ fn json_crate() {
 fn std_time() {
     use std::time::{Duration, SystemTime};
 
+    // Deserialize known good
+    let duration_json = r#"{ "secs": 42, "nanos": 123456789 }"#;
+    let duration: Duration = DeJson::deserialize_json(duration_json).unwrap();
+    assert_eq!(duration, Duration::new(42, 123_456_789));
+
     // Duration round trip
     let durations = [
         Duration::new(0, 0),
@@ -1220,7 +1225,7 @@ fn std_time() {
 
     // Duration error cases
     assert!(Duration::deserialize_json(r#""invalid""#).is_err());
-    assert!(Duration::deserialize_json(r#""1000.1000000001""#).is_err()); // Nanos = 1B (invalid)
+    assert!(Duration::deserialize_json(r#"{ "secs": 1000, "nanos": 1000000001 }"#).is_err()); // Nanos = 1B (invalid)
     assert!(Duration::deserialize_json(r#""""#).is_err()); // Empty string
 
     // SystemTime round trip
