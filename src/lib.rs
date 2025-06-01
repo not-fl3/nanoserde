@@ -41,23 +41,3 @@ pub use crate::serde_json::*;
 mod toml;
 #[cfg(feature = "toml")]
 pub use crate::toml::*;
-
-#[cfg(test)]
-mod format_test {
-    use std::time::{Duration, SystemTime};
-    
-    #[test]
-    fn check_current_format() {
-        let dur = Duration::new(1000, 999_999_999);
-        let time = SystemTime::UNIX_EPOCH + Duration::new(1633072800, 500_000_000);
-        
-        println!("JSON Duration: {}", crate::SerJson::serialize_json(&dur));
-        println!("JSON SystemTime: {}", crate::SerJson::serialize_json(&time));
-        
-        #[cfg(feature = "ron")]
-        {
-            println!("RON Duration: {}", crate::SerRon::serialize_ron(&dur));
-            println!("RON SystemTime: {}", crate::SerRon::serialize_ron(&time));
-        }
-    }
-}
