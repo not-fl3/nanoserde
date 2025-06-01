@@ -713,17 +713,25 @@ fn no_whitespace_when_serialized() {
 #[test]
 fn generic_enum() {
     #[derive(DeRon, PartialEq, Debug)]
-    pub enum Foo<T> {
+    pub enum Foo<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
         A,
         B(T, String),
-        C { a: T, b: String },
+        C { a: U, b: String },
     }
 
     #[derive(DeRon, PartialEq, Debug)]
-    pub struct Bar<T> {
-        foo1: Foo<T>,
-        foo2: Foo<T>,
-        foo3: Foo<T>,
+    pub struct Bar<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
+        foo1: Foo<T, U>,
+        foo2: Foo<T, U>,
+        foo3: Foo<T, U>,
     }
 
     let ron = r#"
@@ -734,7 +742,7 @@ fn generic_enum() {
        )
     "#;
 
-    let test: Bar<i32> = DeRon::deserialize_ron(ron).unwrap();
+    let test: Bar<i32, u64> = DeRon::deserialize_ron(ron).unwrap();
 
     assert_eq!(test.foo1, Foo::A);
     assert_eq!(test.foo2, Foo::B(1, "asd".to_string()));

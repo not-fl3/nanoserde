@@ -324,3 +324,40 @@ fn binary_crate() {
 
     assert!(test == test_deserialized);
 }
+
+#[test]
+fn generic_enum() {
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub enum Foo<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
+        A,
+        B(T, String),
+        C { a: U, b: String },
+    }
+
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    pub struct Bar<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
+        foo1: Foo<T, U>,
+        foo2: Foo<T, U>,
+        foo3: Foo<T, U>,
+    }
+
+    let test = Bar {
+        foo1: Foo::A,
+        foo2: Foo::B(1, "asd".to_string()),
+        foo3: Foo::C {
+            a: 2,
+            b: "qwe".to_string(),
+        },
+    };
+    let bytes = SerBin::serialize_bin(&test);
+    let test_deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+    assert!(test == test_deserialized);
+}
