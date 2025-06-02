@@ -1,12 +1,8 @@
 #![cfg(any(feature = "json", feature = "ron", feature = "binary"))]
 
-#[cfg(any(feature = "json", feature = "binary"))]
-use alloc::{format, string::ToString, vec::Vec};
-
-use alloc::string::String;
-
-#[cfg(any(feature = "binary", feature = "json"))]
 use crate::parse::{Enum, Struct};
+use alloc::string::String;
+use alloc::{format, string::ToString, vec::Vec};
 
 macro_rules! l {
     ($target:ident, $line:expr) => {
@@ -94,7 +90,6 @@ pub fn attrs_crate(attributes: &[crate::parse::Attribute]) -> Option<&str> {
     })
 }
 
-#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn struct_bounds_strings(
     struct_: &Struct,
     bound_name: &str,
@@ -123,7 +118,6 @@ pub(crate) fn struct_bounds_strings(
     (generic_w_bounds, generic_no_bounds)
 }
 
-#[cfg(any(feature = "binary", feature = "json"))]
 pub(crate) fn enum_bounds_strings(
     enum_: &Enum,
     bound_name: &str,

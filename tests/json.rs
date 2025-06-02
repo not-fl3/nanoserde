@@ -1201,6 +1201,60 @@ fn json_crate() {
     assert_eq!(test.c, None);
 }
 
+#[test]
+fn generic_enum() {
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Foo<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
+        A,
+        B(T, String),
+        C { a: U, b: String },
+    }
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Bar<T, U>
+    where
+        T: Copy,
+        U: Clone,
+    {
+        foo1: Foo<T, U>,
+        foo2: Foo<T, U>,
+        foo3: Foo<T, U>,
+    }
+
+    let json = r#"
+       {
+          "foo1": "A",
+          "foo2": { "B": [ 1, "asd" ] },
+          "foo3": { "C": { "a": 2, "b": "qwe" } }
+       }
+    "#;
+
+    let test: Bar<i32, u64> = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(test.foo1, Foo::A);
+    assert_eq!(test.foo2, Foo::B(1, "asd".to_string()));
+    assert_eq!(
+        test.foo3,
+        Foo::C {
+            a: 2,
+            b: "qwe".to_string()
+        }
+    );
+    let bytes = SerJson::serialize_json(&test);
+    assert_eq!(
+        bytes
+            .lines()
+            .map(|l| l.trim().replace(' ', ""))
+            .collect::<String>(),
+        json.lines()
+            .map(|l| l.trim().replace(' ', ""))
+            .collect::<String>()
+    );
+}
+
 #[cfg(feature = "std")]
 #[test]
 fn std_time() {
