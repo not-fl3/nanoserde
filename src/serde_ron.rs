@@ -1,5 +1,5 @@
-use core::error::Error;
 use core::str::Chars;
+use core::{error::Error, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -1301,5 +1301,79 @@ where
 {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Box<T>, DeRonErr> {
         Ok(Box::new(DeRon::de_ron(s, i)?))
+    }
+}
+
+impl SerRon for Duration {
+    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+        s.out.push('{');
+        s.out.push_str(&format!("\"secs\":{}", self.as_secs()));
+        if self.subsec_nanos() > 0 {
+            s.out
+                .push_str(&format!(",\"nanos\":{}", self.subsec_nanos()));
+        }
+        s.out.push('}');
+    }
+}
+
+impl DeRon for Duration {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Duration, DeRonErr> {
+        let mut sec = None;
+        let mut nanos = None;
+        s.curly_open(i)?;
+        while s.tok != DeRonTok::CurlyClose {
+            let k: String = DeRon::de_ron(s, i)?;
+            match k.as_str() {
+                "secs" => {
+                    if sec.is_some() {
+                        return Err(s.err_parse("Duration can only have one secs field"));
+                    }
+                    s.colon(i)?;
+                    sec = Some(DeRon::de_ron(s, i)?);
+                }
+                "nanos" => {
+                    if nanos.is_some() {
+                        return Err(s.err_parse("Duration can only have one nanos field"));
+                    }
+                    s.colon(i)?;
+                    nanos = Some(DeRon::de_ron(s, i)?);
+                }
+                _ => {
+                    return Err(s.err_parse(&format!(
+                        "Duration can only have secs or nanos fields, got {k}"
+                    )));
+                }
+            }
+            s.eat_comma_curly(i)?;
+        }
+        s.curly_close(i)?;
+
+        let secs = sec.ok_or_else(|| s.err_parse("Duration must have secs field"))?;
+        let nanos = nanos.unwrap_or(0);
+
+        if nanos > 1_000_000_000 {
+            Err(s.err_range("Duration nanos must be at most 1,000,000,000"))
+        } else {
+            Ok(Duration::new(secs, nanos))
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl SerRon for std::time::SystemTime {
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        self.duration_since(std::time::SystemTime::UNIX_EPOCH)
+            .ok()
+            .ser_ron(d, s);
+    }
+}
+
+#[cfg(feature = "std")]
+impl DeRon for std::time::SystemTime {
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<std::time::SystemTime, DeRonErr> {
+        match DeRon::de_ron(s, i)? {
+            Some(dur) => Ok(std::time::SystemTime::UNIX_EPOCH + dur),
+            None => Ok(std::time::SystemTime::UNIX_EPOCH),
+        }
     }
 }

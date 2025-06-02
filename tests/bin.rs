@@ -324,3 +324,85 @@ fn binary_crate() {
 
     assert!(test == test_deserialized);
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn std_time() {
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    // Deserialize a known value
+    let known_bytes = [
+        42, 0, 0, 0, 0, 0, 0, 0, // seconds
+        123, 0, 0, 0, // nanoseconds
+    ];
+    let deserialized: Duration = DeBin::deserialize_bin(&known_bytes).unwrap();
+    assert_eq!(deserialized, Duration::new(42, 123));
+
+    // Duration round trip
+    let durations = [
+        Duration::new(0, 0),
+        Duration::new(42, 123_456_789),
+        Duration::new(u64::MAX, 999_999_999),
+    ];
+    for dur in durations {
+        let bytes = SerBin::serialize_bin(&dur);
+        let deserialized: Duration = DeBin::deserialize_bin(&bytes).unwrap();
+        assert_eq!(dur, deserialized);
+    }
+
+    // Not enough data
+    assert!(Duration::deserialize_bin(&[1, 2, 3]).is_err()); // Truncated
+
+    // Nanos too large
+    let invalid_nanos = {
+        let mut b = Vec::new();
+        42u64.ser_bin(&mut b);
+        1_000_000_001u32.ser_bin(&mut b);
+        b
+    };
+    assert!(Duration::deserialize_bin(&invalid_nanos).is_err()); // Invalid nanos
+
+    // SystemTime round trip
+    let times = [
+        UNIX_EPOCH,
+        UNIX_EPOCH + Duration::new(42, 0),
+        UNIX_EPOCH + Duration::new(1_640_995_200, 500_000_000),
+    ];
+    for time in times {
+        let bytes = SerBin::serialize_bin(&time);
+        let deserialized: SystemTime = DeBin::deserialize_bin(&bytes).unwrap();
+        assert_eq!(time, deserialized);
+    }
+
+    // Empty and not enough data
+    assert!(SystemTime::deserialize_bin(&[]).is_err());
+    assert!(SystemTime::deserialize_bin(&[1, 2, 3]).is_err());
+    let none_bytes = {
+        let mut b = Vec::new();
+        0u8.ser_bin(&mut b);
+        b
+    };
+    assert_eq!(
+        SystemTime::deserialize_bin(&none_bytes).unwrap(),
+        UNIX_EPOCH
+    );
+
+    // Combined round trip
+    #[derive(DeBin, SerBin, PartialEq, Debug)]
+    struct Test {
+        duration: Duration,
+        system_time: SystemTime,
+    }
+
+    let test = Test {
+        duration: Duration::new(42, 0),
+        system_time: UNIX_EPOCH + Duration::new(42, 0),
+    };
+    let bytes = SerBin::serialize_bin(&test);
+    let deserialized = DeBin::deserialize_bin(&bytes).unwrap();
+    assert_eq!(test, deserialized);
+
+    let bytes = SerBin::serialize_bin(&None::<SystemTime>);
+    let deserialized: SystemTime = DeBin::deserialize_bin(&bytes).unwrap();
+    assert_eq!(deserialized, UNIX_EPOCH);
+}
