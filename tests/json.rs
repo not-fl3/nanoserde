@@ -1254,3 +1254,67 @@ fn generic_enum() {
             .collect::<String>()
     );
 }
+
+#[cfg(feature = "std")]
+#[test]
+fn std_time() {
+    use std::time::{Duration, SystemTime};
+
+    // Deserialize known good
+    let duration_json = r#"{ "secs": 42, "nanos": 123456789 }"#;
+    let duration: Duration = DeJson::deserialize_json(duration_json).unwrap();
+    assert_eq!(duration, Duration::new(42, 123_456_789));
+
+    // Duration round trip
+    let durations = [
+        Duration::new(0, 0),
+        Duration::new(42, 123_456_789),
+        Duration::new(u64::MAX, 999_999_999),
+    ];
+    for dur in durations {
+        let serialized = SerJson::serialize_json(&dur);
+        let deserialized: Duration = DeJson::deserialize_json(&serialized).unwrap();
+        assert_eq!(dur, deserialized);
+    }
+
+    // Duration error cases
+    assert!(Duration::deserialize_json(r#""invalid""#).is_err());
+    assert!(Duration::deserialize_json(r#"{ "secs": 1000, "nanos": 1000000001 }"#).is_err()); // Nanos = 1B (invalid)
+    assert!(Duration::deserialize_json(r#""""#).is_err()); // Empty string
+
+    // SystemTime round trip
+    let times = [
+        SystemTime::UNIX_EPOCH,
+        SystemTime::UNIX_EPOCH + Duration::new(42, 0),
+        SystemTime::UNIX_EPOCH + Duration::new(1_640_995_200, 500_000_000),
+    ];
+    for time in times {
+        let serialized = SerJson::serialize_json(&time);
+        let deserialized: SystemTime = DeJson::deserialize_json(&serialized).unwrap();
+        assert_eq!(time, deserialized);
+    }
+
+    // SystemTime error cases
+    assert!(SystemTime::deserialize_json(r#""invalid""#).is_err());
+    assert!(SystemTime::deserialize_json(r#""""#).is_err()); // Empty string
+
+    // Combined struct test
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Test {
+        pub duration: Duration,
+        pub system_time: SystemTime,
+    }
+
+    let test = Test {
+        duration: Duration::new(1000, 999_999_999),
+        system_time: SystemTime::UNIX_EPOCH + Duration::new(1633072800, 500_000_000),
+    };
+    let serialized = SerJson::serialize_json(&test);
+    let deserialized = DeJson::deserialize_json(&serialized).unwrap();
+    assert_eq!(test, deserialized);
+
+    // Test nil for SystemTime
+    let none = r#"null"#;
+    let deserialized_none: SystemTime = DeJson::deserialize_json(none).unwrap();
+    assert_eq!(deserialized_none, SystemTime::UNIX_EPOCH);
+}
