@@ -1379,3 +1379,12 @@ impl DeJson for std::time::SystemTime {
         }
     }
 }
+
+impl<T> SerJson for &T
+where
+    T: SerJson + ?Sized,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        (**self).ser_json(d, s);
+    }
+}
