@@ -588,6 +588,21 @@ fn hashmaps() {
     assert_eq!(foo.map["qwe"], 2);
 }
 
+#[cfg(feature = "std")]
+#[test]
+fn serialize_hashmap_with_str_keys() {
+    let mut hm: HashMap<&str, i32> = HashMap::new();
+    hm.insert("foo", 1);
+    hm.insert("bar", 2);
+
+    let json = SerJson::serialize_json(&hm);
+
+    let hm: HashMap<String, i32> = DeJson::deserialize_json(&json).unwrap();
+    assert_eq!(hm.len(), 2);
+    assert_eq!(hm["foo"], 1);
+    assert_eq!(hm["bar"], 2);
+}
+
 #[test]
 fn exponents() {
     #[derive(DeJson)]
