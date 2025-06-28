@@ -603,6 +603,28 @@ fn serialize_hashmap_with_str_keys() {
     assert_eq!(hm["bar"], 2);
 }
 
+fn serialize_hashmap_with_custom_hasher() {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::BuildHasherDefault;
+
+    #[derive(DeJson, SerJson, Debug)]
+    struct CustomHasherMap {
+        map: HashMap<String, usize, BuildHasherDefault<DefaultHasher>>,
+    }
+
+    let mut map = CustomHasherMap {
+        map: HashMap::default(),
+    };
+    map.map.insert("key1".to_string(), 1);
+    map.map.insert("key2".to_string(), 2);
+
+    let json = SerJson::serialize_json(&map);
+    let deserialized: CustomHasherMap = DeJson::deserialize_json(&json).unwrap();
+
+    assert_eq!(deserialized.map["key1"], 1);
+    assert_eq!(deserialized.map["key2"], 2);
+}
+
 #[test]
 fn exponents() {
     #[derive(DeJson)]
