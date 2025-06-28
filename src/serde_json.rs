@@ -1203,7 +1203,7 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<K, V> SerJson for std::collections::HashMap<K, V>
+impl<K, V, S> SerJson for std::collections::HashMap<K, V, S>
 where
     K: SerJson,
     V: SerJson,
@@ -1226,13 +1226,14 @@ where
 }
 
 #[cfg(feature = "std")]
-impl<K, V> DeJson for std::collections::HashMap<K, V>
+impl<K, V, S> DeJson for std::collections::HashMap<K, V, S>
 where
     K: DeJson + Eq + core::hash::Hash,
     V: DeJson,
+    S: core::hash::BuildHasher + Default,
 {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
-        let mut h = std::collections::HashMap::new();
+        let mut h = std::collections::HashMap::with_hasher(S::default());
         s.curly_open(i)?;
         while s.tok != DeJsonTok::CurlyClose {
             let k = DeJson::de_json(s, i)?;
