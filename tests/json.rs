@@ -603,6 +603,8 @@ fn serialize_hashmap_with_str_keys() {
     assert_eq!(hm["bar"], 2);
 }
 
+#[cfg(feature = "std")]
+#[test]
 fn serialize_hashmap_with_custom_hasher() {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::BuildHasherDefault;
