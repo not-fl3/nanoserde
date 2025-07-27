@@ -560,8 +560,8 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct, crate_name: &str) -> Tok
 
     // encode empty struct as {}
     if struct_.fields.is_empty() {
-        l!(body, "s.out.push('}');");
         l!(body, "s.out.push('{');");
+        l!(body, "s.out.push('}');");
     }
     // if its a newtype struct and it should be transparent - skip any curles
     // and skip "container"
