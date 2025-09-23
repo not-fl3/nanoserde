@@ -416,16 +416,14 @@ impl TomlParser {
     }
 
     fn next_tok(&mut self, i: &mut Chars) -> Result<TomlTok, TomlErr> {
-        while self.cur == '\n' || self.cur == '\r' || self.cur == '\t' || self.cur == ' ' {
+        while matches!(self.cur, '\n' | '\r' | '\t' | ' ') {
             self.next(i);
         }
-        loop {
-            if self.cur == '\0' {
-                return Ok(TomlTok::Eof);
-            }
 
+        loop {
             #[allow(unreachable_patterns)]
             match self.cur {
+                '\0' => return Ok(TomlTok::Eof),
                 ',' => {
                     self.next(i);
                     return Ok(TomlTok::Comma);
@@ -447,11 +445,7 @@ impl TomlParser {
                         self.next(i);
                     }
 
-                    while self.cur == '\n'
-                        || self.cur == '\r'
-                        || self.cur == '\t'
-                        || self.cur == ' '
-                    {
+                    while matches!(self.cur, '\n' | '\r' | '\t' | ' ') {
                         self.next(i);
                     }
                 }
@@ -466,27 +460,26 @@ impl TomlParser {
                     }
                     let escaped_string = braces == 3;
                     loop {
-                        if self.cur == '"' && !escaped_string {
-                            break;
-                        }
-                        if self.cur == '"' && escaped_string {
-                            let mut tmp = String::new();
-                            let mut braces = 0;
-                            while self.cur == '"' {
-                                tmp.push('"');
-                                braces += 1;
+                        match self.cur {
+                            '"' if !escaped_string => break,
+                            '"' if escaped_string => {
+                                let mut tmp = String::new();
+                                let mut braces = 0;
+                                while self.cur == '"' {
+                                    tmp.push('"');
+                                    braces += 1;
+                                    self.next(i);
+                                }
+                                if braces == 3 {
+                                    break;
+                                }
+                                val.push_str(&tmp);
+                            }
+                            '\\' => {
                                 self.next(i);
                             }
-                            if braces == 3 {
-                                break;
-                            }
-                            val.push_str(&tmp);
-                        }
-                        if self.cur == '\\' {
-                            self.next(i);
-                        }
-                        if self.cur == '\0' {
-                            return Err(self.err_parse("string"));
+                            '\0' => return Err(self.err_parse("string")),
+                            _ => {}
                         }
                         val.push(self.cur);
                         self.next(i);
@@ -539,7 +532,7 @@ impl TomlParser {
             self.next(i);
         }
 
-        if self.cur == 'n' {
+        if self.cur == 'n' { // check if is "nan"
             num.push(self.cur);
             self.next(i);
             if self.cur == 'a' {
@@ -553,7 +546,7 @@ impl TomlParser {
                     }
                 }
             }
-        } else if self.cur == 'i' {
+        } else if self.cur == 'i' { // check if is "inf"
             num.push(self.cur);
             self.next(i);
             if self.cur == 'n' {
@@ -576,49 +569,40 @@ impl TomlParser {
             self.next(i);
         }
 
-        if self.cur == '.' {
-            num.push(self.cur);
-            self.next(i);
-            while matches!(self.cur, '0'..='9' | '_') {
-                if self.cur != '_' {
-                    num.push(self.cur);
-                }
-                self.next(i);
-            }
-            if let Ok(num) = num.parse() {
-                return Ok(TomlTok::F64(num));
-            } else {
-                return Err(self.err_parse("number"));
-            }
-        } else if self.cur == '-' {
-            // lets assume its a date. whatever. i don't feel like more parsing today
-            num.push(self.cur);
-            self.next(i);
-            while matches!(self.cur, '0'..='9' | ':' | '-' | 'T') {
+        match self.cur {
+            '.' => {
                 num.push(self.cur);
                 self.next(i);
-            }
-            return Ok(TomlTok::Date(num));
-            // TODO rework this
-        }
-
-        if matches!(self.cur, ident_chars!()) {
-            return self.parse_ident(i, num);
-        }
-
-        match negative {
-            true => {
-                if let Ok(num) = num.parse() {
-                    return Ok(TomlTok::I64(num));
+                while matches!(self.cur, '0'..='9' | '_') {
+                    if self.cur != '_' {
+                        num.push(self.cur);
+                    }
+                    self.next(i);
                 }
-            }
-            false => {
                 if let Ok(num) = num.parse() {
-                    return Ok(TomlTok::U64(num));
+                    return Ok(TomlTok::F64(num));
                 }
+                return Err(self.err_parse("number"));
             }
+            '-' => {
+                // lets assume its a date. whatever. i don't feel like more parsing today
+                num.push(self.cur);
+                self.next(i);
+                while matches!(self.cur, '0'..='9' | ':' | '-' | 'T') {
+                    num.push(self.cur);
+                    self.next(i);
+                }
+                return Ok(TomlTok::Date(num));
+                // TODO rework this
+            }
+            ident_chars!() => return self.parse_ident(i, num),
+            _ => {}
         }
 
-        Err(self.err_parse("tokenizer"))
+        match (negative, num.parse()) {
+            (true, Ok(n)) => Ok(TomlTok::I64(n)),
+            (false, Ok(n)) => Ok(TomlTok::U64(n as u64)),
+            _ => Err(self.err_parse("tokenizer")),
+        }
     }
 }
