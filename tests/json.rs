@@ -477,10 +477,9 @@ fn empty2() {
     #[derive(DeJson, SerJson)]
     pub struct Empty;
 
-    let json = r#"{
-    }"#;
+    let json = SerJson::serialize_json(&Empty);
 
-    let _: Empty = DeJson::deserialize_json(json).unwrap();
+    let _: Empty = DeJson::deserialize_json(&json).unwrap();
 }
 
 #[test]
