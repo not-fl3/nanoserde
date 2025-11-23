@@ -372,7 +372,7 @@ pub fn derive_de_bin_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 let id: u16 = {}::DeBin::de_bin(o,d)?;
                 Ok(match id {{
                     {}
-                    _ => return ::core::result::Result::Err({}::DeBinErr::new(*o, 0, d.len()))
+                    unknown => return ::core::result::Result::Err({}::DeBinErr{{o: 0, msg: {}::DeBinErrReason::UnknownDiscriminant(unknown as isize)}})
                 }})
             }}
         }}",
@@ -383,6 +383,7 @@ pub fn derive_de_bin_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
         crate_name,
         crate_name,
         r,
+        crate_name,
         crate_name
     )
     .parse()

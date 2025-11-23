@@ -64,6 +64,7 @@ pub enum DeBinErrReason {
         actual_length: usize,
     },
     Range(String),
+    UnknownDiscriminant(isize),
 }
 
 /// The error message when failing to deserialize.
@@ -99,6 +100,11 @@ impl core::fmt::Debug for DeBinErr {
                 self.o, l, s
             ),
             DeBinErrReason::Range(ref s) => write!(f, "Bin deserialize error at:{} {}", self.o, s),
+            DeBinErrReason::UnknownDiscriminant(variant) => write!(
+                f,
+                "Bin deserialize error at {}: Unknown variant {}",
+                self.o, variant
+            ),
         }
     }
 }
