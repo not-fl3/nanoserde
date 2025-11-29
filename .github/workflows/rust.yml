@@ -13,15 +13,14 @@ jobs:
             - { os: ubuntu-latest, target: 'x86_64-unknown-linux-gnu' }
       steps:
         - uses: actions/checkout@v2
-        - uses: actions-rs/toolchain@v1
+        - uses: actions-rust-lang/setup-rust-toolchain@v1
           with:
             toolchain: stable
             target: ${{ matrix.config.target }}
-            override: true      
-        - uses: actions-rs/cargo@v1
-          with:
-            command: fmt
-            args: --check
+            components: rustfmt
+            override: true
+            rustflags: ""
+        - run: cargo fmt -- --check
         
   build_all:
     name: Build
@@ -38,11 +37,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.config.target }}
           override: true
+          rustflags: ""
       - name: Workaround MinGW issue # https://github.com/rust-lang/rust/issues/47048
         if: runner.os == 'Linux' && matrix.config.target == 'x86_64-pc-windows-gnu'
         run: |
@@ -51,10 +51,7 @@ jobs:
           sudo cp /usr/x86_64-w64-mingw32/lib/crt2.o  ~/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-pc-windows-gnu/lib/crt2.o
           echo "[target.x86_64-pc-windows-gnu]" >> ~/.cargo/config
           echo "linker = \"/usr/bin/x86_64-w64-mingw32-gcc\"" >> ~/.cargo/config
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-targets --target=${{ matrix.config.target }}
+      - run: cargo build --all-targets --target ${{ matrix.config.target }}
 
   features:
     name: Test Individual Features
@@ -71,16 +68,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: x86_64-unknown-linux-gnu
           override: true
+          rustflags: ""
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-default-features --features "std, ${{ matrix.feature }}"
+      - run: cargo test --no-default-features --features "std, ${{ matrix.feature }}"
 
   no_std_features:
     name: Test Individual Features NoStd
@@ -97,16 +92,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           target: x86_64-unknown-linux-gnu
           override: true
+          rustflags: ""
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-default-features --features "${{ matrix.feature }}"
+      - run: cargo test --no-default-features --features "${{ matrix.feature }}"
 
   test:
     name: Test
@@ -119,17 +112,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.config.target }}
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+          rustflags: ""
+      - run: cargo test
 
   test_no_std:
     name: Test No Std
@@ -142,15 +131,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly
           target: ${{ matrix.config.target }}
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test 
-          args: --no-default-features --features "binary, json, ron, toml"
+          rustflags: ""
+      - run: cargo test
+      - run: cargo test --no-default-features --features "binary, json, ron, toml"
