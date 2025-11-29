@@ -532,7 +532,8 @@ impl TomlParser {
             self.next(i);
         }
 
-        if self.cur == 'n' { // check if is "nan"
+        if self.cur == 'n' {
+            // check if is "nan"
             num.push(self.cur);
             self.next(i);
             if self.cur == 'a' {
@@ -546,7 +547,8 @@ impl TomlParser {
                     }
                 }
             }
-        } else if self.cur == 'i' { // check if is "inf"
+        } else if self.cur == 'i' {
+            // check if is "inf"
             num.push(self.cur);
             self.next(i);
             if self.cur == 'n' {
