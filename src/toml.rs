@@ -317,6 +317,7 @@ impl TomlParser {
                             return Err(self.err_token(tok));
                         }
                         out.start_array(&key);
+                        local_scope.clear();
                     }
                     _ => return Err(self.err_token(tok)),
                 }
