@@ -1,5 +1,5 @@
 use core::str::Chars;
-use core::{error::Error, time::Duration};
+use core::{error::Error, ops::Range, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -871,6 +871,21 @@ impl DeJson for String {
     }
 }
 
+impl<T> SerJson for Range<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.st_pre();
+        s.field(d + 1, "start");
+        self.start.ser_json(d + 1, s);
+        s.conl();
+        s.field(d + 1, "end");
+        self.end.ser_json(d + 1, s);
+        s.st_post(d);
+    }
+}
+
 impl<T> SerJson for Vec<T>
 where
     T: SerJson,
@@ -888,6 +903,38 @@ where
             }
         }
         s.out.push(']');
+    }
+}
+
+impl<T> DeJson for Range<T>
+where
+    T: DeJson,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
+        let mut _start = None;
+        let mut _end = None;
+        s.curly_open(i)?;
+        while s.next_str().is_some() {
+            match AsRef::<str>::as_ref(&s.strbuf) {
+                "start" => {
+                    s.next_colon(i)?;
+                    _start = Some(DeJson::de_json(s, i)?)
+                }
+                "end" => {
+                    s.next_colon(i)?;
+                    _end = Some(DeJson::de_json(s, i)?)
+                }
+                _ => {
+                    s.next_colon(i)?;
+                    s.whole_field(i)?;
+                }
+            }
+            s.eat_comma_curly(i)?;
+        }
+        s.curly_close(i)?;
+        let start = _start.ok_or_else(|| s.err_nf("start"))?;
+        let end = _end.ok_or_else(|| s.err_nf("end"))?;
+        Ok(start..end)
     }
 }
 

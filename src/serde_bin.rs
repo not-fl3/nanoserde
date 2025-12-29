@@ -1,5 +1,5 @@
 use core::error::Error;
-use core::{convert::TryInto, time::Duration};
+use core::{convert::TryInto, ops::Range, time::Duration};
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
@@ -274,6 +274,16 @@ impl DeBin for String {
     }
 }
 
+impl<T> SerBin for Range<T>
+where
+    T: SerBin,
+{
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        self.start.ser_bin(s);
+        self.end.ser_bin(s);
+    }
+}
+
 impl<T> SerBin for Vec<T>
 where
     T: SerBin,
@@ -284,6 +294,17 @@ where
         for item in self {
             item.ser_bin(s);
         }
+    }
+}
+
+impl<T> DeBin for Range<T>
+where
+    T: DeBin,
+{
+    fn de_bin(o: &mut usize, d: &[u8]) -> Result<Range<T>, DeBinErr> {
+        let start: T = DeBin::de_bin(o, d)?;
+        let end: T = DeBin::de_bin(o, d)?;
+        Ok(start..end)
     }
 }
 

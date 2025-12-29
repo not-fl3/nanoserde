@@ -4,6 +4,7 @@ use nanoserde::{DeJson, DeJsonErrReason, SerJson};
 use std::{
     collections::{BTreeMap, BTreeSet, LinkedList},
     fmt::Debug,
+    ops::Range,
     sync::atomic::AtomicBool,
 };
 
@@ -656,6 +657,7 @@ fn collections() {
         pub b: LinkedList<f32>,
         pub c: BTreeMap<i32, i32>,
         pub d: BTreeSet<i32>,
+        pub e: Range<i32>,
     }
 
     let test: Test = Test {
@@ -663,6 +665,7 @@ fn collections() {
         b: vec![1.0, 2.0, 3.0, 4.0].into_iter().collect(),
         c: vec![(1, 2), (3, 4)].into_iter().collect(),
         d: vec![1, 2, 3, 4, 5, 6].into_iter().collect(),
+        e: 1..3,
     };
 
     let bytes = SerJson::serialize_json(&test);
