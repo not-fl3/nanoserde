@@ -1,5 +1,5 @@
 use core::str::Chars;
-use core::{error::Error, time::Duration};
+use core::{error::Error, ops::Range, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -871,6 +871,19 @@ impl DeJson for String {
     }
 }
 
+impl<T> SerJson for Range<T>
+where
+    T: SerJson,
+{
+    fn ser_json(&self, d: usize, s: &mut SerJsonState) {
+        s.out.push('[');
+        self.start.ser_json(d, s);
+        s.out.push(',');
+        self.end.ser_json(d, s);
+        s.out.push(']');
+    }
+}
+
 impl<T> SerJson for Vec<T>
 where
     T: SerJson,
@@ -888,6 +901,16 @@ where
             }
         }
         s.out.push(']');
+    }
+}
+
+impl<T> DeJson for Range<T>
+where
+    T: DeJson,
+{
+    fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
+        let (start, end) = <(T, T)>::de_json(s, i)?;
+        Ok(start..end)
     }
 }
 

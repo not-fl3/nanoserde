@@ -1,5 +1,5 @@
 use core::str::Chars;
-use core::{error::Error, time::Duration};
+use core::{error::Error, ops::Range, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -865,6 +865,19 @@ impl DeRon for String {
     }
 }
 
+impl<T> SerRon for Range<T>
+where
+    T: SerRon,
+{
+    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+        s.out.push('(');
+        self.start.ser_ron(d, s);
+        s.out.push(',');
+        self.end.ser_ron(d, s);
+        s.out.push(')');
+    }
+}
+
 impl<T> SerRon for Vec<T>
 where
     T: SerRon,
@@ -878,6 +891,16 @@ where
         }
         s.indent(d);
         s.out.push(']');
+    }
+}
+
+impl<T> DeRon for Range<T>
+where
+    T: DeRon,
+{
+    fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
+        let (start, end) = <(T, T)>::de_ron(s, i)?;
+        Ok(start..end)
     }
 }
 
