@@ -876,13 +876,11 @@ where
     T: SerJson,
 {
     fn ser_json(&self, d: usize, s: &mut SerJsonState) {
-        s.st_pre();
-        s.field(d + 1, "start");
-        self.start.ser_json(d + 1, s);
-        s.conl();
-        s.field(d + 1, "end");
-        self.end.ser_json(d + 1, s);
-        s.st_post(d);
+        s.out.push('[');
+        self.start.ser_json(d, s);
+        s.out.push(',');
+        self.end.ser_json(d, s);
+        s.out.push(']');
     }
 }
 
@@ -911,29 +909,7 @@ where
     T: DeJson,
 {
     fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<Self, DeJsonErr> {
-        let mut _start = None;
-        let mut _end = None;
-        s.curly_open(i)?;
-        while s.next_str().is_some() {
-            match AsRef::<str>::as_ref(&s.strbuf) {
-                "start" => {
-                    s.next_colon(i)?;
-                    _start = Some(DeJson::de_json(s, i)?)
-                }
-                "end" => {
-                    s.next_colon(i)?;
-                    _end = Some(DeJson::de_json(s, i)?)
-                }
-                _ => {
-                    s.next_colon(i)?;
-                    s.whole_field(i)?;
-                }
-            }
-            s.eat_comma_curly(i)?;
-        }
-        s.curly_close(i)?;
-        let start = _start.ok_or_else(|| s.err_nf("start"))?;
-        let end = _end.ok_or_else(|| s.err_nf("end"))?;
+        let (start, end) = <(T, T)>::de_json(s, i)?;
         Ok(start..end)
     }
 }

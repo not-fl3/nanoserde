@@ -870,14 +870,11 @@ where
     T: SerRon,
 {
     fn ser_ron(&self, d: usize, s: &mut SerRonState) {
-        s.st_pre();
-        s.field(d + 1, "start");
-        self.start.ser_ron(d + 1, s);
-        s.conl();
-        s.field(d + 1, "end");
-        self.end.ser_ron(d + 1, s);
-        s.conl();
-        s.st_post(d);
+        s.out.push('(');
+        self.start.ser_ron(d, s);
+        s.out.push(',');
+        self.end.ser_ron(d, s);
+        s.out.push(')');
     }
 }
 
@@ -902,29 +899,8 @@ where
     T: DeRon,
 {
     fn de_ron(s: &mut DeRonState, i: &mut Chars) -> Result<Self, DeRonErr> {
-        Result::Ok({
-            let mut _start: Option<T> = None;
-            let mut _end: Option<T> = None;
-            s.paren_open(i)?;
-            while s.next_ident().is_some() {
-                match s.identbuf.as_ref() {
-                    "start" => {
-                        s.next_colon(i)?;
-                        _start = Some(DeRon::de_ron(s, i)?)
-                    }
-                    "end" => {
-                        s.next_colon(i)?;
-                        _end = Some(DeRon::de_ron(s, i)?)
-                    }
-                    _ => return Result::Err(s.err_exp(&s.identbuf)),
-                }
-                s.eat_comma_paren(i)?;
-            }
-            s.paren_close(i)?;
-            let start = _start.ok_or_else(|| s.err_nf("start"))?;
-            let end = _end.ok_or_else(|| s.err_nf("end"))?;
-            start..end
-        })
+        let (start, end) = <(T, T)>::de_ron(s, i)?;
+        Ok(start..end)
     }
 }
 
