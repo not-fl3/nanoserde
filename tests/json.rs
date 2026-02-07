@@ -809,6 +809,8 @@ fn de_ser_enum_complex() {
     let test: Bar = DeJson::deserialize_json(json).unwrap();
 
     let bytes = SerJson::serialize_json(&test);
+
+    assert_eq!(json.split_whitespace().collect::<String>(), bytes);
     let test_deserialized = DeJson::deserialize_json(&bytes).unwrap();
 
     assert!(test == test_deserialized);
@@ -1340,4 +1342,35 @@ fn std_time() {
     let none = r#"null"#;
     let deserialized_none: SystemTime = DeJson::deserialize_json(none).unwrap();
     assert_eq!(deserialized_none, SystemTime::UNIX_EPOCH);
+}
+
+// https://github.com/not-fl3/nanoserde/issues/140
+#[test]
+fn ts_rs_compat() {
+    #[derive(Debug, SerJson, DeJson)]
+    pub enum MouseEvent {
+        Move(MoveEvent),
+    }
+
+    #[derive(Debug, SerJson, DeJson)]
+    pub enum MovementType {
+        Absolute,
+    }
+
+    #[derive(Debug, SerJson, DeJson)]
+    pub struct MoveEvent {
+        pub type_: MovementType,
+        pub x: i32,
+        pub y: i32,
+    }
+
+    let tmp = MouseEvent::Move(MoveEvent {
+        type_: MovementType::Absolute,
+        x: 1918,
+        y: 616,
+    });
+
+    let expected = "{\"Move\":{\"type_\":\"Absolute\",\"x\":1918,\"y\":616}}";
+
+    assert_eq!(expected, tmp.serialize_json())
 }

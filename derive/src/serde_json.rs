@@ -399,9 +399,25 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                         l!(inner, "{}.ser_json(d, s);", field_name);
                     }
                 }
-                l!(
-                    r,
-                    "Self::{}  ({}) => {{
+                if contents.len() == 1 {
+                    l!(
+                        r,
+                        "Self::{}  ({}) => {{
+                                s.out.push('{{');
+                                s.label(\"{}\");
+                                s.out.push(':');
+                                {}
+                                s.out.push('}}');
+                            }}",
+                        &field_name,
+                        names.join(","),
+                        json_variant_name,
+                        inner
+                    );
+                } else {
+                    l!(
+                        r,
+                        "Self::{}  ({}) => {{
                                 s.out.push('{{');
                                 s.label(\"{}\");
                                 s.out.push(':');
@@ -410,11 +426,12 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                                 s.out.push(']');
                                 s.out.push('}}');
                             }}",
-                    &field_name,
-                    names.join(","),
-                    json_variant_name,
-                    inner
-                );
+                        &field_name,
+                        names.join(","),
+                        json_variant_name,
+                        inner
+                    );
+                }
             }
             v => {
                 unimplemented!("Unexpected type in enum: {:?}", v)
