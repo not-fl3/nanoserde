@@ -1,5 +1,5 @@
 use core::str::Chars;
-use core::{error::Error, time::Duration};
+use core::{error::Error, fmt::Write, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -708,7 +708,7 @@ macro_rules! impl_ser_de_json_unsigned {
     ( $ ty: ident, $ max: expr) => {
         impl SerJson for $ty {
             fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-                s.out.push_str(&self.to_string());
+                _ = write!(s.out, "{self}");
             }
         }
 
@@ -726,7 +726,7 @@ macro_rules! impl_ser_de_json_signed {
     ( $ ty: ident, $ min: expr, $ max: expr) => {
         impl SerJson for $ty {
             fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-                s.out.push_str(&self.to_string());
+                _ = write!(s.out, "{self}");
             }
         }
 
@@ -745,7 +745,7 @@ macro_rules! impl_ser_de_json_float {
     ( $ ty: ident) => {
         impl SerJson for $ty {
             fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
-                s.out.push_str(&format!("{self:?}"));
+                _ = write!(s.out, "{self:?}");
             }
         }
 
@@ -846,7 +846,6 @@ macro_rules! impl_ser_json_string {
                         '\r' => s.out += "\\r",
                         '\t' => s.out += "\\t",
                         _ if c.is_ascii_control() => {
-                            use core::fmt::Write as _;
                             let _ = write!(s.out, "\\u{:04x}", c as u32);
                         }
                         '\\' => s.out += "\\\\",
@@ -1310,10 +1309,9 @@ where
 impl SerJson for Duration {
     fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
         s.out.push('{');
-        s.out.push_str(&format!("\"secs\":{}", self.as_secs()));
+        _ = write!(s.out, "\"secs\":{}", self.as_secs());
         if self.subsec_nanos() > 0 {
-            s.out
-                .push_str(&format!(",\"nanos\":{}", self.subsec_nanos()));
+            _ = write!(s.out, ",\"nanos\":{}", self.subsec_nanos());
         }
         s.out.push('}');
     }

@@ -1,5 +1,5 @@
 use core::str::Chars;
-use core::{error::Error, time::Duration};
+use core::{error::Error, fmt::Write, time::Duration};
 
 use alloc::boxed::Box;
 use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
@@ -710,7 +710,7 @@ macro_rules! impl_ser_de_ron_unsigned {
     ( $ ty: ident, $ max: expr) => {
         impl SerRon for $ty {
             fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
-                s.out.push_str(&self.to_string());
+                _ = write!(s.out, "{self}");
             }
         }
 
@@ -729,7 +729,7 @@ macro_rules! impl_ser_de_ron_signed {
     ( $ ty: ident, $ min: expr, $ max: expr) => {
         impl SerRon for $ty {
             fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
-                s.out.push_str(&self.to_string());
+                _ = write!(s.out, "{self}");
             }
         }
 
@@ -748,7 +748,7 @@ macro_rules! impl_ser_de_ron_float {
     ( $ ty: ident) => {
         impl SerRon for $ty {
             fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
-                s.out.push_str(&format!("{self:?}"));
+                _ = write!(s.out, "{self:?}");
             }
         }
 
@@ -1307,10 +1307,9 @@ where
 impl SerRon for Duration {
     fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
         s.out.push('{');
-        s.out.push_str(&format!("\"secs\":{}", self.as_secs()));
+        _ = write!(s.out, "\"secs\":{}", self.as_secs());
         if self.subsec_nanos() > 0 {
-            s.out
-                .push_str(&format!(",\"nanos\":{}", self.subsec_nanos()));
+            _ = write!(s.out, ",\"nanos\":{}", self.subsec_nanos());
         }
         s.out.push('}');
     }
