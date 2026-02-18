@@ -393,7 +393,7 @@ impl TomlParser {
                 self.line += 1;
                 self.col = 0;
             } else {
-                self.col = 0;
+                self.col += 1;
             }
         } else {
             self.cur = '\0';
