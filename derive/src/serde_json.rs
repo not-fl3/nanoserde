@@ -399,9 +399,25 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                         l!(inner, "{}.ser_json(d, s);", field_name);
                     }
                 }
-                l!(
-                    r,
-                    "Self::{}  ({}) => {{
+                if contents.len() == 1 {
+                    l!(
+                        r,
+                        "Self::{}  ({}) => {{
+                                s.out.push('{{');
+                                s.label(\"{}\");
+                                s.out.push(':');
+                                {}
+                                s.out.push('}}');
+                            }}",
+                        &field_name,
+                        names.join(","),
+                        json_variant_name,
+                        inner
+                    );
+                } else {
+                    l!(
+                        r,
+                        "Self::{}  ({}) => {{
                                 s.out.push('{{');
                                 s.label(\"{}\");
                                 s.out.push(':');
@@ -410,11 +426,12 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                                 s.out.push(']');
                                 s.out.push('}}');
                             }}",
-                    &field_name,
-                    names.join(","),
-                    json_variant_name,
-                    inner
-                );
+                        &field_name,
+                        names.join(","),
+                        json_variant_name,
+                        inner
+                    );
+                }
             }
             v => {
                 unimplemented!("Unexpected type in enum: {:?}", v)
@@ -477,21 +494,33 @@ pub fn derive_de_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 ident: Category::Tuple { contents },
                 ..
             } => {
-                let mut field_names = String::new();
-                for _ in contents.iter() {
+                
+
+                if contents.len() == 1 {
                     l!(
-                        field_names,
-                        "{{let r = {}::DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r}},",
+                        r_rest,
+                        "\"{}\" => {{let is_old = s.block_open(i).is_ok(); let r = Self::{}({}::DeJson::de_json(s,i)?); if is_old {{s.eat_comma_block(i)?; s.block_close(i)?;}} r}}",
+                        json_variant_name,
+                        &field_name,
                         crate_name
                     );
+                } else {
+                    let mut field_names = String::new();
+                    for _ in contents.iter() {
+                        l!(
+                            field_names,
+                            "{{let r = {}::DeJson::de_json(s,i)?;s.eat_comma_block(i)?;r}},",
+                            crate_name
+                        );
+                    }
+                    l!(
+                        r_rest,
+                        "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
+                        json_variant_name,
+                        &field_name,
+                        field_names
+                    );
                 }
-                l!(
-                    r_rest,
-                    "\"{}\" => {{s.block_open(i)?;let r = Self::{}({}); s.block_close(i)?;r}}",
-                    json_variant_name,
-                    &field_name,
-                    field_names
-                );
             }
             v => {
                 unimplemented!("Unexpected type in enum: {:?}", v)
