@@ -1347,17 +1347,17 @@ fn std_time() {
 // https://github.com/not-fl3/nanoserde/issues/140
 #[test]
 fn ts_rs_compat() {
-    #[derive(Debug, SerJson, DeJson)]
+    #[derive(Debug, SerJson, DeJson, PartialEq)]
     pub enum MouseEvent {
         Move(MoveEvent),
     }
 
-    #[derive(Debug, SerJson, DeJson)]
+    #[derive(Debug, SerJson, DeJson, PartialEq)]
     pub enum MovementType {
         Absolute,
     }
 
-    #[derive(Debug, SerJson, DeJson)]
+    #[derive(Debug, SerJson, DeJson, PartialEq)]
     pub struct MoveEvent {
         pub type_: MovementType,
         pub x: i32,
@@ -1371,6 +1371,13 @@ fn ts_rs_compat() {
     });
 
     let expected = "{\"Move\":{\"type_\":\"Absolute\",\"x\":1918,\"y\":616}}";
+    let old_expected = "{\"Move\":[{\"type_\":\"Absolute\",\"x\":1918,\"y\":616}]}";
 
-    assert_eq!(expected, tmp.serialize_json())
+    assert_eq!(expected, tmp.serialize_json());
+    assert_eq!(
+        tmp,
+        DeJson::deserialize_json(tmp.serialize_json().as_str()).unwrap()
+    );
+    // make sure the old format can still be deserialized
+    assert_eq!(tmp, DeJson::deserialize_json(old_expected).unwrap());
 }
