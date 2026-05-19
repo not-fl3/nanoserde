@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use alloc::collections::BTreeMap;
+use ::alloc::collections::BTreeMap;
 use nanoserde::Toml;
 use nanoserde::TomlParser;
 

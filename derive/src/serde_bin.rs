@@ -1,5 +1,5 @@
-use alloc::format;
-use alloc::string::String;
+use ::alloc::format;
+use ::alloc::string::String;
 
 use crate::{
     parse::{Category, Enum, Struct, Type},

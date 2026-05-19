@@ -9,7 +9,7 @@ use nanoserde::{DeJson, SerJson};
 #[cfg(feature = "ron")]
 use nanoserde::{DeRon, SerRon};
 
-use alloc::collections::BTreeMap;
+use ::alloc::collections::BTreeMap;
 
 #[derive(Default, PartialEq, Debug)]
 struct Test2 {

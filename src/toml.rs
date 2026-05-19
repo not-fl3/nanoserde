@@ -1,9 +1,9 @@
-use core::error::Error;
-use core::str::Chars;
+use ::core::error::Error;
+use ::core::str::Chars;
 
-use alloc::format;
-use alloc::string::{String, ToString};
-use alloc::{collections::BTreeMap, vec, vec::Vec};
+use ::alloc::format;
+use ::alloc::string::{String, ToString};
+use ::alloc::{collections::BTreeMap, vec, vec::Vec};
 
 /// Pattern matching any valid unquoted key character as u32.
 /// ABNF line: https://github.com/toml-lang/toml/blob/2431aa308a7bc97eeb50673748606e23a6e0f201/toml.abnf#L55

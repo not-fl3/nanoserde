@@ -1,11 +1,11 @@
-use core::str::Chars;
-use core::{error::Error, fmt::Write, time::Duration};
+use ::core::str::Chars;
+use ::core::{error::Error, fmt::Write, time::Duration};
 
-use alloc::boxed::Box;
-use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
-use alloc::format;
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
+use ::alloc::boxed::Box;
+use ::alloc::collections::{BTreeMap, BTreeSet, LinkedList};
+use ::alloc::format;
+use ::alloc::string::{String, ToString};
+use ::alloc::vec::Vec;
 
 /// The internal state of a JSON serialization.
 #[non_exhaustive]
@@ -1052,7 +1052,7 @@ where
     T: DeJson,
 {
     fn de_json(o: &mut DeJsonState, d: &mut Chars) -> Result<Self, DeJsonErr> {
-        use core::mem::MaybeUninit;
+        use ::core::mem::MaybeUninit;
 
         // waiting for uninit_array(or for array::try_from_fn) stabilization
         // https://github.com/rust-lang/rust/issues/96097
