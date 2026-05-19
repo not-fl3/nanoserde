@@ -4,7 +4,7 @@ extern crate alloc;
 
 use std::{array, sync::atomic::AtomicBool};
 
-use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
+use ::alloc::collections::{BTreeMap, BTreeSet, LinkedList};
 
 use nanoserde::{DeBin, SerBin};
 

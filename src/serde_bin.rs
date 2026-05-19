@@ -1,11 +1,11 @@
-use core::error::Error;
-use core::{convert::TryInto, time::Duration};
+use ::core::error::Error;
+use ::core::{convert::TryInto, time::Duration};
 
-use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
-use alloc::collections::{BTreeMap, BTreeSet, LinkedList};
-use alloc::string::String;
-use alloc::vec::Vec;
+use ::alloc::borrow::ToOwned;
+use ::alloc::boxed::Box;
+use ::alloc::collections::{BTreeMap, BTreeSet, LinkedList};
+use ::alloc::string::String;
+use ::alloc::vec::Vec;
 
 /// A trait for objects that can be serialized to binary.
 pub trait SerBin {
@@ -454,7 +454,7 @@ where
     T: DeBin,
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
-        use core::mem::MaybeUninit;
+        use ::core::mem::MaybeUninit;
 
         // waiting for uninit_array(or for array::try_from_fn) stabilization
         // https://github.com/rust-lang/rust/issues/96097

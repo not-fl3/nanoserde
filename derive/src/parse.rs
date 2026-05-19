@@ -4,15 +4,15 @@
 //! https://docs.rs/syn/0.15.44/syn/enum.Type.html
 //! https://ziglang.org/documentation/0.5.0/#toc-typeInfo
 
-use alloc::collections::BTreeSet;
-use core::iter::Peekable;
-use core::num::IntErrorKind;
+use ::alloc::collections::BTreeSet;
+use ::core::iter::Peekable;
+use ::core::num::IntErrorKind;
 
-use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
-use alloc::string::{String, ToString};
-use alloc::vec::Vec;
-use alloc::{format, vec};
+use ::alloc::borrow::ToOwned;
+use ::alloc::boxed::Box;
+use ::alloc::string::{String, ToString};
+use ::alloc::vec::Vec;
+use ::alloc::{format, vec};
 
 use proc_macro::{Delimiter, Group, TokenStream, TokenTree};
 
