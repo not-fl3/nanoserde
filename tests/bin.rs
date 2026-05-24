@@ -249,6 +249,24 @@ fn pub_tuple_struct() {
 }
 
 #[test]
+fn ser_strings() {
+    #[derive(SerBin)]
+    struct Foo {
+        x: String,
+    }
+    #[derive(SerBin)]
+    struct Bar {
+        x: &'static str,
+    }
+    assert_eq!(
+        SerBin::serialize_bin(&Foo {
+            x: "test123".to_owned()
+        }),
+        SerBin::serialize_bin(&Bar { x: "test123" })
+    );
+}
+
+#[test]
 fn collections() {
     #[derive(DeBin, SerBin, PartialEq, Debug)]
     pub struct Test {
