@@ -14,9 +14,9 @@ use proc_macro::TokenStream;
 pub fn derive_ser_json_proxy(proxy_type: &str, type_: &str, crate_name: &str) -> TokenStream {
     format!(
         "impl {}::SerJson for {} {{
-            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
+            fn ser_json(&self, s: &mut {}::SerJsonState) {{
                 let proxy: {} = self.into();
-                proxy.ser_json(d, s);
+                proxy.ser_json(s);
             }}
         }}",
         crate_name, type_, crate_name, proxy_type
@@ -68,7 +68,7 @@ pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream
                                                  s.conl();
                                              }};
                                              first_field_was_serialized = true;
-                                             s.field(d+1, \"{}\");",
+                                             s.field(\"{}\");",
                     json_fieldname
                 );
                 l!(
@@ -76,14 +76,14 @@ pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream
                     "{}
                     if let Some(t) = &{} {{
                         {}
-                        t.ser_json(d+1, s);
+                        t.ser_json(s);
                     }} {}",
                     if null_on_none { field_header } else { "" },
                     proxied_field,
                     if null_on_none { "" } else { field_header },
                     if null_on_none {
                         "else {{
-                            Option::<i32>::ser_json(&None, d+1, s);
+                            Option::<i32>::ser_json(&None, s);
                         }}"
                     } else {
                         ""
@@ -96,8 +96,8 @@ pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream
                         s.conl();
                     }};
                     first_field_was_serialized = true;
-                    s.field(d+1,\"{}\");
-                    {}.ser_json(d+1, s);",
+                    s.field(\"{}\");
+                    {}.ser_json(s);",
                     json_fieldname,
                     proxied_field
                 );
@@ -108,10 +108,10 @@ pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream
     format!(
         "
         impl{} {}::SerJson for {}{} {{
-            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
+            fn ser_json(&self, s: &mut {}::SerJsonState) {{
                 s.st_pre();
                 {}
-                s.st_post(d);
+                s.st_post();
             }}
         }}
     ",
@@ -334,7 +334,7 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                             if field.ty.base() == "Option" {
                                 l!(
                                     items,
-                                    "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);}}",
+                                    "if {}.is_some(){{s.field(\"{}\");{}.ser_json(s);}}",
                                     name,
                                     name,
                                     proxied_field
@@ -342,23 +342,23 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                             } else {
                                 l!(
                                     items,
-                                    "s.field(d+1, \"{}\");{}.ser_json(d+1, s);",
+                                    "s.field(\"{}\");{}.ser_json(s);",
                                     name,
                                     proxied_field
                                 )
                             }
                         } else if field.ty.base() == "Option" {
                             l!(
-                                    items,
-                                    "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
-                                    name,
-                                    name,
-                                    proxied_field
-                                );
+                                items,
+                                "if {}.is_some(){{s.field(\"{}\");{}.ser_json(s);s.conl();}}",
+                                name,
+                                name,
+                                proxied_field
+                            );
                         } else {
                             l!(
                                 items,
-                                "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
+                                "s.field(\"{}\");{}.ser_json(s);s.conl();",
                                 name,
                                 proxied_field
                             );
@@ -374,7 +374,7 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                                 s.out.push(':');
                                 s.st_pre();
                                 {}
-                                s.st_post(d);
+                                s.st_post();
                                 s.out.push('}}');
                             }}",
                     &field_name,
@@ -394,9 +394,9 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                     let field_name = format!("f{}", index);
                     names.push(field_name.clone());
                     if index != last {
-                        l!(inner, "{}.ser_json(d, s); s.out.push(',');", field_name);
+                        l!(inner, "{}.ser_json(s); s.out.push(',');", field_name);
                     } else {
-                        l!(inner, "{}.ser_json(d, s);", field_name);
+                        l!(inner, "{}.ser_json(s);", field_name);
                     }
                 }
                 if contents.len() == 1 {
@@ -442,7 +442,7 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
     format!(
         "
         impl{} {}::SerJson for {}{} {{
-            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
+            fn ser_json(&self, s: &mut {}::SerJsonState) {{
                 match self {{
                     {}
                 }}
@@ -494,8 +494,6 @@ pub fn derive_de_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 ident: Category::Tuple { contents },
                 ..
             } => {
-                
-
                 if contents.len() == 1 {
                     l!(
                         r_rest,
@@ -595,14 +593,14 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct, crate_name: &str) -> Tok
     // if its a newtype struct and it should be transparent - skip any curles
     // and skip "container"
     else if transparent && struct_.fields.len() == 1 {
-        l!(body, "self.{}.ser_json(d, s);", 0);
+        l!(body, "self.{}.ser_json(s);", 0);
     }
     // if more than one field - encode as array []
     else {
         l!(body, "s.out.push('[');");
         let last = struct_.fields.len() - 1;
         for (n, _) in struct_.fields.iter().enumerate() {
-            l!(body, "self.{}.ser_json(d, s);", n);
+            l!(body, "self.{}.ser_json(s);", n);
             if n != last {
                 l!(body, "s.out.push_str(\", \");");
             }
@@ -613,7 +611,7 @@ pub fn derive_ser_json_struct_unnamed(struct_: &Struct, crate_name: &str) -> Tok
     format!(
         "
         impl{} {}::SerJson for {}{} {{
-            fn ser_json(&self, d: usize, s: &mut {}::SerJsonState) {{
+            fn ser_json(&self, s: &mut {}::SerJsonState) {{
                 {}
             }}
         }}",

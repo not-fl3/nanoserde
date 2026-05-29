@@ -13,14 +13,7 @@ pub struct SerRonState {
 }
 
 impl SerRonState {
-    pub fn indent(&mut self, _d: usize) {
-        // for _ in 0..d {
-        //     self.out.push_str("    ");
-        // }
-    }
-
-    pub fn field(&mut self, d: usize, field: &str) {
-        self.indent(d);
+    pub fn field(&mut self, field: &str) {
         self.out.push_str(field);
         self.out.push(':');
     }
@@ -33,8 +26,7 @@ impl SerRonState {
         self.out.push('(');
     }
 
-    pub fn st_post(&mut self, d: usize) {
-        self.indent(d);
+    pub fn st_post(&mut self) {
         self.out.push(')');
     }
 }
@@ -48,7 +40,7 @@ pub trait SerRon {
     /// This is a convenient wrapper around `ser_ron`.
     fn serialize_ron(&self) -> String {
         let mut s = SerRonState { out: String::new() };
-        self.ser_ron(0, &mut s);
+        self.ser_ron(&mut s);
         s.out
     }
 
@@ -57,10 +49,10 @@ pub trait SerRon {
     /// ```rust
     /// # use nanoserde::*;
     /// let mut s = SerRonState { out: String::new() };
-    /// 42u32.ser_ron(0, &mut s);
+    /// 42u32.ser_ron(&mut s);
     /// assert_eq!(s.out, "42");
     /// ```
-    fn ser_ron(&self, indent_level: usize, state: &mut SerRonState);
+    fn ser_ron(&self, state: &mut SerRonState);
 }
 
 /// A trait for objects that can be deserialized from the RON file format.
@@ -709,7 +701,7 @@ impl DeRonState {
 macro_rules! impl_ser_de_ron_unsigned {
     ( $ ty: ident, $ max: expr) => {
         impl SerRon for $ty {
-            fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+            fn ser_ron(&self, s: &mut SerRonState) {
                 _ = write!(s.out, "{self}");
             }
         }
@@ -728,7 +720,7 @@ macro_rules! impl_ser_de_ron_unsigned {
 macro_rules! impl_ser_de_ron_signed {
     ( $ ty: ident, $ min: expr, $ max: expr) => {
         impl SerRon for $ty {
-            fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+            fn ser_ron(&self, s: &mut SerRonState) {
                 _ = write!(s.out, "{self}");
             }
         }
@@ -747,7 +739,7 @@ macro_rules! impl_ser_de_ron_signed {
 macro_rules! impl_ser_de_ron_float {
     ( $ ty: ident) => {
         impl SerRon for $ty {
-            fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+            fn ser_ron(&self, s: &mut SerRonState) {
                 _ = write!(s.out, "{self:?}");
             }
         }
@@ -779,9 +771,9 @@ impl<T> SerRon for Option<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         if let Some(v) = self {
-            v.ser_ron(d, s);
+            v.ser_ron(s);
         } else {
             s.out.push_str("None");
         }
@@ -804,7 +796,7 @@ where
 }
 
 impl SerRon for bool {
-    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         if *self {
             s.out.push_str("true")
         } else {
@@ -822,7 +814,7 @@ impl DeRon for bool {
 }
 
 impl SerRon for String {
-    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('"');
         for c in self.chars() {
             match c {
@@ -869,14 +861,12 @@ impl<T> SerRon for Vec<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('[');
         for item in self {
-            s.indent(d + 1);
-            item.ser_ron(d + 1, s);
+            item.ser_ron(s);
             s.conl();
         }
-        s.indent(d);
         s.out.push(']');
     }
 }
@@ -903,13 +893,12 @@ impl<T> SerRon for std::collections::HashSet<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('[');
         if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
-                s.indent(d + 1);
-                item.ser_ron(d + 1, s);
+                item.ser_ron(s);
                 if index != last {
                     s.out.push(',');
                 }
@@ -941,13 +930,12 @@ impl<T> SerRon for LinkedList<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('[');
         if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
-                s.indent(d + 1);
-                item.ser_ron(d + 1, s);
+                item.ser_ron(s);
                 if index != last {
                     s.out.push(',');
                 }
@@ -978,13 +966,12 @@ impl<T> SerRon for BTreeSet<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('[');
         if !self.is_empty() {
             let last = self.len() - 1;
             for (index, item) in self.iter().enumerate() {
-                s.indent(d + 1);
-                item.ser_ron(d + 1, s);
+                item.ser_ron(s);
                 if index != last {
                     s.out.push(',');
                 }
@@ -1015,11 +1002,11 @@ impl<T> SerRon for [T]
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('(');
         let last = self.len() - 1;
         for (index, item) in self.iter().enumerate() {
-            item.ser_ron(d + 1, s);
+            item.ser_ron(s);
             if index != last {
                 s.out.push(',');
             }
@@ -1033,8 +1020,8 @@ where
     T: SerRon,
 {
     #[inline(always)]
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
-        self.as_slice().ser_ron(d, s)
+    fn ser_ron(&self, s: &mut SerRonState) {
+        self.as_slice().ser_ron(s)
     }
 }
 
@@ -1091,7 +1078,7 @@ where
 }
 
 impl SerRon for () {
-    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push_str("()");
     }
 }
@@ -1109,11 +1096,11 @@ where
     A: SerRon,
     B: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('(');
-        self.0.ser_ron(d, s);
+        self.0.ser_ron(s);
         s.out.push(',');
-        self.1.ser_ron(d, s);
+        self.1.ser_ron(s);
         s.out.push(')');
     }
 }
@@ -1137,13 +1124,13 @@ where
     B: SerRon,
     C: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('(');
-        self.0.ser_ron(d, s);
+        self.0.ser_ron(s);
         s.out.push(',');
-        self.1.ser_ron(d, s);
+        self.1.ser_ron(s);
         s.out.push(',');
-        self.2.ser_ron(d, s);
+        self.2.ser_ron(s);
         s.out.push(')');
     }
 }
@@ -1173,15 +1160,15 @@ where
     C: SerRon,
     D: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('(');
-        self.0.ser_ron(d, s);
+        self.0.ser_ron(s);
         s.out.push(',');
-        self.1.ser_ron(d, s);
+        self.1.ser_ron(s);
         s.out.push(',');
-        self.2.ser_ron(d, s);
+        self.2.ser_ron(s);
         s.out.push(',');
-        self.3.ser_ron(d, s);
+        self.3.ser_ron(s);
         s.out.push(')');
     }
 }
@@ -1212,16 +1199,14 @@ where
     K: SerRon,
     V: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('{');
         for (k, v) in self {
-            s.indent(d + 1);
-            k.ser_ron(d + 1, s);
+            k.ser_ron(s);
             s.out.push(':');
-            v.ser_ron(d + 1, s);
+            v.ser_ron(s);
             s.conl();
         }
-        s.indent(d);
         s.out.push('}');
     }
 }
@@ -1252,16 +1237,14 @@ where
     K: SerRon,
     V: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('{');
         for (k, v) in self {
-            s.indent(d + 1);
-            k.ser_ron(d + 1, s);
+            k.ser_ron(s);
             s.out.push(':');
-            v.ser_ron(d + 1, s);
+            v.ser_ron(s);
             s.conl();
         }
-        s.indent(d);
         s.out.push('}');
     }
 }
@@ -1290,8 +1273,8 @@ impl<T> SerRon for Box<T>
 where
     T: SerRon,
 {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
-        (**self).ser_ron(d, s)
+    fn ser_ron(&self, s: &mut SerRonState) {
+        (**self).ser_ron(s)
     }
 }
 
@@ -1305,7 +1288,7 @@ where
 }
 
 impl SerRon for Duration {
-    fn ser_ron(&self, _d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         s.out.push('{');
         _ = write!(s.out, "\"secs\":{}", self.as_secs());
         if self.subsec_nanos() > 0 {
@@ -1360,10 +1343,10 @@ impl DeRon for Duration {
 
 #[cfg(feature = "std")]
 impl SerRon for std::time::SystemTime {
-    fn ser_ron(&self, d: usize, s: &mut SerRonState) {
+    fn ser_ron(&self, s: &mut SerRonState) {
         self.duration_since(std::time::SystemTime::UNIX_EPOCH)
             .ok()
-            .ser_ron(d, s);
+            .ser_ron(s);
     }
 }
 
