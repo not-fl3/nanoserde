@@ -752,6 +752,27 @@ fn de_enum() {
 }
 
 #[test]
+fn de_ser_enum_trailing_comma() {
+    #[rustfmt::skip]
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub enum Foo {
+        A(i32, String,),
+        B { a: i32, b: String, },
+    }
+
+    for foo in [
+        Foo::A(1, "asd".to_string()),
+        Foo::B {
+            a: 2,
+            b: "qwe".to_string(),
+        },
+    ] {
+        let json = foo.serialize_json();
+        assert_eq!(Foo::deserialize_json(&json).unwrap(), foo);
+    }
+}
+
+#[test]
 fn de_ser_enum() {
     #[derive(DeJson, SerJson, PartialEq, Debug)]
     pub enum Fud {
