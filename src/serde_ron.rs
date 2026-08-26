@@ -411,6 +411,17 @@ impl DeRonState {
         if let DeRonTok::F64(value) = self.tok {
             return Ok(value);
         }
+        // The non-finite float literals `inf` and `NaN` (RON also accepts
+        // `-inf`/`+inf`, which are tokenized as `F64` above) are scanned as
+        // bare identifiers, so accept them here when a float is expected.
+        if let DeRonTok::Ident = self.tok {
+            if self.identbuf == "inf" {
+                return Ok(f64::INFINITY);
+            }
+            if self.identbuf == "NaN" {
+                return Ok(f64::NAN);
+            }
+        }
         Err(self.err_token("floating point"))
     }
 
@@ -519,6 +530,25 @@ impl DeRonState {
                     } else {
                         false
                     };
+                    // A sign followed by `inf` is the non-finite float literal
+                    // `-inf`/`+inf` (as emitted by `SerRon` for infinities).
+                    if self.cur == 'i' {
+                        self.identbuf.truncate(0);
+                        while self.cur >= 'a' && self.cur <= 'z' {
+                            self.identbuf.push(self.cur);
+                            self.next(i);
+                        }
+                        if self.identbuf == "inf" {
+                            self.tok = DeRonTok::F64(if is_neg {
+                                f64::NEG_INFINITY
+                            } else {
+                                f64::INFINITY
+                            });
+                            return Ok(());
+                        } else {
+                            return Err(self.err_parse("number"));
+                        }
+                    }
                     while self.cur >= '0' && self.cur <= '9' {
                         self.numbuf.push(self.cur);
                         self.next(i);

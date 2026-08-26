@@ -813,3 +813,74 @@ fn std_time() {
     let deserialized_none: SystemTime = DeRon::deserialize_ron(none).unwrap();
     assert_eq!(deserialized_none, SystemTime::UNIX_EPOCH);
 }
+
+#[test]
+fn ron_de_ser_non_finite_floats() {
+    // `SerRon` emits `NaN`, `inf` and `-inf` for non-finite floats (matching
+    // the RON specification and the reference `ron` crate), so the RON
+    // deserializer must round-trip them back. Previously these tokens failed
+    // to parse, making `deserialize_ron(serialize_ron(x))` error for any value
+    // containing an infinity or NaN.
+
+    // f64
+    assert!(f64::deserialize_ron(&f64::INFINITY.serialize_ron())
+        .unwrap()
+        .is_infinite());
+    assert_eq!(
+        f64::deserialize_ron(&f64::INFINITY.serialize_ron()).unwrap(),
+        f64::INFINITY
+    );
+    assert_eq!(
+        f64::deserialize_ron(&f64::NEG_INFINITY.serialize_ron()).unwrap(),
+        f64::NEG_INFINITY
+    );
+    assert!(f64::deserialize_ron(&f64::NAN.serialize_ron())
+        .unwrap()
+        .is_nan());
+
+    // f32
+    assert_eq!(
+        f32::deserialize_ron(&f32::INFINITY.serialize_ron()).unwrap(),
+        f32::INFINITY
+    );
+    assert_eq!(
+        f32::deserialize_ron(&f32::NEG_INFINITY.serialize_ron()).unwrap(),
+        f32::NEG_INFINITY
+    );
+    assert!(f32::deserialize_ron(&f32::NAN.serialize_ron())
+        .unwrap()
+        .is_nan());
+
+    // Parse the literal forms directly (as accepted by the RON spec).
+    assert_eq!(f64::deserialize_ron("inf").unwrap(), f64::INFINITY);
+    assert_eq!(f64::deserialize_ron("+inf").unwrap(), f64::INFINITY);
+    assert_eq!(f64::deserialize_ron("-inf").unwrap(), f64::NEG_INFINITY);
+    assert!(f64::deserialize_ron("NaN").unwrap().is_nan());
+
+    // Non-finite floats nested inside a struct must round-trip too.
+    #[derive(DeRon, SerRon, Debug)]
+    struct Holder {
+        a: f32,
+        b: f64,
+        c: Vec<f64>,
+        d: Option<f32>,
+    }
+    let h = Holder {
+        a: f32::NEG_INFINITY,
+        b: f64::INFINITY,
+        c: vec![f64::NAN, 1.5, f64::NEG_INFINITY],
+        d: Some(f32::NAN),
+    };
+    let back: Holder = DeRon::deserialize_ron(&h.serialize_ron()).unwrap();
+    assert_eq!(back.a, f32::NEG_INFINITY);
+    assert_eq!(back.b, f64::INFINITY);
+    assert!(back.c[0].is_nan());
+    assert_eq!(back.c[1], 1.5);
+    assert_eq!(back.c[2], f64::NEG_INFINITY);
+    assert!(back.d.unwrap().is_nan());
+
+    // Finite floats must keep working (no regression).
+    assert_eq!(f64::deserialize_ron("-1.5").unwrap(), -1.5);
+    assert_eq!(f64::deserialize_ron("2.0").unwrap(), 2.0);
+    assert_eq!(i64::deserialize_ron("-42").unwrap(), -42);
+}
