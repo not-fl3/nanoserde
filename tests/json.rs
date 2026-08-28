@@ -649,6 +649,34 @@ fn exponents() {
 }
 
 #[test]
+fn exponents_with_plus_sign() {
+    #[derive(DeJson)]
+    struct Foo {
+        a: f64,
+        b: f64,
+        c: f64,
+        d: f64,
+        e: f64,
+    }
+
+    let json = r#"{
+        "a": 1e+2,
+        "b": 1E+2,
+        "c": 1.0e+2,
+        "d": 1.0E+2,
+        "e": -1.5e+3
+    }"#;
+
+    let foo: Foo = DeJson::deserialize_json(json).unwrap();
+
+    assert_eq!(foo.a, 100.);
+    assert_eq!(foo.b, 100.);
+    assert_eq!(foo.c, 100.);
+    assert_eq!(foo.d, 100.);
+    assert_eq!(foo.e, -1500.);
+}
+
+#[test]
 fn collections() {
     #[derive(DeJson, SerJson, PartialEq, Debug)]
     pub struct Test {

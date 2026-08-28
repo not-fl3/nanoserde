@@ -545,7 +545,7 @@ impl DeJsonState {
                     is_float = true;
                     self.numbuf.push(self.cur);
                     self.next(i);
-                    if self.cur == '-' {
+                    if self.cur == '-' || self.cur == '+' {
                         self.numbuf.push(self.cur);
                         self.next(i);
                     }
