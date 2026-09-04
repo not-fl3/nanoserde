@@ -254,16 +254,21 @@ impl SerBin for String {
 impl DeBin for String {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<String, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        if *o + len > d.len() {
-            return Err(DeBinErr {
-                o: *o,
-                msg: DeBinErrReason::Length {
-                    expected_length: 1,
-                    actual_length: d.len(),
-                },
-            });
-        }
-        let r = match core::str::from_utf8(&d[*o..(*o + len)]) {
+        // Use checked arithmetic: `*o + len` could overflow and bypass this check
+        // (e.g. *o = 1, len = usize::MAX), panicking on the slice below.
+        let end = match (*o).checked_add(len) {
+            Some(end) if end <= d.len() => end,
+            _ => {
+                return Err(DeBinErr {
+                    o: *o,
+                    msg: DeBinErrReason::Length {
+                        expected_length: len,
+                        actual_length: d.len(),
+                    },
+                });
+            }
+        };
+        let r = match core::str::from_utf8(&d[*o..end]) {
             Ok(r) => r.to_owned(),
             Err(_) => {
                 return Err(DeBinErr {
@@ -299,7 +304,11 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Vec<T>, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut out = Vec::with_capacity(len);
+        // Do not reserve capacity based on the untrusted declared length: a small
+        // malformed buffer could otherwise trigger an allocation of len * size_of::<T>()
+        // (up to ~2^64 elements) before any element is successfully read.
+        // Grow from actual data instead, mirroring LinkedList/BTreeSet/BTreeMap below.
+        let mut out = Vec::new();
         for _ in 0..len {
             out.push(DeBin::de_bin(o, d)?)
         }
@@ -355,7 +364,8 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut out = std::collections::HashSet::with_capacity(len);
+        // Do not reserve capacity based on the untrusted declared length (see Vec impl).
+        let mut out = std::collections::HashSet::new();
         for _ in 0..len {
             out.insert(DeBin::de_bin(o, d)?);
         }
@@ -602,7 +612,8 @@ where
 {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<Self, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
-        let mut h = std::collections::HashMap::with_capacity(len);
+        // Do not reserve capacity based on the untrusted declared length (see Vec impl).
+        let mut h = std::collections::HashMap::new();
         for _ in 0..len {
             let k = DeBin::de_bin(o, d)?;
             let v = DeBin::de_bin(o, d)?;
