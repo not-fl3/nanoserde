@@ -29,6 +29,9 @@ mod parse;
 #[proc_macro_derive(SerBin, attributes(nserde))]
 pub fn derive_ser_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 
@@ -49,6 +52,9 @@ pub fn derive_ser_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 #[proc_macro_derive(DeBin, attributes(nserde))]
 pub fn derive_de_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 
@@ -70,6 +76,9 @@ pub fn derive_de_bin(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 #[proc_macro_derive(SerRon, attributes(nserde))]
 pub fn derive_ser_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 
@@ -90,6 +99,9 @@ pub fn derive_ser_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream
 #[proc_macro_derive(DeRon, attributes(nserde))]
 pub fn derive_de_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 
@@ -110,6 +122,9 @@ pub fn derive_de_ron(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 #[proc_macro_derive(SerJson, attributes(nserde))]
 pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 
@@ -132,6 +147,9 @@ pub fn derive_ser_json(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 #[proc_macro_derive(DeJson, attributes(nserde))]
 pub fn derive_de_json(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse::parse_data(input);
+    if let Some(err) = shared::unknown_attr_compile_error(&input) {
+        return err;
+    }
 
     let crate_name = shared::attrs_crate(input.attributes()).unwrap_or("nanoserde");
 

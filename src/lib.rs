@@ -14,6 +14,18 @@
 //!
 //! `nanoserde` supports some serialization customisation with `#[nserde()]` attributes.
 //! For `#[nserde(..)]` supported attributes for each format check [Features support matrix](https://github.com/not-fl3/nanoserde#features-support-matrix)
+//!
+//! Unknown `#[nserde(...)]` attributes are a compile error rather than a silent no-op.
+//!
+//! ```compile_fail
+//! use nanoserde::SerJson;
+//!
+//! #[derive(SerJson)]
+//! #[nserde(tag = "type", rename_all = "camelCase")]
+//! struct Test {
+//!     script_name: String,
+//! }
+//! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
