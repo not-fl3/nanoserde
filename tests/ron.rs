@@ -884,3 +884,27 @@ fn ron_de_ser_non_finite_floats() {
     assert_eq!(f64::deserialize_ron("2.0").unwrap(), 2.0);
     assert_eq!(i64::deserialize_ron("-42").unwrap(), -42);
 }
+
+// https://github.com/not-fl3/nanoserde/issues/159
+#[test]
+fn raw_ident_field() {
+    #[derive(DeRon, SerRon, PartialEq, Debug)]
+    pub struct TestStruct {
+        pub r#type: String,
+        pub value: i32,
+    }
+
+    let ron = r#"(type:"hello",value:1)"#;
+    let test: TestStruct = DeRon::deserialize_ron(ron).unwrap();
+    assert_eq!(
+        test,
+        TestStruct {
+            r#type: "hello".into(),
+            value: 1,
+        }
+    );
+    let serialized = test.serialize_ron();
+    assert!(!serialized.contains("r#"));
+    assert!(serialized.contains("type:"));
+    assert_eq!(TestStruct::deserialize_ron(&serialized).unwrap(), test);
+}
