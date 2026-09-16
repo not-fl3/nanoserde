@@ -90,6 +90,14 @@ pub fn attrs_crate(attributes: &[crate::parse::Attribute]) -> Option<&str> {
     })
 }
 
+/// Strip a leading `r#` raw-identifier prefix.
+///
+/// Field access and struct construction keep the original ident (`r#type`).
+/// Serialized names and generated local variables use the unraw form (`type`).
+pub fn unraw_ident(ident: &str) -> &str {
+    ident.strip_prefix("r#").unwrap_or(ident)
+}
+
 pub(crate) fn struct_bounds_strings(
     struct_: &Struct,
     bound_name: &str,

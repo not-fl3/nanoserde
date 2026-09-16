@@ -46,8 +46,8 @@ pub fn derive_ser_ron_struct(struct_: &Struct, crate_name: &str) -> TokenStream 
 
     for field in struct_.fields.iter().filter(|f| !attrs_skip(&f.attributes)) {
         let struct_fieldname = field.field_name.clone().unwrap();
-        let ron_fieldname =
-            shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+        let ron_fieldname = shared::attrs_rename(&field.attributes)
+            .unwrap_or_else(|| shared::unraw_ident(&struct_fieldname).to_string());
         let skip = shared::attrs_skip(&field.attributes);
         if skip {
             continue;
@@ -154,7 +154,7 @@ pub fn derive_de_ron_named(
     let mut unwraps = Vec::new();
     for field in fields.iter() {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
-        let localvar = format!("_{}", struct_fieldname);
+        let localvar = format!("_{}", shared::unraw_ident(&struct_fieldname));
         let field_is_option = field.ty.base() == "Option";
         let field_attr_skip = shared::attrs_skip(&field.attributes);
         let field_attr_default = shared::attrs_default(&field.attributes);
@@ -180,8 +180,10 @@ pub fn derive_de_ron_named(
         } else {
             None
         };
-        let ron_fieldname = (!field_attr_skip)
-            .then(|| shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone()));
+        let ron_fieldname = (!field_attr_skip).then(|| {
+            shared::attrs_rename(&field.attributes)
+                .unwrap_or_else(|| shared::unraw_ident(&struct_fieldname).to_string())
+        });
 
         unwraps.push(match default_val {
             Some(def) => format!("{}.unwrap_or_else(|| {})", localvar, def),
@@ -335,13 +337,19 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
     for variant in &enum_.variants {
         let ident = &variant.field_name.clone().unwrap();
+        let ron_ident = shared::unraw_ident(ident);
         match &variant.ty {
             Type {
                 ident: Category::None,
                 ..
             } => {
                 // unit variant
-                l!(body, "Self::{} => s.out.push_str(\"{}\"),", ident, ident)
+                l!(
+                    body,
+                    "Self::{} => s.out.push_str(\"{}\"),",
+                    ident,
+                    ron_ident
+                )
             }
             Type {
                 ident: Category::AnonymousStruct { contents },
@@ -351,6 +359,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 let mut inner = String::new();
                 for field in contents.fields.iter() {
                     let name = field.field_name.as_ref().unwrap();
+                    let ron_name = shared::unraw_ident(name);
                     names.push(name.clone());
                     if field.ty.base() == "Option" {
                         l!(
@@ -361,7 +370,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                                 s.conl();
                             }}",
                             name.as_str(),
-                            name.as_str(),
+                            ron_name,
                             name.as_str()
                         )
                     } else {
@@ -370,7 +379,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                             "s.field(d+1, \"{}\");
                             {}.ser_ron(d+1, s);
                             s.conl();",
-                            name,
+                            ron_name,
                             name
                         )
                     }
@@ -385,7 +394,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                     }}",
                     ident,
                     names.join(","),
-                    ident,
+                    ron_ident,
                     inner
                 );
             }
@@ -414,7 +423,7 @@ pub fn derive_ser_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                     }}",
                     ident,
                     names.join(","),
-                    ident,
+                    ron_ident,
                     inner
                 )
             }
@@ -444,6 +453,7 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
     for variant in &enum_.variants {
         let ident = variant.field_name.clone().unwrap();
+        let ron_ident = shared::unraw_ident(&ident);
 
         match &variant.ty {
             Type {
@@ -452,7 +462,7 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 ..
             } => {
                 // unit variant
-                l!(body, "\"{}\" => Self::{},", ident, ident)
+                l!(body, "\"{}\" => Self::{},", ron_ident, ident)
             }
             Type {
                 ident: Category::AnonymousStruct { contents },
@@ -460,7 +470,7 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
             } => {
                 let name = format!("{}::{}", enum_.name, ident);
                 let inner = derive_de_ron_named(&name, &contents.fields, &[], crate_name);
-                l!(body, "\"{}\" => {}", ident, inner);
+                l!(body, "\"{}\" => {}", ron_ident, inner);
             }
             Type {
                 ident: Category::Tuple { contents },
@@ -487,7 +497,7 @@ pub fn derive_de_ron_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                         s.paren_close(i)?;
                         r
                     }}, ",
-                    ident,
+                    ron_ident,
                     ident,
                     inner
                 );

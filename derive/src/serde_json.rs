@@ -49,8 +49,8 @@ pub fn derive_ser_json_struct(struct_: &Struct, crate_name: &str) -> TokenStream
     if !struct_.fields.is_empty() {
         for field in struct_.fields.iter() {
             let struct_fieldname = field.field_name.clone().unwrap();
-            let json_fieldname =
-                shared::attrs_rename(&field.attributes).unwrap_or_else(|| struct_fieldname.clone());
+            let json_fieldname = shared::attrs_rename(&field.attributes)
+                .unwrap_or_else(|| shared::unraw_ident(&struct_fieldname).to_string());
             let skip = shared::attrs_skip(&field.attributes);
             if skip {
                 continue;
@@ -145,7 +145,7 @@ pub fn derive_de_json_named(
 
     for field in fields {
         let struct_fieldname = field.field_name.as_ref().unwrap().to_string();
-        let localvar = format!("_{}", struct_fieldname);
+        let localvar = format!("_{}", shared::unraw_ident(&struct_fieldname));
         let field_attr_default = shared::attrs_default(&field.attributes);
         let field_attr_default_with = shared::attrs_default_with(&field.attributes);
         let default_val = if let Some(v) = field_attr_default {
@@ -174,8 +174,8 @@ pub fn derive_de_json_named(
         } else {
             None
         };
-        let json_fieldname =
-            shared::attrs_rename(&field.attributes).unwrap_or(struct_fieldname.clone());
+        let json_fieldname = shared::attrs_rename(&field.attributes)
+            .unwrap_or_else(|| shared::unraw_ident(&struct_fieldname).to_string());
         let proxy = crate::shared::attrs_proxy(&field.attributes);
         let skip = crate::shared::attrs_skip(&field.attributes);
 
@@ -302,8 +302,8 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
     for variant in enum_.variants.iter() {
         let field_name = variant.field_name.clone().unwrap();
-        let json_variant_name =
-            shared::attrs_rename(&variant.attributes).unwrap_or(field_name.clone());
+        let json_variant_name = shared::attrs_rename(&variant.attributes)
+            .unwrap_or_else(|| shared::unraw_ident(&field_name).to_string());
 
         match &variant.ty {
             Type {
@@ -330,20 +330,21 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 for (index, field) in contents.fields.iter().enumerate() {
                     if let Some(name) = &&field.field_name {
                         let proxied_field = ser_proxy_guard(name, field);
+                        let json_name = shared::unraw_ident(name);
                         if index == last {
                             if field.ty.base() == "Option" {
                                 l!(
                                     items,
                                     "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);}}",
                                     name,
-                                    name,
+                                    json_name,
                                     proxied_field
                                 )
                             } else {
                                 l!(
                                     items,
                                     "s.field(d+1, \"{}\");{}.ser_json(d+1, s);",
-                                    name,
+                                    json_name,
                                     proxied_field
                                 )
                             }
@@ -352,14 +353,14 @@ pub fn derive_ser_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                                     items,
                                     "if {}.is_some(){{s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();}}",
                                     name,
-                                    name,
+                                    json_name,
                                     proxied_field
                                 );
                         } else {
                             l!(
                                 items,
                                 "s.field(d+1, \"{}\");{}.ser_json(d+1, s);s.conl();",
-                                name,
+                                json_name,
                                 proxied_field
                             );
                         }
@@ -461,8 +462,8 @@ pub fn derive_de_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
 
     for variant in &enum_.variants {
         let field_name = variant.field_name.clone().unwrap();
-        let json_variant_name =
-            shared::attrs_rename(&variant.attributes).unwrap_or(field_name.clone());
+        let json_variant_name = shared::attrs_rename(&variant.attributes)
+            .unwrap_or_else(|| shared::unraw_ident(&field_name).to_string());
 
         match &variant.ty {
             Type {
@@ -494,8 +495,6 @@ pub fn derive_de_json_enum(enum_: &Enum, crate_name: &str) -> TokenStream {
                 ident: Category::Tuple { contents },
                 ..
             } => {
-                
-
                 if contents.len() == 1 {
                     l!(
                         r_rest,
