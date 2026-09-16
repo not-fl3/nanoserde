@@ -1381,3 +1381,37 @@ fn ts_rs_compat() {
     // make sure the old format can still be deserialized
     assert_eq!(tmp, DeJson::deserialize_json(old_expected).unwrap());
 }
+
+// https://github.com/not-fl3/nanoserde/issues/159
+#[test]
+fn raw_ident_field() {
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct TestStruct {
+        pub r#type: String,
+        pub value: i32,
+    }
+
+    let json = r#"{"type":"hello","value":1}"#;
+    let test: TestStruct = DeJson::deserialize_json(json).unwrap();
+    assert_eq!(
+        test,
+        TestStruct {
+            r#type: "hello".into(),
+            value: 1,
+        }
+    );
+    assert_eq!(test.serialize_json(), r#"{"type":"hello","value":1}"#);
+
+    #[derive(DeJson, SerJson, PartialEq, Debug)]
+    pub struct Renamed {
+        #[nserde(rename = "kind")]
+        pub r#type: String,
+    }
+
+    let renamed = Renamed { r#type: "x".into() };
+    assert_eq!(renamed.serialize_json(), r#"{"kind":"x"}"#);
+    assert_eq!(
+        Renamed::deserialize_json(r#"{"kind":"x"}"#).unwrap(),
+        renamed
+    );
+}
