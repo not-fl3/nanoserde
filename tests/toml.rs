@@ -122,3 +122,31 @@ fn carriage_return() {
     assert_eq!(toml["foo"].num(), 1.0);
     assert_eq!(toml["bar"].boolean(), false);
 }
+
+// https://github.com/not-fl3/nanoserde/issues/154
+#[test]
+fn boolean_arrays_and_crlf() {
+    let toml = TomlParser::parse("bool = false\r\n").unwrap();
+    assert_eq!(toml["bool"].boolean(), false);
+
+    let toml = TomlParser::parse("bool = true\r\n").unwrap();
+    assert_eq!(toml["bool"].boolean(), true);
+
+    let toml = TomlParser::parse("array = [false, false]\r\n").unwrap();
+    assert_eq!(
+        toml["array"].simple_arr(),
+        &vec![Toml::Bool(false), Toml::Bool(false)]
+    );
+
+    let toml = TomlParser::parse("array = [true, false]\n").unwrap();
+    assert_eq!(
+        toml["array"].simple_arr(),
+        &vec![Toml::Bool(true), Toml::Bool(false)]
+    );
+
+    let toml = TomlParser::parse("array = [false,false]").unwrap();
+    assert_eq!(
+        toml["array"].simple_arr(),
+        &vec![Toml::Bool(false), Toml::Bool(false)]
+    );
+}
