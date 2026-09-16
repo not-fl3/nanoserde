@@ -137,7 +137,6 @@ pub fn derive_de_json_named(
 ) -> TokenStream {
     let mut local_vars = Vec::new();
     let mut struct_field_names = Vec::new();
-    let mut json_field_names = Vec::new();
     let mut matches = Vec::new();
     let mut unwraps = Vec::new();
 
@@ -208,14 +207,13 @@ pub fn derive_de_json_named(
                     localvar, proxified_t, struct_fieldname
                 ));
             }
-            matches.push((json_fieldname.clone(), localvar.clone()));
+            matches.push((json_fieldname, localvar.clone()));
             local_vars.push(localvar);
         } else {
             unwraps.push(default_val.unwrap_or_else(|| String::from("Default::default()")));
         }
 
         struct_field_names.push(struct_fieldname);
-        json_field_names.push(json_fieldname);
     }
 
     let mut r = String::new();
@@ -225,25 +223,24 @@ pub fn derive_de_json_named(
     l!(r, "s.curly_open(i) ?;");
     l!(r, "while s.next_str().is_some() {");
 
-    if !json_field_names.is_empty() {
-        l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
-        for (json_field_name, local_var) in matches.iter() {
-            l!(
-                r,
-                "\"{}\" => {{s.next_colon(i) ?;{} = Some({}::DeJson::de_json(s, i) ?)}},",
-                json_field_name,
-                local_var,
-                crate_name
-            );
-        }
-        // TODO: maybe introduce "exhaustive" attribute?
-        // l!(
-        //     r,
-        //     "_ => return ::core::result::Result::Err(s.err_exp(&s.strbuf))"
-        // );
-        l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
-        l!(r, "}");
+    // Skip unknown fields even when the struct itself has none.
+    l!(r, "match AsRef::<str>::as_ref(&s.strbuf) {");
+    for (json_field_name, local_var) in matches.iter() {
+        l!(
+            r,
+            "\"{}\" => {{s.next_colon(i) ?;{} = Some({}::DeJson::de_json(s, i) ?)}},",
+            json_field_name,
+            local_var,
+            crate_name
+        );
     }
+    // TODO: maybe introduce "exhaustive" attribute?
+    // l!(
+    //     r,
+    //     "_ => return ::core::result::Result::Err(s.err_exp(&s.strbuf))"
+    // );
+    l!(r, "_ => {s.next_colon(i)?; s.whole_field(i)?; }");
+    l!(r, "}");
     l!(r, "s.eat_comma_curly(i) ?;");
     l!(r, "}");
     l!(r, "s.curly_close(i) ?;");

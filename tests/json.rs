@@ -472,6 +472,33 @@ fn empty() {
     let _: Empty2 = DeJson::deserialize_json(json).unwrap();
 }
 
+// https://github.com/not-fl3/nanoserde/issues/157
+// Empty structs should ignore extra JSON fields, same as non-empty structs.
+#[test]
+fn empty_struct_ignores_extra_fields() {
+    #[derive(DeJson, Debug)]
+    struct EmptyStruct {}
+
+    #[derive(DeJson, Debug)]
+    #[nserde(default)]
+    struct EmptyStructDefault {}
+
+    #[derive(DeJson, Debug)]
+    #[nserde(default)]
+    struct NonEmptyStruct {
+        #[allow(dead_code)]
+        _dummy: Option<i32>,
+    }
+
+    let json = r#"{"extra": 123}"#;
+    let _: EmptyStruct = DeJson::deserialize_json(json).unwrap();
+    let _: EmptyStructDefault = DeJson::deserialize_json(json).unwrap();
+    let _: NonEmptyStruct = DeJson::deserialize_json(json).unwrap();
+
+    let nested = r#"{"extra": {"a": 1}, "arr": [1, 2], "s": "x"}"#;
+    let _: EmptyStruct = DeJson::deserialize_json(nested).unwrap();
+}
+
 #[test]
 fn empty2() {
     #[derive(DeJson, SerJson)]
