@@ -1,8 +1,10 @@
 #![cfg(any(feature = "json", feature = "ron", feature = "binary"))]
 
-use crate::parse::{Enum, Struct};
+use crate::parse::{Category, Data, Enum, Struct};
+use ::alloc::collections::BTreeSet;
 use ::alloc::string::String;
 use ::alloc::{format, string::ToString, vec::Vec};
+use proc_macro::TokenStream;
 
 macro_rules! l {
     ($target:ident, $line:expr) => {
@@ -88,6 +90,85 @@ pub fn attrs_crate(attributes: &[crate::parse::Attribute]) -> Option<&str> {
             None
         }
     })
+}
+
+const KNOWN_NSERDE_ATTRS: &[&str] = &[
+    "proxy",
+    "rename",
+    "default",
+    "default_with",
+    "transparent",
+    "skip",
+    "serialize_none_as_null",
+    "crate",
+];
+
+fn unknown_nserde_attr_names(attributes: &[crate::parse::Attribute]) -> Vec<String> {
+    attributes
+        .iter()
+        .filter_map(|attr| {
+            let name = attr.tokens.first()?;
+            if KNOWN_NSERDE_ATTRS.contains(&name.as_str()) {
+                None
+            } else {
+                Some(name.clone())
+            }
+        })
+        .collect()
+}
+
+fn collect_unknown_nserde_attrs(data: &Data) -> Vec<String> {
+    let mut out = Vec::new();
+    match data {
+        Data::Struct(s) => {
+            out.extend(unknown_nserde_attr_names(&s.attributes));
+            for field in &s.fields {
+                out.extend(unknown_nserde_attr_names(&field.attributes));
+            }
+        }
+        Data::Enum(e) => {
+            out.extend(unknown_nserde_attr_names(&e.attributes));
+            for variant in &e.variants {
+                out.extend(unknown_nserde_attr_names(&variant.attributes));
+                if let Category::AnonymousStruct { contents } = &variant.ty.ident {
+                    for field in &contents.fields {
+                        out.extend(unknown_nserde_attr_names(&field.attributes));
+                    }
+                }
+            }
+        }
+        Data::Union(_) => {}
+    }
+    out
+}
+
+/// Reject unsupported `#[nserde(...)]` attributes instead of silently ignoring them.
+pub fn unknown_attr_compile_error(data: &Data) -> Option<TokenStream> {
+    let unknown = collect_unknown_nserde_attrs(data);
+    if unknown.is_empty() {
+        return None;
+    }
+
+    let unique: BTreeSet<_> = unknown.into_iter().collect();
+    let list = unique
+        .iter()
+        .map(|name| format!("`{}`", name))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let msg = if unique.len() == 1 {
+        format!(
+            "unknown nserde attribute {}. Supported attributes are: {}",
+            list,
+            KNOWN_NSERDE_ATTRS.join(", ")
+        )
+    } else {
+        format!(
+            "unknown nserde attributes: {}. Supported attributes are: {}",
+            list,
+            KNOWN_NSERDE_ATTRS.join(", ")
+        )
+    };
+    Some(format!("compile_error!(\"{}\");", msg).parse().unwrap())
 }
 
 pub(crate) fn struct_bounds_strings(
