@@ -650,7 +650,10 @@ fn next_type<T: Iterator<Item = TokenTree> + Clone>(source: &mut Peekable<T>) ->
     ) -> Option<Type> {
         let mut wraps = vec![];
         let mut path = "(".to_owned();
-        while let Some(next_ty) = next_type(source) {
+        while next_eof(source).is_none() {
+            let Some(next_ty) = next_type(source) else {
+                break;
+            };
             wraps.push(next_ty.clone());
             path.push_str(&next_ty.full().to_string());
             if next_exact_punct(source, ",").is_none() {
