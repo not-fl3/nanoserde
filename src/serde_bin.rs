@@ -251,6 +251,14 @@ impl SerBin for String {
     }
 }
 
+impl SerBin for &'static str {
+    fn ser_bin(&self, s: &mut Vec<u8>) {
+        let len = self.len();
+        len.ser_bin(s);
+        s.extend_from_slice(self.as_bytes());
+    }
+}
+
 impl DeBin for String {
     fn de_bin(o: &mut usize, d: &[u8]) -> Result<String, DeBinErr> {
         let len: usize = DeBin::de_bin(o, d)?;
