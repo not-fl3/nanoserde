@@ -102,13 +102,16 @@ pub trait DeJson: Sized {
 }
 
 /// A JSON parsed token.
+/// A JSON parsed token.
 #[derive(PartialEq, Debug, Default, Clone)]
 #[non_exhaustive]
 pub enum DeJsonTok {
     Str,
     Char(char),
     U64(u64),
+    U128(u128),
     I64(i64),
+    I128(i128),
     F64(f64),
     Bool(bool),
     BareIdent,
@@ -284,8 +287,10 @@ impl DeJsonState {
         match self.tok {
             DeJsonTok::F64 { .. }
             | DeJsonTok::I64 { .. }
+            | DeJsonTok::I128 { .. }
             | DeJsonTok::Str
             | DeJsonTok::U64 { .. }
+            | DeJsonTok::U128 { .. }
             | DeJsonTok::Bool { .. }
             | DeJsonTok::Null => {
                 self.next_tok(i)?;
@@ -420,6 +425,52 @@ impl DeJsonState {
         Err(self.err_token("signed integer"))
     }
 
+    pub fn u128_range(&mut self, max: u128) -> Result<u128, DeJsonErr> {
+        if let DeJsonTok::U128(value) = self.tok {
+            if value > max {
+                return Err(self.err_range(&format!("{}>{}", value, max)));
+            }
+            return Ok(value);
+        }
+        if let DeJsonTok::U64(value) = self.tok {
+            return Ok(value as u128);
+        }
+        Err(self.err_token("unsigned integer"))
+    }
+
+    pub fn i128_range(&mut self, min: i128, max: i128) -> Result<i128, DeJsonErr> {
+        if let DeJsonTok::I128(value) = self.tok {
+            if value < min {
+                return Err(self.err_range(&format!("{}<{}", value, min)));
+            }
+            if value > max {
+                return Err(self.err_range(&format!("{}>{}", value, max)));
+            }
+            return Ok(value);
+        }
+        if let DeJsonTok::I64(value) = self.tok {
+            return Ok(value as i128);
+        }
+        if let DeJsonTok::U64(value) = self.tok {
+            let value = value as i128;
+            if value > max {
+                return Err(self.err_range(&format!("{}>{}", value, max)));
+            }
+            return Ok(value);
+        }
+        if let DeJsonTok::U128(value) = self.tok {
+            if value > i128::MAX as u128 {
+                return Err(self.err_range(&format!("{}>{}", value, max)));
+            }
+            let value = value as i128;
+            if value > max {
+                return Err(self.err_range(&format!("{}>{}", value, max)));
+            }
+            return Ok(value);
+        }
+        Err(self.err_token("signed integer"))
+    }
+
     pub fn as_f64(&mut self) -> Result<f64, DeJsonErr> {
         if let DeJsonTok::I64(value) = self.tok {
             return Ok(value as f64);
@@ -518,7 +569,7 @@ impl DeJsonState {
                 Ok(())
             }
             '-' | '+' | '0'..='9' => {
-                self.numbuf.truncate(0);
+                self.numbuf.clear();
                 let is_neg = if self.cur == '-' || self.cur == '+' {
                     let sign = self.cur;
                     self.numbuf.push(self.cur);
@@ -527,10 +578,12 @@ impl DeJsonState {
                 } else {
                     false
                 };
+
                 while self.cur >= '0' && self.cur <= '9' {
                     self.numbuf.push(self.cur);
                     self.next(i);
                 }
+
                 let mut is_float = false;
                 if self.cur == '.' {
                     is_float = true;
@@ -541,6 +594,7 @@ impl DeJsonState {
                         self.next(i);
                     }
                 }
+
                 if self.cur == 'e' || self.cur == 'E' {
                     is_float = true;
                     self.numbuf.push(self.cur);
@@ -554,6 +608,7 @@ impl DeJsonState {
                         self.next(i);
                     }
                 }
+
                 if is_float {
                     if let Ok(num) = self.numbuf.parse() {
                         self.tok = DeJsonTok::F64(num);
@@ -563,23 +618,32 @@ impl DeJsonState {
                     }
                 } else {
                     if is_neg {
-                        if let Ok(num) = self.numbuf.parse() {
+                        if let Ok(num) = self.numbuf.parse::<i64>() {
                             self.tok = DeJsonTok::I64(num);
                             return Ok(());
-                        } else {
-                            return Err(self.err_parse("number"));
                         }
+                        if let Ok(num) = self.numbuf.parse::<i128>() {
+                            self.tok = DeJsonTok::I128(num);
+                            return Ok(());
+                        }
+                        return Err(self.err_parse("number"));
                     }
-                    if let Ok(num) = self.numbuf.parse() {
+
+                    if let Ok(num) = self.numbuf.parse::<u64>() {
                         self.tok = DeJsonTok::U64(num);
-                        Ok(())
-                    } else {
-                        Err(self.err_parse("number"))
+                        return Ok(());
                     }
+                    if let Ok(num) = self.numbuf.parse::<u128>() {
+                        self.tok = DeJsonTok::U128(num);
+                        return Ok(());
+                    }
+
+                    Err(self.err_parse("number"))
                 }
             }
+
             'a'..='z' | 'A'..='Z' | '_' => {
-                self.identbuf.truncate(0);
+                self.identbuf.clear();
                 while self.cur >= 'a' && self.cur <= 'z'
                     || self.cur >= 'A' && self.cur <= 'Z'
                     || self.cur == '_'
@@ -606,7 +670,7 @@ impl DeJsonState {
                 )))
             }
             '"' => {
-                self.strbuf.truncate(0);
+                self.strbuf.clear();
                 self.next(i);
                 while self.cur != '"' {
                     if self.cur == '\\' {
@@ -771,6 +835,46 @@ impl_ser_de_json_signed!(i16, i16::MIN, i16::MAX);
 impl_ser_de_json_signed!(i8, i8::MIN, i8::MAX);
 impl_ser_de_json_float!(f64);
 impl_ser_de_json_float!(f32);
+
+// NOTE: separate impl to avoid implying 128bit calculation
+macro_rules! impl_ser_de_json_unsigned_128 {
+    ( $ ty: ident, $ max: expr) => {
+        impl SerJson for $ty {
+            fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
+                _ = write!(s.out, "{self}");
+            }
+        }
+
+        impl DeJson for $ty {
+            fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<$ty, DeJsonErr> {
+                let val = s.u128_range($max)?;
+                s.next_tok(i)?;
+                return Ok(val as $ty);
+            }
+        }
+    };
+}
+
+macro_rules! impl_ser_de_json_signed_128 {
+    ( $ ty: ident, $ min: expr, $ max: expr) => {
+        impl SerJson for $ty {
+            fn ser_json(&self, _d: usize, s: &mut SerJsonState) {
+                _ = write!(s.out, "{self}");
+            }
+        }
+
+        impl DeJson for $ty {
+            fn de_json(s: &mut DeJsonState, i: &mut Chars) -> Result<$ty, DeJsonErr> {
+                let val = s.i128_range($min, $max)?;
+                s.next_tok(i)?;
+                return Ok(val as $ty);
+            }
+        }
+    };
+}
+
+impl_ser_de_json_unsigned_128!(u128, u128::MAX);
+impl_ser_de_json_signed_128!(i128, i128::MIN, i128::MAX);
 
 impl<T> SerJson for Option<T>
 where
