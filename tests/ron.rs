@@ -170,6 +170,30 @@ fn de_ser_field_skip() {
 }
 
 #[test]
+fn de_ser_all_fields_skipped() {
+    fn default_count() -> u64 {
+        42
+    }
+
+    #[derive(DeRon, SerRon, Debug, PartialEq)]
+    struct AllSkipped {
+        #[nserde(skip)]
+        name: String,
+        #[nserde(skip, default_with = "default_count")]
+        count: u64,
+    }
+
+    let value = AllSkipped::deserialize_ron("()").unwrap();
+    assert_eq!(value.name, "");
+    assert_eq!(value.count, 42);
+    assert_eq!(
+        AllSkipped::deserialize_ron(&value.serialize_ron()).unwrap(),
+        value
+    );
+    assert!(AllSkipped::deserialize_ron("(name: \"ignored\")").is_err());
+}
+
+#[test]
 fn doctests() {
     /// This is test
     /// second doc comment

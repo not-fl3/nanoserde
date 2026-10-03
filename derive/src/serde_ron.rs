@@ -225,7 +225,7 @@ pub fn derive_de_ron_named(
             );
         }
         format!(
-            "match s.identbuf.as_ref() {{
+            "match s.identbuf.as_str() {{
                 {}
                 _ => return ::core::result::Result::Err(s.err_exp(&s.identbuf))
             }}",
