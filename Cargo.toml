@@ -21,3 +21,6 @@ std = []
 
 [dependencies]
 nanoserde-derive = { path = "derive", version = "=0.2.2", optional = true }
+
+[dev-dependencies]
+toml-test-harness = "1.4.0"
